@@ -1,0 +1,76 @@
+# AI Agents
+
+A powerful AI agent system built with pydantic-ai and FastAPI, providing intelligent agents for resume parsing, career coaching, and interview preparation.
+
+## Features
+
+- **Resume Parser Agent**: Extract structured data from PDF resumes with high accuracy
+- **Resume Tutor Agent**: Interactive conversational agent to help users build and improve their resumes
+- **Interview Coach Agent**: AI-powered mock interviews with personalized feedback and scoring
+- **RESTful API**: Clean API endpoints for easy integration with frontend applications
+- **Multiple LLM Support**: OpenAI GPT-4, Google Gemini, and other providers
+- **Type Safety**: Full type safety with Pydantic models and structured outputs
+- **Auto Database Setup**: Automatic database initialization on container startup
+
+## Technology Stack
+
+- **Core Framework**: [pydantic-ai](https://github.com/pydantic/pydantic-ai) 0.4.4
+- **Web Framework**: FastAPI 0.115.12
+- **Python**: 3.11 (fixed version)
+- **PDF Processing**: pdfplumber 0.11.4
+- **ASGI Server**: uvicorn 0.35.0
+- **Monitoring**: Pydantic Logfire 3.24.2
+- **Package Manager**: uv
+- **Containerization**: Docker
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11 (exact version required)
+- uv package manager
+
+### Local Installation
+
+0. Clone the repository:
+```bash
+git clone <repo_url>
+cd replay_llm_call
+```
+
+1. Install uv if not installed:
+```bash
+pip install uv
+```
+
+- (Optional) Create a virtual environment:
+```bash
+uv venv .venv
+
+source .venv/bin/activate  # Linux/macOS 
+.venv\Scripts\activate   # Windows 
+```
+
+2. Install dependencies:
+- For production (requires uv.lock file):
+```bash
+uv pip install --locked -r uv.lock
+```
+- For development/testing (based on pyproject.toml):
+```bash
+uv sync 
+```
+
+3. Set up environment variables:
+* Use your own API keys and configuration by putting them in the `.env` file.
+* or use the following command to copy the sample file:
+```bash
+cp env.sample .env
+# Edit .env with your API keys and configuration
+# For monitoring setup, see Logfire Monitoring Setup section below
+```
+
+1. Run the application:
+```bash
+uv run python main.py
+```

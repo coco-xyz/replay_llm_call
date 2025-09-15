@@ -262,6 +262,20 @@ GET /api/v1/health  # Comprehensive API health check
 - **Level Configuration**: Environment-specific log levels
 - **Request Tracking**: Unique request IDs for correlation
 
+## SQLAlchemy ORM 使用约定
+
+### mapped_column 说明
+```python
+# mapped_column 是 SQLAlchemy 2.0+ 的新语法，用于定义表列的映射
+# 它提供了更好的类型提示和IDE支持，替代了旧的 Column() 语法
+
+from sqlalchemy.orm import Mapped, mapped_column
+
+class TestCase(Base):
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+```
+
 ## Extension Patterns
 
 ### Adding New Agents

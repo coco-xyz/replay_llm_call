@@ -52,7 +52,7 @@ RUN if [ "$INSTALL_DEV" = "true" ]; then \
 # ================================
 # Runtime Stage
 # ================================
-FROM python:3.11-slim as runtime
+FROM python:3.11-slim AS runtime
 
 # Build argument to control dev dependencies installation (for runtime tools)
 ARG INSTALL_DEV=false

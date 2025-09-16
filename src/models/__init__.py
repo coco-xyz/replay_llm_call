@@ -2,10 +2,19 @@
 Models Package
 
 Data models and schemas for replay-llm-call.
-This package is currently empty but can be used to define:
-- Database models (SQLAlchemy)
-- Pydantic models for data validation
-- Custom data structures
+Contains SQLAlchemy models for database entities and Pydantic schemas for API validation.
 """
 
-__all__: list[str] = []
+from .base import Base, BaseDBModel, TimestampMixin
+from .test_case import TestCase
+from .test_log import TestLog
+
+__all__ = [
+    # Base classes
+    "Base",
+    "BaseDBModel",
+    "TimestampMixin",
+    # Database models
+    "TestCase",
+    "TestLog",
+]

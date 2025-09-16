@@ -4,6 +4,6 @@ Services Package
 Business logic and orchestration layer for replay-llm-call.
 """
 
-from .demo_service import DemoService
+from .test_log_service import TestLogService
 
-__all__ = ["DemoService"]
+__all__ = ["TestLogService"]

@@ -6,10 +6,15 @@ Version 1 of the replay-llm-call API endpoints.
 
 from fastapi import APIRouter
 
-from .endpoints import demo_router, health_router
+from .endpoints import health_router
+from .endpoints.test_cases import router as test_cases_router
+from .endpoints.test_execution import router as test_execution_router
+from .endpoints.test_logs import router as test_logs_router
 
 router = APIRouter()
 router.include_router(health_router, tags=["health"])
-router.include_router(demo_router, prefix="/demo", tags=["demo"])
+router.include_router(test_cases_router)
+router.include_router(test_execution_router)
+router.include_router(test_logs_router)
 
 __all__ = ["router"]

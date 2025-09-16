@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.api.errors import register_exception_handlers
 from src.api.middleware import (
@@ -143,6 +144,24 @@ def setup_logfire_instrumentation(app: FastAPI) -> None:
         logger.warning("Failed to initialize Logfire: %s", e)
 
 
+def setup_static_files(app: FastAPI) -> None:
+    """
+    Setup static file serving.
+
+    Args:
+        app: FastAPI application instance
+    """
+    import os
+
+    # Mount static files
+    static_dir = "static"
+    if os.path.exists(static_dir):
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+        logger.info("Static files mounted at /static")
+    else:
+        logger.warning("Static directory not found: %s", static_dir)
+
+
 def setup_metrics_hooks(app: FastAPI) -> None:
     """
     Setup optional metrics collection hooks.
@@ -241,6 +260,9 @@ def create_api(
 
     # Logfire instrumentation (should be after middleware setup)
     setup_logfire_instrumentation(app)
+
+    # Setup static files
+    setup_static_files(app)
 
     # Mount API router
     app.include_router(router, prefix=mount_prefix)

@@ -1,9 +1,14 @@
 """
 V1 API Request Schemas
 
-Only demo-related request schemas for the template.
+Request schemas for all API v1 endpoints.
 """
 
-from .demo_request import DemoChatRequest
+from .test_case_requests import TestCaseCreateRequest, TestCaseUpdateRequest
+from .test_execution_requests import TestExecutionRequest
 
-__all__ = ["DemoChatRequest"]
+__all__ = [
+    "TestCaseCreateRequest",
+    "TestCaseUpdateRequest",
+    "TestExecutionRequest"
+]

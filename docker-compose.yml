@@ -1,0 +1,54 @@
+services:
+  # PostgreSQL database service
+  postgres:
+    image: postgres:15-alpine
+    # container_name: postgres
+    environment:
+      POSTGRES_DB: replay_llm_call
+      POSTGRES_USER: replay_llm_call
+      POSTGRES_PASSWORD: replay_llm_call
+      # POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U replay_llm_call -d replay_llm_call"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - replay_llm_call_network
+
+  # Replay LLM Call application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # container_name: app
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # Override only Docker-specific service names (keep all other configs from .env)
+      DATABASE__URL: postgresql://replay_llm_call:replay_llm_call@postgres:5432/replay_llm_call
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - replay_llm_call_network
+    restart: unless-stopped
+
+
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  replay_llm_call_network:
+    driver: bridge 

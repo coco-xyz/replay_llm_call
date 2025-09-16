@@ -336,7 +336,23 @@ def setup_logging() -> None:
     """
 
     config = get_logging_config()
-    logging.config.dictConfig(config)
+
+    try:
+        logging.config.dictConfig(config)
+    except Exception as e:
+        # If file handler fails, fall back to console-only logging
+        print(f"⚠️  Warning: File logging failed ({e}), using console-only logging")
+
+        # Create a fallback config with only console handler
+        fallback_config = config.copy()
+        fallback_config["loggers"]["replay_llm_call"]["handlers"] = ["console"]
+        fallback_config["root"]["handlers"] = ["console"]
+
+        # Remove the problematic file handler
+        if "file" in fallback_config["handlers"]:
+            del fallback_config["handlers"]["file"]
+
+        logging.config.dictConfig(fallback_config)
 
     # Log startup information
     logger = logging.getLogger("replay_llm_call.startup")

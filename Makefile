@@ -13,6 +13,9 @@ PACKAGE_NAME := replay_llm_call
 DOCKER_IMAGE := $(PROJECT_NAME)
 DOCKER_TAG := latest
 
+# Docker Compose command - check if docker compose (v2) is available, fallback to docker-compose (v1)
+DOCKER_COMPOSE := $(shell command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
+
 # Environment settings
 ENV_FILE := .env
 ENV_SAMPLE := env.sample
@@ -226,6 +229,84 @@ docker-clean: docker-stop ## docker - Clean up Docker images and containers
 	@docker system prune -f
 
 # =============================================================================
+# Docker Compose Commands
+# =============================================================================
+
+.PHONY: compose-up
+compose-up: ## docker - Start full application stack with docker-compose
+	@echo "$(BLUE)Starting full application stack...$(RESET)"
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "$(RED)❌ .env file not found$(RESET)"; \
+		echo "$(YELLOW)Run 'make setup-env' to create it$(RESET)"; \
+		exit 1; \
+	fi
+	$(DOCKER_COMPOSE) up -d --build
+	@echo "$(GREEN)✅ Application stack started$(RESET)"
+	@echo "$(CYAN)Use 'make compose-logs' to view logs$(RESET)"
+
+.PHONY: compose-up-middleware
+compose-up-middleware: ## docker - Start middleware services only (postgres, redis)
+	@echo "$(BLUE)Starting middleware services...$(RESET)"
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "$(RED)❌ .env file not found$(RESET)"; \
+		echo "$(YELLOW)Run 'make setup-env' to create it$(RESET)"; \
+		exit 1; \
+	fi
+	$(DOCKER_COMPOSE) -f docker-compose.middleware.yml up -d
+	@echo "$(GREEN)✅ Middleware services started$(RESET)"
+	@echo "$(CYAN)Use 'make compose-logs-middleware' to view logs$(RESET)"
+
+.PHONY: compose-down
+compose-down: ## docker - Stop full application stack
+	@echo "$(BLUE)Stopping full application stack...$(RESET)"
+	$(DOCKER_COMPOSE) down
+	@echo "$(GREEN)✅ Application stack stopped$(RESET)"
+
+.PHONY: compose-down-middleware
+compose-down-middleware: ## docker - Stop middleware services
+	@echo "$(BLUE)Stopping middleware services...$(RESET)"
+	$(DOCKER_COMPOSE) -f docker-compose.middleware.yml down
+	@echo "$(GREEN)✅ Middleware services stopped$(RESET)"
+
+.PHONY: compose-restart
+compose-restart: compose-down compose-up ## docker - Restart full application stack
+
+.PHONY: compose-restart-middleware
+compose-restart-middleware: compose-down-middleware compose-up-middleware ## docker - Restart middleware services
+
+.PHONY: compose-build
+compose-build: ## docker - Build application image for docker-compose
+	@echo "$(BLUE)Building application image...$(RESET)"
+	$(DOCKER_COMPOSE) build
+	@echo "$(GREEN)✅ Application image built$(RESET)"
+
+.PHONY: compose-logs
+compose-logs: ## docker - View logs from full application stack
+	@echo "$(BLUE)Viewing application stack logs...$(RESET)"
+	$(DOCKER_COMPOSE) logs -f
+
+.PHONY: compose-logs-middleware
+compose-logs-middleware: ## docker - View logs from middleware services
+	@echo "$(BLUE)Viewing middleware services logs...$(RESET)"
+	$(DOCKER_COMPOSE) -f docker-compose.middleware.yml logs -f
+
+.PHONY: compose-ps
+compose-ps: ## docker - Show status of docker-compose services
+	@echo "$(BLUE)Docker Compose Services Status:$(RESET)"
+	@echo "$(CYAN)Full Stack:$(RESET)"
+	@$(DOCKER_COMPOSE) ps 2>/dev/null || echo "$(YELLOW)No full stack services running$(RESET)"
+	@echo ""
+	@echo "$(CYAN)Middleware Only:$(RESET)"
+	@$(DOCKER_COMPOSE) -f docker-compose.middleware.yml ps 2>/dev/null || echo "$(YELLOW)No middleware services running$(RESET)"
+
+.PHONY: compose-clean
+compose-clean: ## docker - Stop and remove all containers, networks, and volumes
+	@echo "$(BLUE)Cleaning up docker-compose resources...$(RESET)"
+	@$(DOCKER_COMPOSE) down -v --remove-orphans 2>/dev/null || true
+	@$(DOCKER_COMPOSE) -f docker-compose.middleware.yml down -v --remove-orphans 2>/dev/null || true
+	@echo "$(GREEN)✅ Docker compose cleanup complete$(RESET)"
+
+# =============================================================================
 # Utility Commands
 # =============================================================================
 
@@ -267,8 +348,30 @@ setup: setup-deps setup-env setup-dirs test-create ## Complete project setup
 	@echo "$(GREEN)✅ Project setup complete!$(RESET)"
 	@echo "$(YELLOW)Next steps:$(RESET)"
 	@echo "  1. Edit .env file with your configuration"
-	@echo "  2. Run 'make run-cli' to test CLI mode"
-	@echo "  3. Run 'make run-api' to start the API server"
+	@echo "  2. Run 'make dev-start' to start development environment"
+	@echo "  3. Run 'make run-cli' to test CLI mode"
+	@echo "  4. Run 'make run-api' to start the API server"
+
+.PHONY: dev-start
+dev-start: compose-up-middleware ## Start development environment (middleware only)
+	@echo "$(GREEN)✅ Development environment started!$(RESET)"
+	@echo "$(YELLOW)Services available:$(RESET)"
+	@echo "  - PostgreSQL: localhost:$${DB_PORT:-5432}"
+	@echo "  - Redis: localhost:$${REDIS_PORT:-6379}"
+	@echo "$(CYAN)Now you can run your application locally with 'make run-api' or 'make run-cli'$(RESET)"
+
+.PHONY: dev-stop
+dev-stop: compose-down-middleware ## Stop development environment
+	@echo "$(GREEN)✅ Development environment stopped$(RESET)"
+
+.PHONY: prod-start
+prod-start: compose-up ## Start production-like environment (full stack)
+	@echo "$(GREEN)✅ Production-like environment started!$(RESET)"
+	@echo "$(CYAN)Application available at: http://localhost:$${APP_PORT:-8080}$(RESET)"
+
+.PHONY: prod-stop
+prod-stop: compose-down ## Stop production-like environment
+	@echo "$(GREEN)✅ Production-like environment stopped$(RESET)"
 
 # =============================================================================
 # Special Targets

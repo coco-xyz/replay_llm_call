@@ -88,11 +88,12 @@ def setup_logging_middleware(app: FastAPI) -> None:
     Args:
         app: FastAPI application instance
     """
-    # Request ID middleware (should be first to ensure all requests have IDs)
-    app.add_middleware(RequestIDMiddleware)
-
-    # Request logging middleware
+    # Request logging middleware should be added before Request ID middleware
+    # as middleware is processed in reverse order of addition.
     app.add_middleware(RequestLoggingMiddleware)
+
+    # Request ID middleware (ensures all requests have IDs)
+    app.add_middleware(RequestIDMiddleware)
 
     logger.info("Request logging and ID middleware configured")
 

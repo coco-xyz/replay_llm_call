@@ -9,6 +9,9 @@ let isExecuting = false;
 let currentTools = [];
 let editingToolIndex = -1;
 
+// Prevent blur-hide race when clicking dropdown
+let pointerDownInDropdown = false;
+
 // Model name history management
 const MODEL_HISTORY_KEY = 'llm_replay_model_history';
 const MAX_HISTORY_ITEMS = 10;
@@ -529,7 +532,14 @@ function setupModelNameInput() {
         if (value) {
             saveModelToHistory(value);
         }
-        hideModelHistory();
+
+        // Only hide if not clicking in dropdown
+        setTimeout(() => {
+            if (!pointerDownInDropdown) {
+                hideModelHistory();
+            }
+            pointerDownInDropdown = false;
+        }, 0);
     });
 
     modelNameInput.addEventListener('keydown', function (event) {
@@ -594,7 +604,7 @@ function showModelHistory() {
     const history = getModelHistory();
 
     if (history.length === 0) {
-        dropdown.style.display = 'none';
+        dropdown.classList.remove('show');
         return;
     }
 
@@ -616,17 +626,21 @@ function showModelHistory() {
         deleteBtn.style.fontSize = '0.75rem';
         deleteBtn.style.padding = '0.125rem 0.25rem';
 
-        // Click on model name to select
-        modelText.addEventListener('click', function (e) {
-            e.stopPropagation();
+        // Use mousedown to set value before input loses focus
+        item.addEventListener('mousedown', function (e) {
+            if (e.target === deleteBtn || deleteBtn.contains(e.target)) {
+                removeFromModelHistory(modelName);
+                return;
+            }
+
+            pointerDownInDropdown = true;
             document.getElementById('modelName').value = modelName;
-            hideModelHistory();
+            saveModelToHistory(modelName);
         });
 
-        // Click on delete button to remove
-        deleteBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            removeFromModelHistory(modelName);
+        item.addEventListener('mouseup', function () {
+            hideModelHistory();
+            pointerDownInDropdown = false;
         });
 
         item.appendChild(modelText);
@@ -634,7 +648,6 @@ function showModelHistory() {
         dropdown.appendChild(item);
     });
 
-    dropdown.style.display = 'block';
     dropdown.classList.add('show');
 }
 
@@ -647,7 +660,7 @@ function filterModelHistory(searchTerm) {
     );
 
     if (filtered.length === 0) {
-        dropdown.style.display = 'none';
+        dropdown.classList.remove('show');
         return;
     }
 
@@ -669,17 +682,21 @@ function filterModelHistory(searchTerm) {
         deleteBtn.style.fontSize = '0.75rem';
         deleteBtn.style.padding = '0.125rem 0.25rem';
 
-        // Click on model name to select
-        modelText.addEventListener('click', function (e) {
-            e.stopPropagation();
+        // Use mousedown to set value before input loses focus
+        item.addEventListener('mousedown', function (e) {
+            if (e.target === deleteBtn || deleteBtn.contains(e.target)) {
+                removeFromModelHistory(modelName);
+                return;
+            }
+
+            pointerDownInDropdown = true;
             document.getElementById('modelName').value = modelName;
-            hideModelHistory();
+            saveModelToHistory(modelName);
         });
 
-        // Click on delete button to remove
-        deleteBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            removeFromModelHistory(modelName);
+        item.addEventListener('mouseup', function () {
+            hideModelHistory();
+            pointerDownInDropdown = false;
         });
 
         item.appendChild(modelText);
@@ -687,12 +704,10 @@ function filterModelHistory(searchTerm) {
         dropdown.appendChild(item);
     });
 
-    dropdown.style.display = 'block';
     dropdown.classList.add('show');
 }
 
 function hideModelHistory() {
     const dropdown = document.getElementById('modelNameDropdown');
-    dropdown.style.display = 'none';
     dropdown.classList.remove('show');
 }

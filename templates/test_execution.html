@@ -234,10 +234,13 @@
         }
 
         /* Model Name History Dropdown */
-        #modelNameDropdown {
+        .model-history-dropdown {
             position: absolute;
-            top: 100%;
+            top: calc(100% + 2px);
             left: 0;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
             z-index: 1000;
             border: 1px solid #dee2e6;
             border-radius: 0.375rem;
@@ -246,28 +249,33 @@
             display: none;
         }
 
-        #modelNameDropdown .dropdown-item {
+        .model-history-dropdown.show {
+            display: block;
+        }
+
+        .model-history-dropdown .dropdown-item {
             padding: 0.5rem 0.75rem;
             border-bottom: 1px solid #f8f9fa;
             transition: background-color 0.15s ease-in-out;
+            cursor: pointer;
         }
 
-        #modelNameDropdown .dropdown-item:last-child {
+        .model-history-dropdown .dropdown-item:last-child {
             border-bottom: none;
         }
 
-        #modelNameDropdown .dropdown-item:hover {
+        .model-history-dropdown .dropdown-item:hover {
             background-color: #f8f9fa;
         }
 
-        #modelNameDropdown .btn-outline-danger {
+        .model-history-dropdown .btn-outline-danger {
             border-color: #dc3545;
             color: #dc3545;
             opacity: 0.7;
             transition: all 0.15s ease-in-out;
         }
 
-        #modelNameDropdown .btn-outline-danger:hover {
+        .model-history-dropdown .btn-outline-danger:hover {
             background-color: #dc3545;
             color: white;
             opacity: 1;
@@ -343,8 +351,7 @@
                             <div class="position-relative">
                                 <input type="text" class="form-control" id="modelName"
                                     placeholder="e.g., anthropic/claude-sonnet-4" autocomplete="off">
-                                <div class="dropdown-menu" id="modelNameDropdown"
-                                    style="width: 100%; max-height: 200px; overflow-y: auto;">
+                                <div class="model-history-dropdown" id="modelNameDropdown">
                                     <!-- 历史记录将在这里动态生成 -->
                                 </div>
                             </div>

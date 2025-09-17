@@ -23,28 +23,35 @@
 ```
 src/
 ├── models/
+│   ├── base.py               # 基础模型（BaseDBModel）
 │   ├── test_case.py          # 测试用例模型
-│   ├── test_log.py           # 测试日志模型
-│   └── llm_data.py           # LLM数据解析模型
+│   └── test_log.py           # 测试日志模型
 ├── stores/
 │   ├── test_case_store.py    # 测试用例数据访问
 │   └── test_log_store.py     # 测试日志数据访问
 ├── services/
 │   ├── test_case_service.py  # 测试用例业务逻辑
 │   ├── test_execution_service.py # 测试执行业务逻辑
-│   └── llm_replay_service.py # LLM回放服务
+│   ├── test_log_service.py   # 测试日志业务逻辑
+│   ├── llm_parser_service.py # LLM数据解析服务
+│   └── llm_execution_service.py # LLM执行服务（使用pydantic-ai Direct Model Requests）
 ├── agents/
-│   └── replay_agent.py       # LLM回放代理
+│   └── demo_agent.py         # 演示代理（示例pydantic-ai代理）
 ├── api/
 │   └── v1/
 │       └── endpoints/
 │           ├── test_cases.py # 测试用例API
 │           ├── test_execution.py # 测试执行API
 │           └── test_logs.py  # 测试日志API
-└── templates/                # 前端模板
-    ├── test_cases.html       # 测试用例管理页面
-    ├── test_execution.html   # 测试执行页面
-    └── test_logs.html        # 测试日志页面
+├── templates/                # 前端模板
+│   ├── test_cases.html       # 测试用例管理页面
+│   ├── test_execution.html   # 测试执行页面
+│   └── test_logs.html        # 测试日志页面
+└── static/                   # 静态文件
+    └── js/                   # JavaScript文件
+        ├── test-cases.js     # 测试用例管理页面脚本
+        ├── test-execution.js # 测试执行页面脚本
+        └── test-logs.js      # 测试日志页面脚本
 ```
 
 ### 2.2 页面流程
@@ -58,90 +65,96 @@ src/
 
 ### 3.1 测试用例模型 (TestCase)
 ```python
-from sqlalchemy import String, Text, DateTime, JSON
+from sqlalchemy import String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from datetime import datetime
 from typing import List, Optional
 
 # mapped_column 是 SQLAlchemy 2.0+ 的新语法，用于定义表列的映射
 # 它提供了更好的类型提示和IDE支持，替代了旧的 Column() 语法
 
-class TestCase(Base):
+class TestCase(BaseDBModel):  # 继承自BaseDBModel，包含id、created_at、updated_at
     __tablename__ = "test_cases"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    # 基本信息
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    # 存储原始的logfire raw data
+    # 存储原始的logfire raw data（用于审计和参考）
     raw_data: Mapped[dict] = mapped_column(JSON, nullable=False)
 
-    # 存储原始请求中除system prompt和最后一条user message外的其他messages（用于replay拼接）
-    original_messages: Mapped[List[dict]] = mapped_column(JSON, nullable=False)
-    # 存储原始请求的tools
-    original_tools: Mapped[Optional[List[dict]]] = mapped_column(JSON, nullable=True)
-    # 存储原始请求的model名称
-    original_model: Mapped[str] = mapped_column(String(255), nullable=False)
+    # 分离存储以实现高效replay
+    # middle_messages包含除第一条system prompt和最后一条user message之外的所有消息
+    middle_messages: Mapped[List[dict]] = mapped_column(JSON, nullable=False)
+    tools: Mapped[Optional[List[dict]]] = mapped_column(JSON, nullable=True)
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    # 存储解析后的关键数据，用于页面展示和replay拼接
-    parsed_system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
-    parsed_user_message: Mapped[str] = mapped_column(Text, nullable=False)
-
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # 解析出的关键组件，用于显示和replay
+    system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    last_user_message: Mapped[str] = mapped_column(Text, nullable=False)
 
     # 关联测试日志
-    test_logs: Mapped[List["TestLog"]] = relationship("TestLog", back_populates="test_case")
+    test_logs: Mapped[List["TestLog"]] = relationship(
+        "TestLog", 
+        back_populates="test_case",
+        cascade="all, delete-orphan"
+    )
 ```
 
 ### 3.2 测试日志模型 (TestLog)
 ```python
-from sqlalchemy import String, Text, DateTime, JSON, Integer, ForeignKey
+from sqlalchemy import String, Text, JSON, Integer, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import Optional
 
-class TestLog(Base):
+class TestLog(BaseDBModel):  # 继承自BaseDBModel，包含id、created_at、updated_at
     __tablename__ = "test_logs"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    test_case_id: Mapped[str] = mapped_column(String, ForeignKey("test_cases.id"))
+    # 关联测试用例
+    test_case_id: Mapped[str] = mapped_column(
+        String, 
+        ForeignKey("test_cases.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    # 模型信息
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    # 输入数据（执行时的实际输入，可能被用户修改过）
+    # 输入数据（执行时的实际参数，可能被用户修改过）
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     user_message: Mapped[str] = mapped_column(Text, nullable=False)
-    tools: Mapped[Optional[dict]] = mapped_column(JSON)
+    tools: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # 输出数据
-    llm_response: Mapped[Optional[str]] = mapped_column(Text)
-    response_time_ms: Mapped[Optional[int]] = mapped_column(Integer)
+    llm_response: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    response_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
-    # 执行状态 - 同步执行，只有 success 或 failed
-    status: Mapped[str] = mapped_column(String(20), default="success")  # success, failed
-    error_message: Mapped[Optional[str]] = mapped_column(Text)
-
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # 执行状态（同步执行：success 或 failed）
+    status: Mapped[str] = mapped_column(String(20), default="success", nullable=False)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # 关联测试用例
-    test_case: Mapped["TestCase"] = relationship("TestCase", back_populates="test_logs")
+    test_case: Mapped["TestCase"] = relationship(
+        "TestCase", 
+        back_populates="test_logs"
+    )
 ```
 
 ### 3.3 LLM数据解析模型
 ```python
-class LLMRawData(BaseModel):
-    """解析logfire raw data的模型"""
-    messages: List[Dict[str, str]]
-    tools: Optional[List[Dict]] = None
-    model: Optional[str] = None
-    
-class ParsedLLMData(BaseModel):
-    """解析后的LLM数据"""
-    # 原始数据（用于replay拼接）
-    original_messages: List[Dict]  # 除system prompt和最后一条user message外的其他messages
-    original_tools: Optional[List[Dict]] = None
-    original_model: str
+from pydantic import BaseModel, Field
+from typing import Dict, List, Optional
 
-    # 解析出的关键数据（用于页面展示和replay拼接）
-    system_prompt: str
-    user_message: str
+class ParsedLLMData(BaseModel):
+    """从logfire raw data解析后的LLM数据，用于服务层使用"""
+    
+    # 原始数据（用于replay拼接）
+    middle_messages: List[Dict] = Field(..., description="除system prompt和最后一条user message外的消息")
+    tools: Optional[List[Dict]] = Field(None, description="工具配置")
+    model_name: str = Field(..., description="模型名称")
+
+    # 解析出的关键数据（用于页面显示和replay拼接）
+    system_prompt: str = Field(..., description="系统提示词")
+    last_user_message: str = Field(..., description="最后一条用户消息")
 
 class TestExecutionRequest(BaseModel):
     """测试执行请求"""
@@ -180,38 +193,91 @@ class TestExecutionRequest(BaseModel):
 ### 5.1 Raw Data解析逻辑
 ```python
 def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
-    """解析logfire raw data，提取system prompt、user message和tools"""
+    """
+    解析logfire raw data，分离system prompt、最后一条user message和其他messages。
     
-    # 从http.request.body.text.messages中提取
-    messages = raw_data.get("attributes", {}).get("http.request.body.text", {}).get("messages", [])
-    tools = raw_data.get("attributes", {}).get("http.request.body.text", {}).get("tools", [])
+    实现优化的存储策略：
+    - System prompt（第一条system message）单独提取
+    - 最后一条user message单独提取  
+    - 所有其他messages存储在middle_messages中用于replay拼接
     
-    system_prompt = ""
-    user_message = ""
-    
-    for message in messages:
-        if message.get("role") == "system":
-            system_prompt = message.get("content", "")
-        elif message.get("role") == "user":
-            user_message = message.get("content", "")
-    
-    return ParsedLLMData(
-        system_prompt=system_prompt,
-        user_message=user_message,
-        tools=tools if tools else None
-    )
+    Args:
+        raw_data: 包含LLM请求的原始logfire数据
+        
+    Returns:
+        ParsedLLMData: 分离组件的解析数据
+        
+    Raises:
+        ValueError: 如果raw data格式无效
+        KeyError: 如果缺少必需字段
+    """
+    try:
+        # 从logfire数据中提取请求体
+        attributes = raw_data.get("attributes", {})
+        request_body = attributes.get("http.request.body.text", {})
+        
+        # 提取原始数据
+        all_messages = request_body.get("messages", [])
+        tools = request_body.get("tools", [])
+        model_name = request_body.get("model", "")
+        
+        # 分离system prompt和最后一条user message
+        system_prompt = ""
+        last_user_message = ""
+        middle_messages = []
+        
+        # 找到第一条system message
+        system_message_index = -1
+        for i, message in enumerate(all_messages):
+            if message.get("role") == "system":
+                system_prompt = message.get("content", "")
+                system_message_index = i
+                break
+        
+        # 找到最后一条user message
+        last_user_message_index = -1
+        for i in range(len(all_messages) - 1, -1, -1):
+            if all_messages[i].get("role") == "user":
+                last_user_message = all_messages[i].get("content", "")
+                last_user_message_index = i
+                break
+        
+        # 构建middle_messages（除了第一条system和最后一条user之外的所有消息）
+        for i, message in enumerate(all_messages):
+            if i != system_message_index and i != last_user_message_index:
+                middle_messages.append(message)
+        
+        return ParsedLLMData(
+            middle_messages=middle_messages,
+            tools=tools if tools else None,
+            model_name=model_name,
+            system_prompt=system_prompt,
+            last_user_message=last_user_message
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to parse LLM raw data: {e}")
+        raise ValueError(f"Invalid raw data format: {e}")
 ```
 
-### 5.2 LLM调用集成 - 完整Replay原始请求
+### 5.2 LLM调用集成 - 使用pydantic-ai Direct Model Requests
 ```python
-# 使用pydantic-ai的最底层用法：Direct Model Requests
+# 使用pydantic-ai的Direct Model Requests进行LLM调用
 from pydantic_ai.direct import model_request
-from pydantic_ai.messages import ModelRequest, SystemPromptPart, UserPromptPart
-from typing import Optional, List, Dict
+from pydantic_ai.messages import (
+    ModelRequest,
+    SystemPromptPart,
+    UserPromptPart,
+    ToolReturnPart,
+    TextPart,
+    ToolCallPart,
+)
+from pydantic_ai.models import ModelRequestParameters
+from src.core.llm_factory import create_llm_model
 
 async def execute_llm_test(
     model_name: str,
-    original_messages: List[Dict],  # 除system prompt和最后一条user message外的其他messages
+    middle_messages: List[Dict],  # 除system prompt和最后一条user message外的其他messages
     original_tools: Optional[List[Dict]] = None,
     # 用户可能修改的参数
     system_prompt: str = "",
@@ -230,8 +296,8 @@ async def execute_llm_test(
             "content": system_prompt
         })
 
-    # 2. 添加原始messages中的其他消息
-    replay_messages.extend(original_messages)
+    # 2. 添加middle_messages中的其他消息
+    replay_messages.extend(middle_messages)
 
     # 3. 添加user message（如果有）
     if user_message:
@@ -240,48 +306,50 @@ async def execute_llm_test(
             "content": user_message
         })
 
-    # 构建pydantic-ai的消息格式
-    pydantic_messages = []
-    current_parts = []
-
-    for message in replay_messages:
-        role = message.get("role")
-        content = message.get("content", "")
-
-        if role == "system":
-            current_parts.append(SystemPromptPart(content=content))
-        elif role == "user":
-            current_parts.append(UserPromptPart(content=content))
-        # TODO: 可以根据需要添加其他类型的消息处理（assistant、tool等）
-
-    if current_parts:
-        pydantic_messages.append(ModelRequest(parts=current_parts))
+    # 转换为pydantic-ai消息格式
+    pydantic_messages = convert_messages_to_pydantic_ai(replay_messages)
 
     # 使用修改后的tools或原始tools
     tools_to_use = modified_tools if modified_tools is not None else original_tools
-
-    # 构建model_request_parameters
+    
+    # 转换tools为pydantic-ai格式
     model_request_parameters = None
     if tools_to_use:
-        # TODO: 将tools转换为pydantic-ai的ModelRequestParameters格式
-        # 这里需要根据原始tools的格式进行转换
-        pass
+        model_request_parameters = convert_logfire_tools_to_pydantic_ai(tools_to_use)
 
-    # 直接调用模型（model_name已经是完整名称）
+    # 创建模型实例（从model_name解析provider和model）
+    provider, model = parse_model_name(model_name)
+    llm_model = create_llm_model(model, provider)
+
+    # 直接调用模型
     model_response = await model_request(
-        model=model_name,
+        model=llm_model,
         messages=pydantic_messages,
         model_request_parameters=model_request_parameters
     )
 
     # 提取响应内容
-    if model_response.parts:
-        # 获取第一个文本部分的内容
-        for part in model_response.parts:
-            if hasattr(part, 'content'):
-                return part.content
+    return extract_response_text(model_response)
 
-    return ""
+def convert_messages_to_pydantic_ai(messages: List[Dict]) -> List[ModelRequest]:
+    """将消息转换为pydantic-ai格式"""
+    # 实现消息格式转换逻辑
+    pass
+
+def convert_logfire_tools_to_pydantic_ai(tools: List[Dict]) -> ModelRequestParameters:
+    """将logfire工具格式转换为pydantic-ai ModelRequestParameters格式"""
+    # 实现工具格式转换逻辑
+    pass
+
+def parse_model_name(model_name: str) -> tuple[str, str]:
+    """解析模型名称，返回(provider, model)"""
+    # 实现模型名称解析逻辑
+    pass
+
+def extract_response_text(response) -> str:
+    """从模型响应中提取文本内容"""
+    # 实现响应文本提取逻辑
+    pass
 ```
 
 ## 6. 前端页面设计
@@ -864,39 +932,59 @@ templates = Jinja2Templates(directory="templates")
 ### 13.1 创建表的SQL脚本
 ```sql
 -- 测试用例表
-CREATE TABLE test_cases (
+CREATE TABLE IF NOT EXISTS test_cases (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    raw_data JSONB NOT NULL,
-    original_messages JSONB NOT NULL,
-    original_tools JSONB,
-    original_model VARCHAR(255) NOT NULL,
-    parsed_system_prompt TEXT NOT NULL,
-    parsed_user_message TEXT NOT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    raw_data JSONB NOT NULL,
+    middle_messages JSONB NOT NULL,
+    tools JSONB,
+    model_name VARCHAR(255) NOT NULL,
+    system_prompt TEXT NOT NULL,
+    last_user_message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- 测试日志表
-CREATE TABLE test_logs (
+CREATE TABLE IF NOT EXISTS test_logs (
     id VARCHAR(255) PRIMARY KEY,
-    test_case_id VARCHAR(255) REFERENCES test_cases(id) ON DELETE CASCADE,
+    test_case_id VARCHAR(255) NOT NULL REFERENCES test_cases(id) ON DELETE CASCADE,
     model_name VARCHAR(100) NOT NULL,
     system_prompt TEXT NOT NULL,
     user_message TEXT NOT NULL,
     tools JSONB,
     llm_response TEXT,
     response_time_ms INTEGER,
-    status VARCHAR(20) DEFAULT 'success',
+    status VARCHAR(20) DEFAULT 'success' NOT NULL,
     error_message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
--- 创建索引
-CREATE INDEX idx_test_logs_test_case_id ON test_logs(test_case_id);
-CREATE INDEX idx_test_logs_created_at ON test_logs(created_at);
-CREATE INDEX idx_test_logs_status ON test_logs(status);
+-- 创建索引以提升查询性能
+CREATE INDEX IF NOT EXISTS idx_test_cases_name ON test_cases(name);
+CREATE INDEX IF NOT EXISTS idx_test_cases_created_at ON test_cases(created_at);
+CREATE INDEX IF NOT EXISTS idx_test_logs_test_case_id ON test_logs(test_case_id);
+CREATE INDEX IF NOT EXISTS idx_test_logs_status ON test_logs(status);
+CREATE INDEX IF NOT EXISTS idx_test_logs_created_at ON test_logs(created_at);
+
+-- 注释说明
+COMMENT ON TABLE test_cases IS 'Stores LLM test cases with original and parsed data for replay';
+COMMENT ON TABLE test_logs IS 'Stores execution logs and results for LLM test runs';
+
+COMMENT ON COLUMN test_cases.raw_data IS 'Original logfire raw data for audit purposes';
+COMMENT ON COLUMN test_cases.middle_messages IS 'Messages except system prompt and last user message';
+COMMENT ON COLUMN test_cases.tools IS 'Tools definition from the request';
+COMMENT ON COLUMN test_cases.model_name IS 'Model name used in original request';
+COMMENT ON COLUMN test_cases.system_prompt IS 'Extracted system prompt for display and replay';
+COMMENT ON COLUMN test_cases.last_user_message IS 'Extracted last user message for display and replay';
+
+COMMENT ON COLUMN test_logs.system_prompt IS 'Actual system prompt used in execution (may be modified)';
+COMMENT ON COLUMN test_logs.user_message IS 'Actual user message used in execution (may be modified)';
+COMMENT ON COLUMN test_logs.tools IS 'Actual tools used in execution (may be modified)';
+COMMENT ON COLUMN test_logs.status IS 'Execution status: success or failed';
+COMMENT ON COLUMN test_logs.response_time_ms IS 'Response time in milliseconds';
 ```
 
 ### 13.2 数据库初始化脚本
@@ -1133,43 +1221,66 @@ async def init_database():
 
 ### 15.1 核心配置更新
 ```python
-# src/core/config.py 添加新的配置项
+# src/core/config.py 现有配置已包含LLM相关设置
 class Settings(BaseSettings):
     # ... 现有配置 ...
 
-    # LLM Replay System 配置
-    ai__openrouter_api_key: SecretStr = Field(default="", description="OpenRouter API Key")
-    ai__replay_default_model: str = Field(default="anthropic/claude-sonnet-4", description="默认测试模型")
+    # AI API Keys (已有配置)
+    ai__openrouter_api_key: Optional[SecretStr] = Field(
+        default=None, description="OpenRouter API key"
+    )
+    ai__anthropic_api_key: Optional[SecretStr] = Field(
+        default=None, description="Anthropic API key"
+    )
+    # ... 其他AI配置 ...
 
-    # 前端配置
-    frontend__page_size: int = Field(default=50, description="页面默认分页大小")
-    frontend__max_response_length: int = Field(default=10000, description="最大响应长度显示")
+    # 模型配置 (已有配置)
+    ai__default_model__provider: str = Field(
+        default="openrouter", description="Default model provider"
+    )
+    ai__default_model__name: str = Field(
+        default="openai/gpt-4o-mini", description="Default model name"
+    )
 
-    # 测试执行配置
-    test__execution_timeout: int = Field(default=300, description="测试执行超时时间(秒)")
-    test__max_concurrent_tests: int = Field(default=5, description="最大并发测试数")
+    # 可以添加LLM Replay System特定配置
+    # frontend__page_size: int = Field(default=50, description="页面默认分页大小")
+    # frontend__max_response_length: int = Field(default=10000, description="最大响应长度显示")
+    # test__execution_timeout: int = Field(default=300, description="测试执行超时时间(秒)")
 ```
 
 ### 15.2 路由注册
 ```python
-# src/api/v1/__init__.py 添加新路由
-from .endpoints import test_cases, test_execution, test_logs
+# 在main.py或api/router.py中注册路由
+from src.api.v1.endpoints import test_cases, test_execution, test_logs
+from src.api.pages import router as pages_router
 
-# 注册路由
-app.include_router(test_cases.router, prefix="/test-cases", tags=["test-cases"])
-app.include_router(test_execution.router, prefix="/test-execution", tags=["test-execution"])
-app.include_router(test_logs.router, prefix="/test-logs", tags=["test-logs"])
+# 注册API路由
+app.include_router(test_cases.router, prefix="/api/v1/test-cases", tags=["test-cases"])
+app.include_router(test_execution.router, prefix="/api/v1/test-execution", tags=["test-execution"])
+app.include_router(test_logs.router, prefix="/api/v1/test-logs", tags=["test-logs"])
+
+# 注册页面路由
+app.include_router(pages_router, tags=["pages"])
+
+# 静态文件服务
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory="static"), name="static")
 ```
 
 ### 15.3 页面路由
 ```python
-# src/api/v1/endpoints/pages.py - 前端页面路由
+# src/api/pages.py - 前端页面路由
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
-router = APIRouter()
+router = APIRouter(tags=["pages"])
 templates = Jinja2Templates(directory="templates")
+
+@router.get("/", response_class=HTMLResponse)
+async def home_page(request: Request):
+    """主页 - 重定向到测试用例页面"""
+    return templates.TemplateResponse("test_cases.html", {"request": request})
 
 @router.get("/test-cases", response_class=HTMLResponse)
 async def test_cases_page(request: Request):
@@ -1292,16 +1403,69 @@ class User(Base):
    - 简化接口，移除不必要的parse端点
    - 专注核心功能：CRUD + 执行 + 日志
 
-## 18. 实施总结
+## 18. 实施现状与设计对比
 
-这个技术实施文档提供了完整的系统设计和实现指南，包括：
+### 18.1 关键实现差异
+
+**数据模型字段命名变化：**
+- `original_messages` → `middle_messages` （更准确描述中间消息）
+- `original_tools` → `tools` （简化命名）
+- `original_model` → `model_name` （简化命名）
+- `parsed_system_prompt` → `system_prompt` （简化命名）
+- `parsed_user_message` → `last_user_message` （更准确描述最后一条用户消息）
+
+**服务层架构：**
+- 实际实现分离了 `llm_parser_service.py` 和 `llm_execution_service.py`
+- 移除了设计中的 `llm_replay_service.py`，功能分散到专门的服务中
+- 添加了 `test_log_service.py` 独立处理日志业务逻辑
+
+**模型继承结构：**
+- 所有模型都继承自 `BaseDBModel`，自动包含 `id`、`created_at`、`updated_at` 字段
+- 无需在每个模型中重复定义这些基础字段
+
+**LLM集成方式：**
+- 使用现有的 `llm_factory.py` 创建模型实例
+- 通过 `parse_model_name()` 函数解析模型名称和提供商
+- 完整的工具格式转换逻辑已实现
+
+### 18.2 已实现的核心功能
+
+**✅ 已完成功能：**
+- 完整的数据模型定义（TestCase、TestLog）
+- 数据库表结构和索引
+- 完整的API端点实现
+- 前端页面和JavaScript逻辑
+- LLM数据解析服务
+- LLM执行服务（使用pydantic-ai Direct Model Requests）
+- 测试用例、执行、日志的完整业务逻辑
+- 页面路由和静态文件服务
+
+**✅ 技术特性：**
+- SQLAlchemy 2.0+ 语法和类型提示
+- pydantic-ai Direct Model Requests集成
+- 分层架构设计
+- 完整的错误处理
+- 响应时间监控
+- 级联删除关系
+
+### 18.3 系统架构优势
+
+1. **优化的存储策略** - 通过分离存储system prompt、middle messages和last user message，实现高效的replay机制
+2. **类型安全** - 使用SQLAlchemy 2.0+的Mapped类型注解，提供完整的类型检查
+3. **模块化设计** - 清晰的服务层分离，每个服务专注特定功能
+4. **扩展性** - 基于现有的LLM工厂模式，易于添加新的模型提供商
+5. **可维护性** - 标准化的API设计和错误处理
+
+## 19. 实施总结
+
+这个技术实施文档现在准确反映了当前的系统实现，包括：
 
 1. **完整的架构设计** - 基于现有项目的分层架构
-2. **详细的数据模型** - 使用SQLAlchemy 2.0+语法，存储原始和解析数据
-3. **API接口设计** - 简化的RESTful API设计
+2. **详细的数据模型** - 使用SQLAlchemy 2.0+语法，准确的字段命名
+3. **API接口设计** - 与实际实现一致的RESTful API设计
 4. **前端实现** - 包含HTML模板和JavaScript逻辑
-5. **核心业务逻辑** - 使用Direct Model Requests的LLM调用
-6. **配置和部署** - 环境配置和部署指南
+5. **核心业务逻辑** - 使用pydantic-ai Direct Model Requests的LLM调用
+6. **配置和部署** - 基于现有配置系统的环境配置
 7. **开发指南** - 本地开发和测试的完整流程
 
 **核心特性：**
@@ -1312,5 +1476,6 @@ class User(Base):
 - ✅ 测试日志记录和筛选
 - ✅ 同步执行，简化状态管理
 - ✅ 使用pydantic-ai Direct Model Requests
+- ✅ 完整的错误处理和监控
 
-您可以按照这个文档逐步实现LLM测试回放系统。需要我详细解释任何部分或者开始实际的代码实现吗？
+文档现已与实际代码实现保持一致，可以作为系统维护和扩展的准确参考。

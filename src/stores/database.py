@@ -220,7 +220,7 @@ def database_session() -> Generator[Session, None, None]:
         with database_session() as db:
             user = db.query(User).filter(User.id == user_id).first()
             if user:
-                user.last_login = datetime.utcnow()
+                user.last_login = datetime.now(timezone.utc)
                 db.commit()
 
         # In service layer

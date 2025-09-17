@@ -4,7 +4,7 @@ API Health Check Endpoint
 Comprehensive health check for the replay-llm-call API.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 from fastapi import APIRouter
@@ -26,6 +26,9 @@ async def check_database_health() -> Dict[str, Any]:
 
         status = test_connection()
         return {"status": "healthy", "details": status}
+    except ImportError:
+        # Database module not available
+        return {"status": "disabled", "reason": "Database module not available"}
     except Exception as e:
         logger.warning("Database health check failed: %s", str(e))
         return {"status": "unhealthy", "error": str(e)}
@@ -39,6 +42,9 @@ async def check_redis_health() -> Dict[str, Any]:
         redis_client = await get_redis_client_async()
         health = await redis_client.health_check()
         return {"status": health.get("status", "unknown"), "details": health}
+    except ImportError:
+        # Redis module not available
+        return {"status": "disabled", "reason": "Redis module not available"}
     except Exception as e:
         logger.warning("Redis health check failed: %s", str(e))
         return {"status": "unhealthy", "error": str(e)}
@@ -61,8 +67,8 @@ async def health_check() -> HealthResponse:
 
     Checks the status of:
     - API service itself
-    - Database connection (if configured)
-    - Redis connection (if configured)
+    - Database connection (if enabled and configured)
+    - Redis connection (if enabled and configured)
 
     Returns:
         HealthResponse: Overall health status and component details
@@ -70,25 +76,29 @@ async def health_check() -> HealthResponse:
     components = {}
     overall_healthy = True
 
-    # Check database health
-    try:
-        db_health = await check_database_health()
-        components["database"] = db_health
-        if db_health["status"] != "healthy":
+    # Check database health (only if enabled in configuration)
+    if settings.health__check_database:
+        try:
+            db_health = await check_database_health()
+            components["database"] = db_health
+            # Only consider it unhealthy if it's actually unhealthy (not disabled)
+            if db_health["status"] == "unhealthy":
+                overall_healthy = False
+        except Exception as e:
+            components["database"] = {"status": "error", "error": str(e)}
             overall_healthy = False
-    except Exception as e:
-        components["database"] = {"status": "error", "error": str(e)}
-        overall_healthy = False
 
-    # Check Redis health
-    try:
-        redis_health = await check_redis_health()
-        components["redis"] = redis_health
-        if redis_health["status"] != "healthy":
+    # Check Redis health (only if enabled in configuration)
+    if settings.health__check_redis:
+        try:
+            redis_health = await check_redis_health()
+            components["redis"] = redis_health
+            # Only consider it unhealthy if it's actually unhealthy (not disabled)
+            if redis_health["status"] == "unhealthy":
+                overall_healthy = False
+        except Exception as e:
+            components["redis"] = {"status": "error", "error": str(e)}
             overall_healthy = False
-    except Exception as e:
-        components["redis"] = {"status": "error", "error": str(e)}
-        overall_healthy = False
 
     # API service is healthy if we can respond
     components["api"] = {
@@ -99,7 +109,7 @@ async def health_check() -> HealthResponse:
 
     return HealthResponse(
         status="healthy" if overall_healthy else "unhealthy",
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         version="1.0.0",
         environment=settings.environment,
         components=components,

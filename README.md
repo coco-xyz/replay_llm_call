@@ -4,6 +4,12 @@ A clean and practical AI Agent project built with Pydantic-AI + FastAPI. Ready-t
 
 > 📖 **中文文档**: [README_zh.md](README_zh.md)
 
+## 🎥 Demo Video
+
+[![Project Demo](https://img.youtube.com/vi/vGjn2LWQVB4/0.jpg)](https://youtu.be/vGjn2LWQVB4)
+
+Click the image above to watch the project demonstration video.
+
 ## Prerequisites (Environment Setup)
 - Operating System: macOS / Linux / Windows (with make installed)
 - Python: 3.11 (required - this project uses a fixed Python version)

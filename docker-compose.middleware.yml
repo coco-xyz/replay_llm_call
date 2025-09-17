@@ -20,33 +20,9 @@ services:
     networks:
       - replay_llm_call_network
 
-  # Replay LLM Call application service
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "${APP_PORT}:8080"
-    env_file:
-      - .env
-    environment:
-      # Override only Docker-specific service names (keep all other configs from .env)
-      DATABASE__URL: postgresql://replay_llm_call:replay_llm_call@postgres:5432/replay_llm_call
-    volumes:
-      - app_logs:/app/logs
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - replay_llm_call_network
-    restart: unless-stopped
-
-
 
 volumes:
   postgres_data:
-    driver: local
-  app_logs:
     driver: local
 
 networks:

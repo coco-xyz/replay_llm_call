@@ -105,6 +105,14 @@ class Settings(BaseSettings):
         default=0.1, description="Lock retry sleep interval in seconds"
     )
 
+    # Health check configuration
+    health__check_database: bool = Field(
+        default=False, description="Enable database health check"
+    )
+    health__check_redis: bool = Field(
+        default=False, description="Enable Redis health check"
+    )
+
     # AI API Keys (secured with SecretStr)
     ai__openai_api_key: Optional[SecretStr] = Field(
         default=None, description="OpenAI API key"

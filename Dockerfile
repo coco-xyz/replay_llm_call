@@ -95,8 +95,9 @@ COPY --chown=appuser:appuser static/ ./static/
 COPY --chown=appuser:appuser templates/ ./templates/
 COPY --chown=appuser:appuser main.py ./
 
-# Copy init scripts (optional directory)
-COPY --chown=appuser:appuser initdb/ ./initdb/
+# Copy migrations and scripts
+COPY --chown=appuser:appuser migrations/ ./migrations/
+COPY --chown=appuser:appuser scripts/ ./scripts/
 
 # Create runtime directories with proper permissions
 # Note: We create empty directories instead of copying existing logs

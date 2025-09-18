@@ -6,7 +6,7 @@ Data model for LLM test cases in the replay system.
 
 from typing import List, Optional
 
-from sqlalchemy import JSON, String, Text
+from sqlalchemy import JSON, String, Text, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseDBModel
@@ -36,6 +36,7 @@ class TestCase(BaseDBModel):
     middle_messages: Mapped[List[dict]] = mapped_column(JSON, nullable=False)
     tools: Mapped[Optional[List[dict]]] = mapped_column(JSON, nullable=True)
     model_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    temperature: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Parsed key components for display and replay
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)

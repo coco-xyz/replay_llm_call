@@ -102,6 +102,14 @@ function populateExecutionParameters(testCase) {
     document.getElementById('systemPrompt').value = testCase.system_prompt;
     document.getElementById('userMessage').value = testCase.last_user_message;
 
+    // Populate temperature
+    const temperatureInput = document.getElementById('temperature');
+    if (testCase.temperature !== null && testCase.temperature !== undefined) {
+        temperatureInput.value = testCase.temperature;
+    } else {
+        temperatureInput.value = '';
+    }
+
     // Populate tools
     currentTools = testCase.tools ? JSON.parse(JSON.stringify(testCase.tools)) : [];
     displayTools();
@@ -111,6 +119,7 @@ function clearSelection() {
     currentTestCase = null;
     document.getElementById('testCaseSelect').value = '';
     document.getElementById('modelName').value = '';
+    document.getElementById('temperature').value = '';
     document.getElementById('systemPrompt').value = '';
     document.getElementById('userMessage').value = '';
 
@@ -144,6 +153,7 @@ async function executeTest() {
     const modelName = document.getElementById('modelName').value.trim();
     const systemPrompt = document.getElementById('systemPrompt').value.trim();
     const userMessage = document.getElementById('userMessage').value.trim();
+    const temperature = document.getElementById('temperature').value.trim();
 
     if (!modelName) {
         showAlert('Please specify a model name', 'warning');
@@ -158,6 +168,7 @@ async function executeTest() {
             modified_model_name: modelName || null,
             modified_system_prompt: systemPrompt || null,
             modified_last_user_message: userMessage || null,
+            modified_temperature: temperature ? parseFloat(temperature) : null,
             modified_tools: currentTools.length > 0 ? currentTools : null
         };
 

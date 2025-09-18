@@ -3,9 +3,9 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: replay_llm_call
-      POSTGRES_USER: replay_llm_call
-      POSTGRES_PASSWORD: replay_llm_call
+      POSTGRES_DB: ${POSTGRES_DB:-replay_llm_call}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       # POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "${DB_PORT}:5432"
@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U replay_llm_call -d replay_llm_call"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-replay_llm_call}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,7 +31,7 @@ services:
       - .env
     environment:
       # Override only Docker-specific service names (keep all other configs from .env)
-      DATABASE__URL: postgresql://replay_llm_call:replay_llm_call@postgres:5432/replay_llm_call
+      DATABASE__URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-replay_llm_call}
     volumes:
       - app_logs:/app/logs
     depends_on:

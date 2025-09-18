@@ -20,7 +20,7 @@ from pydantic_ai.messages import (
 )
 
 from pydantic_ai.models import ModelRequestParameters
-from pydantic_ai import ToolDefinition
+from pydantic_ai import ToolDefinition, ModelSettings
 
 from src.core.logger import get_logger
 from src.core.llm_factory import create_llm_model
@@ -77,7 +77,8 @@ async def execute_llm_test(
     system_prompt: str = "",
     user_message: str = "",
     original_tools: Optional[List[Dict]] = None,
-    modified_tools: Optional[List[Dict]] = None
+    modified_tools: Optional[List[Dict]] = None,
+    temperature: Optional[float] = None
 ) -> str:
     """
     Execute LLM test using Direct Model Requests with concatenation replay strategy.
@@ -94,6 +95,7 @@ async def execute_llm_test(
         user_message: User message to use (may be modified by user)
         original_tools: Original tools from the request
         modified_tools: Modified tools (if None, use original_tools)
+        temperature: Temperature parameter for model (if None, uses model default)
 
     Returns:
         str: LLM response content
@@ -186,11 +188,18 @@ async def execute_llm_test(
                 # Proceed without tools if conversion fails
                 model_request_parameters = None
 
+        # Create model settings if temperature is provided
+        model_settings = None
+        if temperature is not None:
+            model_settings = ModelSettings(temperature=temperature)
+            logger.debug(f"Using temperature: {temperature}")
+
         # Execute the direct model request
         logger.debug(f"Calling model: {model_name}")
         model_response = await model_request(
             model=create_llm_model(model_name, "openrouter"),
             messages=pydantic_messages,
+            model_settings=model_settings,
             model_request_parameters=model_request_parameters
         )
 

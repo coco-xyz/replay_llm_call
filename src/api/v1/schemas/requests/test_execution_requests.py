@@ -18,3 +18,4 @@ class TestExecutionRequest(BaseModel):
     modified_system_prompt: Optional[str] = Field(None, description="Override system prompt")
     modified_last_user_message: Optional[str] = Field(None, description="Override user message")
     modified_tools: Optional[List[Dict]] = Field(None, description="Override tools configuration")
+    modified_temperature: Optional[float] = Field(None, description="Override temperature parameter")

@@ -18,6 +18,7 @@ class ParsedLLMData(BaseModel):
     middle_messages: List[Dict] = Field(..., description="Messages except system prompt and last user message")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration")
     model_name: str = Field(..., description="Model name")
+    temperature: Optional[float] = Field(None, description="Temperature parameter for model")
 
     # Parsed key data (used for page display and replay concatenation)
     system_prompt: str = Field(..., description="System prompt")
@@ -58,6 +59,7 @@ def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
         all_messages = request_body.get("messages", [])
         tools = request_body.get("tools", [])
         model_name = request_body.get("model", "")
+        temperature = request_body.get("temperature")
 
         if not all_messages:
             raise ValueError("No messages found in request body")
@@ -96,13 +98,15 @@ def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
             f"Parsed data: system_prompt={len(system_prompt)} chars, "
             f"last_user_message={len(last_user_message)} chars, "
             f"middle_messages={len(middle_messages)} items, "
-            f"tools={len(tools) if tools else 0} items"
+            f"tools={len(tools) if tools else 0} items, "
+            f"temperature={temperature}"
         )
 
         return ParsedLLMData(
             middle_messages=middle_messages,
             tools=tools if tools else None,
             model_name=model_name,
+            temperature=temperature,
             system_prompt=system_prompt,
             last_user_message=last_user_message
         )

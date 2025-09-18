@@ -20,6 +20,7 @@ class TestCaseResponse(BaseModel):
     middle_messages: List[Dict] = Field(..., description="Middle messages for replay")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration")
     model_name: str = Field(..., description="Model name")
+    temperature: Optional[float] = Field(None, description="Temperature parameter")
     system_prompt: str = Field(..., description="System prompt")
     last_user_message: str = Field(..., description="Last user message")
     created_at: datetime = Field(..., description="Creation timestamp")

@@ -14,6 +14,7 @@ def convert_test_log_data_to_response(data: TestLogData) -> TestLogResponse:
         id=data.id,
         test_case_id=data.test_case_id,
         model_name=data.model_name,
+        temperature=data.temperature,
         system_prompt=data.system_prompt,
         user_message=data.user_message,
         tools=data.tools,

@@ -447,6 +447,14 @@
                                         <td>Updated At:</td>
                                         <td>${formatDate(testCase.updated_at)}</td>
                                     </tr>
+                                    <tr>
+                                        <td>Model Name:</td>
+                                        <td><code>${escapeHtml(testCase.model_name)}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Temperature:</td>
+                                        <td>${testCase.temperature !== null && testCase.temperature !== undefined ? `<span class="badge bg-info">${testCase.temperature}</span>` : '<span class="text-muted">Not specified</span>'}</td>
+                                    </tr>
                                 </table>
                             </div>
                         </div>

@@ -12,10 +12,11 @@ from pydantic import BaseModel, Field
 
 class TestLogResponse(BaseModel):
     """Response model for test log data."""
-    
+
     id: str = Field(..., description="Test log ID")
     test_case_id: str = Field(..., description="Associated test case ID")
     model_name: str = Field(..., description="Model used for execution")
+    temperature: Optional[float] = Field(None, description="Temperature parameter used")
     system_prompt: str = Field(..., description="System prompt used")
     user_message: str = Field(..., description="User message used")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration used")

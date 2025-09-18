@@ -6,7 +6,7 @@ Data model for LLM test execution logs in the replay system.
 
 from typing import Optional
 
-from sqlalchemy import ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Float, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseDBModel
@@ -31,7 +31,8 @@ class TestLog(BaseDBModel):
     
     # Model information
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    
+    temperature: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
     # Input data (actual parameters used in execution, may be modified by user)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     user_message: Mapped[str] = mapped_column(Text, nullable=False)

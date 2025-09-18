@@ -39,6 +39,7 @@ def convert_test_case_data_to_response(data: TestCaseData) -> TestCaseResponse:
         middle_messages=data.middle_messages,
         tools=data.tools,
         model_name=data.model_name,
+        temperature=data.temperature,
         system_prompt=data.system_prompt,
         last_user_message=data.last_user_message,
         created_at=data.created_at,

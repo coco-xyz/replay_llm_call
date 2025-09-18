@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const testCaseId = urlParams.get('testCaseId');
 
     if (logId) {
-        setTimeout(() => viewLog(logId), 1000);
+        setTimeout(() => viewLogInNewPage(logId), 1000);
     } else if (testCaseId) {
         setTimeout(() => {
             document.getElementById('testCaseFilter').value = testCaseId;
@@ -161,7 +161,7 @@ function displayTestLogs(logs) {
             </td>
             <td>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewLog('${log.id}')" title="View Details">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewLogInNewPage('${log.id}')" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="reExecuteTest('${log.test_case_id}')" title="Re-execute">
@@ -179,6 +179,12 @@ function displayTestLogs(logs) {
     container.innerHTML = html;
 }
 
+// Function to open log in new page
+function viewLogInNewPage(logId) {
+    window.open(`/test-logs/${logId}`, '_blank');
+}
+
+// Keep the original viewLog function for backward compatibility (if needed)
 async function viewLog(logId) {
     try {
         // Ensure test cases data is loaded
@@ -252,7 +258,7 @@ async function viewLog(logId) {
                     ` : '<h6>Tools</h6><p class="text-muted">No tools used</p>'}
             </div>
         </div>
-            
+
             ${log.error_message ? `
                 <div class="row mt-3">
                     <div class="col-12">
@@ -264,7 +270,7 @@ async function viewLog(logId) {
                 </div>
             ` : ''
             }
-            
+
             ${log.llm_response ? `
                 <div class="row mt-3">
                     <div class="col-12">

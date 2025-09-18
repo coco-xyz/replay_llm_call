@@ -147,11 +147,6 @@ function displayTestLogs(logs) {
                 <span class="badge bg-primary">${escapeHtml(log.model_name)}</span>
             </td>
             <td>
-                ${log.model_settings !== null && log.model_settings !== undefined ?
-                `<span class="badge bg-info" title="${JSON.stringify(log.model_settings)}">JSON</span>` :
-                '<span class="text-muted">-</span>'}
-            </td>
-            <td>
                 <span class="badge ${log.status === 'success' ? 'bg-success' : 'bg-danger'}">
                     <i class="fas fa-${log.status === 'success' ? 'check-circle' : 'times-circle'} me-1"></i>
                     ${log.status.toUpperCase()}

@@ -359,12 +359,26 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="modelSettings" class="form-label">Model Settings</label>
-                            <textarea class="form-control" id="modelSettings" rows="4"
-                                placeholder='{"temperature": 0.7, "max_tokens": 1000}'></textarea>
-                            <small class="text-muted">JSON format. Common settings: temperature (0.0-2.0), max_tokens
-                                (mapped from max_completion_tokens),
-                                top_p, seed, etc. Leave empty for model defaults.</small>
+                            <div class="d-flex align-items-center mb-2">
+                                <button class="btn btn-link text-decoration-none p-0 text-muted" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#modelSettingsCollapse"
+                                    aria-expanded="false" aria-controls="modelSettingsCollapse">
+                                    <i class="fas fa-chevron-right me-1" id="modelSettingsChevron"
+                                        style="font-size: 0.8em;"></i>
+                                    <span style="font-size: 0.9em;">Model Settings (Optional)</span>
+                                </button>
+                            </div>
+                            <div class="collapse" id="modelSettingsCollapse">
+                                <div class="ms-3">
+                                    <textarea class="form-control" id="modelSettings" rows="4"
+                                        placeholder='{"temperature": 0.7, "max_tokens": 1000}'></textarea>
+                                    <small class="text-muted mt-1 d-block">
+                                        <strong>Supported:</strong> temperature, max_tokens, top_p, parallel_tool_calls,
+                                        seed, presence_penalty, frequency_penalty.
+                                        Note: parallel_tool_calls is boolean, others are float.
+                                    </small>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -478,6 +492,19 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/test-execution.js"></script>
+
+    <script>
+        // Handle Model Settings collapse icon rotation
+        document.getElementById('modelSettingsCollapse').addEventListener('show.bs.collapse', function () {
+            document.getElementById('modelSettingsChevron').classList.remove('fa-chevron-right');
+            document.getElementById('modelSettingsChevron').classList.add('fa-chevron-down');
+        });
+
+        document.getElementById('modelSettingsCollapse').addEventListener('hide.bs.collapse', function () {
+            document.getElementById('modelSettingsChevron').classList.remove('fa-chevron-down');
+            document.getElementById('modelSettingsChevron').classList.add('fa-chevron-right');
+        });
+    </script>
 </body>
 
 </html>

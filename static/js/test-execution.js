@@ -104,10 +104,17 @@ function populateExecutionParameters(testCase) {
 
     // Populate model settings
     const modelSettingsInput = document.getElementById('modelSettings');
+    const modelSettingsCollapse = document.getElementById('modelSettingsCollapse');
+
     if (testCase.model_settings !== null && testCase.model_settings !== undefined) {
         modelSettingsInput.value = JSON.stringify(testCase.model_settings, null, 2);
+        // Auto-expand if there are model settings
+        if (!modelSettingsCollapse.classList.contains('show')) {
+            const bsCollapse = new bootstrap.Collapse(modelSettingsCollapse, { show: true });
+        }
     } else {
         modelSettingsInput.value = '';
+        // Keep collapsed if no model settings
     }
 
     // Populate tools

@@ -343,9 +343,9 @@ function resetToOriginal() {
 
 function viewTestLogs() {
     if (currentTestCase) {
-        window.location.href = `/test-logs?testCaseId=${currentTestCase.id}`;
+        window.open(`/test-logs?testCaseId=${currentTestCase.id}`, '_blank');
     } else {
-        window.location.href = '/test-logs';
+        window.open('/test-logs', '_blank');
     }
 }
 

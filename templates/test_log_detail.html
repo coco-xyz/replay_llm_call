@@ -436,20 +436,25 @@
                                         <td>${escapeHtml(log.model_name)}</td>
                                     </tr>
                                     <tr>
-                                        <td>Model Settings:</td>
-                                        <td>${log.model_settings !== null && log.model_settings !== undefined ? `<pre class="bg-light p-2 rounded"><code>${JSON.stringify(log.model_settings, null, 2)}</code></pre>` : '<span class="text-muted">Not specified</span>'}</td>
-                                    </tr>
-                                    <tr>
                                         <td>Response Time:</td>
                                         <td><strong>${log.response_time_ms}ms</strong></td>
                                     </tr>
                                     <tr>
                                         <td>Test Case:</td>
                                         <td>
-                                            <a href="/test-cases?id=${log.test_case_id}" class="text-decoration-none" target="_blank">
-                                                ${escapeHtml(testCase?.name || log.test_case_id)}
-                                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                                            </a>
+                                            <div>
+                                                <a href="/test-cases/${log.test_case_id}" class="text-decoration-none" target="_blank">
+                                                    ${escapeHtml(testCase?.name || log.test_case_id)}
+                                                    <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                                                </a>
+                                            </div>
+                                            ${testCase?.description ? `
+                                                <div class="text-muted mt-1" style="font-size: 0.9em;">
+                                                    <span title="${escapeHtml(testCase.description)}" style="cursor: help;">
+                                                        ${truncateText(testCase.description, 100)}
+                                                    </span>
+                                                </div>
+                                            ` : ''}
                                         </td>
                                     </tr>
                                     <tr>
@@ -459,6 +464,8 @@
                                 </table>
                             </div>
                         </div>
+
+
 
                         <!-- System Prompt -->
                         <div class="card mb-4">
@@ -513,6 +520,29 @@
                                 </div>
                             </div>
                         `}
+
+                        <!-- Model Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <div class="d-flex align-items-center">
+                                    <button class="btn btn-link text-decoration-none p-0 text-muted" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#modelSettingsCollapse"
+                                        aria-expanded="false" aria-controls="modelSettingsCollapse">
+                                        <i class="fas fa-chevron-right me-1" id="modelSettingsChevron"
+                                            style="font-size: 0.8em;"></i>
+                                        <span style="font-size: 0.9em;">Model Settings</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse" id="modelSettingsCollapse">
+                                <div class="card-body">
+                                    ${log.model_settings !== null && log.model_settings !== undefined ?
+                    `<pre class="bg-light p-3 rounded mb-0"><code>${JSON.stringify(log.model_settings, null, 2)}</code></pre>` :
+                    '<p class="text-muted mb-0">No model settings specified</p>'
+                }
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Tools Configuration -->
                         ${log.tools && log.tools.length > 0 ? `
@@ -577,6 +607,32 @@
             document.getElementById('logDetailsContent').innerHTML = detailsHtml;
             document.getElementById('logDetailsContent').classList.remove('d-none');
             document.getElementById('actionButtons').classList.remove('d-none');
+
+            // Setup Model Settings collapse handlers
+            setupModelSettingsCollapse(log);
+        }
+
+        function setupModelSettingsCollapse(log) {
+            const modelSettingsCollapse = document.getElementById('modelSettingsCollapse');
+            const modelSettingsChevron = document.getElementById('modelSettingsChevron');
+
+            if (!modelSettingsCollapse || !modelSettingsChevron) return;
+
+            // Handle chevron icon rotation
+            modelSettingsCollapse.addEventListener('show.bs.collapse', function () {
+                modelSettingsChevron.classList.remove('fa-chevron-right');
+                modelSettingsChevron.classList.add('fa-chevron-down');
+            });
+
+            modelSettingsCollapse.addEventListener('hide.bs.collapse', function () {
+                modelSettingsChevron.classList.remove('fa-chevron-down');
+                modelSettingsChevron.classList.add('fa-chevron-right');
+            });
+
+            // Auto-expand if there are model settings
+            if (log.model_settings !== null && log.model_settings !== undefined) {
+                const bsCollapse = new bootstrap.Collapse(modelSettingsCollapse, { show: true });
+            }
         }
 
         // Helper functions
@@ -603,6 +659,12 @@
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            if (text.length <= maxLength) return escapeHtml(text);
+            return escapeHtml(text.substring(0, maxLength)) + '...';
         }
 
         async function copyToClipboard(elementId, buttonElement) {

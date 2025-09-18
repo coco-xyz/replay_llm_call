@@ -213,10 +213,19 @@ async function viewLog(logId) {
                         <tr><td><strong>Model:</strong></td><td>${escapeHtml(log.model_name)}</td></tr>
                         <tr><td><strong>Response Time:</strong></td><td>${log.response_time_ms}ms</td></tr>
                         <tr><td><strong>Test Case:</strong></td><td>
-                            <a href="/test-cases?id=${log.test_case_id}" class="text-decoration-none" target="_blank">
-                                ${escapeHtml(findTestCaseById(log.test_case_id)?.name || log.test_case_id)}
-                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                            </a>
+                            <div>
+                                <a href="/test-cases/${log.test_case_id}" class="text-decoration-none" target="_blank">
+                                    ${escapeHtml(findTestCaseById(log.test_case_id)?.name || log.test_case_id)}
+                                    <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                                </a>
+                            </div>
+                            ${findTestCaseById(log.test_case_id)?.description ? `
+                                <div class="text-muted mt-1" style="font-size: 0.9em;">
+                                    <span title="${escapeHtml(findTestCaseById(log.test_case_id).description)}" style="cursor: help;">
+                                        ${truncateText(findTestCaseById(log.test_case_id).description, 100)}
+                                    </span>
+                                </div>
+                            ` : ''}
                         </td></tr>
                         <tr><td><strong>Executed At:</strong></td><td>${formatDate(log.created_at)}</td></tr>
                     </table>
@@ -433,8 +442,8 @@ function escapeHtml(text) {
 
 function truncateText(text, maxLength) {
     if (!text) return '';
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    if (text.length <= maxLength) return escapeHtml(text);
+    return escapeHtml(text.substring(0, maxLength)) + '...';
 }
 
 function formatDate(dateString) {

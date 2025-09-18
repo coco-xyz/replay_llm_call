@@ -285,9 +285,9 @@ function displayExecutionResult(result) {
         ` : ''}
 
         ${result.llm_response ? `
-            <div>
+            <div class="llm-response-container">
                 <h6 class="mb-2">LLM Response</h6>
-                <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.9em; white-space: pre-wrap;">${escapeHtml(result.llm_response)}</div>
+                <div class="llm-response-content">${escapeHtml(result.llm_response)}</div>
             </div>
         ` : ''}
     `;

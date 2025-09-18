@@ -321,7 +321,7 @@ function viewTestLogs() {
 }
 
 function viewTestLog(logId) {
-    window.location.href = `/test-logs?logId=${logId}`;
+    window.open(`/test-logs/${logId}`, '_blank');
 }
 
 // Utility functions

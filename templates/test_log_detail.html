@@ -458,21 +458,31 @@
 
                         <!-- System Prompt -->
                         <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-terminal me-2"></i>System Prompt
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas fa-terminal me-2"></i>System Prompt
+                                </span>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('systemPromptContent', this)" title="Copy System Prompt">
+                                    <i class="fas fa-copy"></i>
+                                </button>
                             </div>
                             <div class="card-body">
-                                <div class="code-block">${escapeHtml(log.system_prompt)}</div>
+                                <div class="code-block" id="systemPromptContent">${escapeHtml(log.system_prompt)}</div>
                             </div>
                         </div>
 
                         <!-- User Message -->
                         <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-comment me-2"></i>User Message
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas fa-comment me-2"></i>User Message
+                                </span>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('userMessageContent', this)" title="Copy User Message">
+                                    <i class="fas fa-copy"></i>
+                                </button>
                             </div>
                             <div class="card-body">
-                                <div class="code-block">${escapeHtml(log.user_message)}</div>
+                                <div class="code-block" id="userMessageContent">${escapeHtml(log.user_message)}</div>
                             </div>
                         </div>
                     </div>
@@ -589,6 +599,57 @@
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        async function copyToClipboard(elementId, buttonElement) {
+            try {
+                const element = document.getElementById(elementId);
+                if (!element) {
+                    console.error('Element not found:', elementId);
+                    return;
+                }
+
+                // Get the text content (without HTML tags)
+                const textToCopy = element.textContent || element.innerText;
+
+                // Use the modern clipboard API
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(textToCopy);
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textToCopy;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    document.execCommand('copy');
+                    textArea.remove();
+                }
+
+                // Visual feedback
+                const originalIcon = buttonElement.innerHTML;
+                buttonElement.innerHTML = '<i class="fas fa-check text-success"></i>';
+                buttonElement.disabled = true;
+
+                setTimeout(() => {
+                    buttonElement.innerHTML = originalIcon;
+                    buttonElement.disabled = false;
+                }, 1500);
+
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+
+                // Show error feedback
+                const originalIcon = buttonElement.innerHTML;
+                buttonElement.innerHTML = '<i class="fas fa-times text-danger"></i>';
+
+                setTimeout(() => {
+                    buttonElement.innerHTML = originalIcon;
+                }, 1500);
+            }
         }
 
         function reExecuteTest() {

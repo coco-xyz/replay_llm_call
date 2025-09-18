@@ -39,7 +39,6 @@ CREATE TABLE IF NOT EXISTS test_logs (
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_test_cases_name ON test_cases(name);
 CREATE INDEX IF NOT EXISTS idx_test_cases_created_at ON test_cases(created_at);
-CREATE INDEX IF NOT EXISTS idx_test_cases_temperature ON test_cases(temperature);
 CREATE INDEX IF NOT EXISTS idx_test_logs_test_case_id ON test_logs(test_case_id);
 CREATE INDEX IF NOT EXISTS idx_test_logs_status ON test_logs(status);
 CREATE INDEX IF NOT EXISTS idx_test_logs_created_at ON test_logs(created_at);

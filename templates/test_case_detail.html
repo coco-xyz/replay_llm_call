@@ -452,8 +452,8 @@
                                         <td><code>${escapeHtml(testCase.model_name)}</code></td>
                                     </tr>
                                     <tr>
-                                        <td>Temperature:</td>
-                                        <td>${testCase.temperature !== null && testCase.temperature !== undefined ? `<span class="badge bg-info">${testCase.temperature}</span>` : '<span class="text-muted">Not specified</span>'}</td>
+                                        <td>Model Settings:</td>
+                                        <td>${testCase.model_settings !== null && testCase.model_settings !== undefined ? `<pre class="bg-light p-2 rounded"><code>${JSON.stringify(testCase.model_settings, null, 2)}</code></pre>` : '<span class="text-muted">Not specified</span>'}</td>
                                     </tr>
                                 </table>
                             </div>

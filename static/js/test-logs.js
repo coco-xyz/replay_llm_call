@@ -147,8 +147,8 @@ function displayTestLogs(logs) {
                 <span class="badge bg-primary">${escapeHtml(log.model_name)}</span>
             </td>
             <td>
-                ${log.temperature !== null && log.temperature !== undefined ?
-                `<span class="badge bg-info">${log.temperature}</span>` :
+                ${log.model_settings !== null && log.model_settings !== undefined ?
+                `<span class="badge bg-info" title="${JSON.stringify(log.model_settings)}">JSON</span>` :
                 '<span class="text-muted">-</span>'}
             </td>
             <td>

@@ -36,7 +36,7 @@ class TestCase(BaseDBModel):
     middle_messages: Mapped[List[dict]] = mapped_column(JSON, nullable=False)
     tools: Mapped[Optional[List[dict]]] = mapped_column(JSON, nullable=True)
     model_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    temperature: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    model_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Parsed key components for display and replay
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)

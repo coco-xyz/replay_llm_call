@@ -31,7 +31,7 @@ class TestLog(BaseDBModel):
     
     # Model information
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    temperature: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    model_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Input data (actual parameters used in execution, may be modified by user)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)

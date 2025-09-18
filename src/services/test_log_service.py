@@ -19,7 +19,7 @@ class TestLogData(BaseModel):
     id: str = Field(..., description="Test log ID")
     test_case_id: str = Field(..., description="Associated test case ID")
     model_name: str = Field(..., description="Model used for execution")
-    temperature: Optional[float] = Field(None, description="Temperature parameter used")
+    model_settings: Optional[Dict] = Field(None, description="Model settings JSON used for execution")
     system_prompt: str = Field(..., description="System prompt used")
     user_message: str = Field(..., description="User message used")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration used")
@@ -63,7 +63,7 @@ class TestLogService:
                 id=test_log.id,
                 test_case_id=test_log.test_case_id,
                 model_name=test_log.model_name,
-                temperature=test_log.temperature,
+                model_settings=test_log.model_settings,
                 system_prompt=test_log.system_prompt,
                 user_message=test_log.user_message,
                 tools=test_log.tools,
@@ -107,7 +107,7 @@ class TestLogService:
                     id=log.id,
                     test_case_id=log.test_case_id,
                     model_name=log.model_name,
-                    temperature=log.temperature,
+                    model_settings=log.model_settings,
                     system_prompt=log.system_prompt,
                     user_message=log.user_message,
                     tools=log.tools,
@@ -143,7 +143,7 @@ class TestLogService:
                     id=log.id,
                     test_case_id=log.test_case_id,
                     model_name=log.model_name,
-                    temperature=log.temperature,
+                    model_settings=log.model_settings,
                     system_prompt=log.system_prompt,
                     user_message=log.user_message,
                     tools=log.tools,
@@ -189,7 +189,7 @@ class TestLogService:
                     id=log.id,
                     test_case_id=log.test_case_id,
                     model_name=log.model_name,
-                    temperature=log.temperature,
+                    model_settings=log.model_settings,
                     system_prompt=log.system_prompt,
                     user_message=log.user_message,
                     tools=log.tools,
@@ -264,7 +264,7 @@ class TestLogService:
                     id=log.id,
                     test_case_id=log.test_case_id,
                     model_name=log.model_name,
-                    temperature=log.temperature,
+                    model_settings=log.model_settings,
                     system_prompt=log.system_prompt,
                     user_message=log.user_message,
                     tools=log.tools,

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS test_cases (
     middle_messages JSONB NOT NULL,
     tools JSONB,
     model_name VARCHAR(255) NOT NULL,
-    temperature FLOAT,
+    model_settings JSONB,
     system_prompt TEXT NOT NULL,
     last_user_message TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS test_logs (
     id VARCHAR(255) PRIMARY KEY,
     test_case_id VARCHAR(255) NOT NULL REFERENCES test_cases(id) ON DELETE CASCADE,
     model_name VARCHAR(100) NOT NULL,
-    temperature FLOAT,
+    model_settings JSONB,
     system_prompt TEXT NOT NULL,
     user_message TEXT NOT NULL,
     tools JSONB,
@@ -52,13 +52,13 @@ COMMENT ON COLUMN test_cases.raw_data IS 'Original logfire raw data for audit pu
 COMMENT ON COLUMN test_cases.middle_messages IS 'Messages except system prompt and last user message';
 COMMENT ON COLUMN test_cases.tools IS 'Tools definition from the request';
 COMMENT ON COLUMN test_cases.model_name IS 'Model name used in original request';
-COMMENT ON COLUMN test_cases.temperature IS 'Temperature parameter from original LLM request (0.0-1.0 range)';
+COMMENT ON COLUMN test_cases.model_settings IS 'Model settings JSON (temperature, max_tokens, top_p, etc.) from original LLM request';
 COMMENT ON COLUMN test_cases.system_prompt IS 'Extracted system prompt for display and replay';
 COMMENT ON COLUMN test_cases.last_user_message IS 'Extracted last user message for display and replay';
 
 COMMENT ON COLUMN test_logs.system_prompt IS 'Actual system prompt used in execution (may be modified)';
 COMMENT ON COLUMN test_logs.user_message IS 'Actual user message used in execution (may be modified)';
-COMMENT ON COLUMN test_logs.temperature IS 'Actual temperature parameter used in execution (may be modified)';
+COMMENT ON COLUMN test_logs.model_settings IS 'Model settings JSON (temperature, max_tokens, top_p, etc.) used during execution (may be modified)';
 COMMENT ON COLUMN test_logs.tools IS 'Actual tools used in execution (may be modified)';
 COMMENT ON COLUMN test_logs.status IS 'Execution status: success or failed';
 COMMENT ON COLUMN test_logs.response_time_ms IS 'Response time in milliseconds';

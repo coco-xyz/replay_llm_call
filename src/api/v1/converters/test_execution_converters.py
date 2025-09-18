@@ -17,7 +17,7 @@ def convert_test_execution_request(request: TestExecutionRequest) -> TestExecuti
         modified_system_prompt=request.modified_system_prompt,
         modified_last_user_message=request.modified_last_user_message,
         modified_tools=request.modified_tools,
-        modified_temperature=request.modified_temperature
+        modified_model_settings=request.modified_model_settings
     )
 
 

@@ -16,7 +16,7 @@ class TestLogResponse(BaseModel):
     id: str = Field(..., description="Test log ID")
     test_case_id: str = Field(..., description="Associated test case ID")
     model_name: str = Field(..., description="Model used for execution")
-    temperature: Optional[float] = Field(None, description="Temperature parameter used")
+    model_settings: Optional[Dict] = Field(None, description="Model settings JSON used for execution")
     system_prompt: str = Field(..., description="System prompt used")
     user_message: str = Field(..., description="User message used")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration used")

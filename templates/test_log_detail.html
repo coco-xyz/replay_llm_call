@@ -436,8 +436,8 @@
                                         <td>${escapeHtml(log.model_name)}</td>
                                     </tr>
                                     <tr>
-                                        <td>Temperature:</td>
-                                        <td>${log.temperature !== null && log.temperature !== undefined ? `<span class="badge bg-info">${log.temperature}</span>` : '<span class="text-muted">Not specified</span>'}</td>
+                                        <td>Model Settings:</td>
+                                        <td>${log.model_settings !== null && log.model_settings !== undefined ? `<pre class="bg-light p-2 rounded"><code>${JSON.stringify(log.model_settings, null, 2)}</code></pre>` : '<span class="text-muted">Not specified</span>'}</td>
                                     </tr>
                                     <tr>
                                         <td>Response Time:</td>

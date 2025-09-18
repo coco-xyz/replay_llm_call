@@ -78,7 +78,7 @@ async def execute_llm_test(
     user_message: str = "",
     original_tools: Optional[List[Dict]] = None,
     modified_tools: Optional[List[Dict]] = None,
-    temperature: Optional[float] = None
+    model_settings: Optional[Dict] = None
 ) -> str:
     """
     Execute LLM test using Direct Model Requests with concatenation replay strategy.
@@ -95,7 +95,7 @@ async def execute_llm_test(
         user_message: User message to use (may be modified by user)
         original_tools: Original tools from the request
         modified_tools: Modified tools (if None, use original_tools)
-        temperature: Temperature parameter for model (if None, uses model default)
+        model_settings: Model settings dict (temperature, max_tokens, etc.)
 
     Returns:
         str: LLM response content
@@ -188,18 +188,18 @@ async def execute_llm_test(
                 # Proceed without tools if conversion fails
                 model_request_parameters = None
 
-        # Create model settings if temperature is provided
-        model_settings = None
-        if temperature is not None:
-            model_settings = ModelSettings(temperature=temperature)
-            logger.debug(f"Using temperature: {temperature}")
+        # Create model settings if provided
+        pydantic_model_settings = None
+        if model_settings is not None:
+            pydantic_model_settings = ModelSettings(**model_settings)
+            logger.debug(f"Using model settings: {model_settings}")
 
         # Execute the direct model request
         logger.debug(f"Calling model: {model_name}")
         model_response = await model_request(
             model=create_llm_model(model_name, "openrouter"),
             messages=pydantic_messages,
-            model_settings=model_settings,
+            model_settings=pydantic_model_settings,
             model_request_parameters=model_request_parameters
         )
 

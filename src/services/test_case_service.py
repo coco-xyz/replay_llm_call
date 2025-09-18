@@ -43,7 +43,7 @@ class TestCaseData(BaseModel):
     middle_messages: List[Dict] = Field(..., description="Middle messages for replay")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration")
     model_name: str = Field(..., description="Model name")
-    temperature: Optional[float] = Field(None, description="Temperature parameter")
+    model_settings: Optional[Dict] = Field(None, description="Model settings JSON")
     system_prompt: str = Field(..., description="System prompt")
     last_user_message: str = Field(..., description="Last user message")
     created_at: datetime = Field(..., description="Creation timestamp")
@@ -92,7 +92,7 @@ class TestCaseService:
                 middle_messages=parsed_data.middle_messages,
                 tools=parsed_data.tools,
                 model_name=parsed_data.model_name,
-                temperature=parsed_data.temperature,
+                model_settings=parsed_data.model_settings,
                 system_prompt=parsed_data.system_prompt,
                 last_user_message=parsed_data.last_user_message
             )
@@ -110,7 +110,7 @@ class TestCaseService:
                 middle_messages=created_test_case.middle_messages,
                 tools=created_test_case.tools,
                 model_name=created_test_case.model_name,
-                temperature=created_test_case.temperature,
+                model_settings=created_test_case.model_settings,
                 system_prompt=created_test_case.system_prompt,
                 last_user_message=created_test_case.last_user_message,
                 created_at=created_test_case.created_at,
@@ -148,7 +148,7 @@ class TestCaseService:
                 middle_messages=test_case.middle_messages,
                 tools=test_case.tools,
                 model_name=test_case.model_name,
-                temperature=test_case.temperature,
+                model_settings=test_case.model_settings,
                 system_prompt=test_case.system_prompt,
                 last_user_message=test_case.last_user_message,
                 created_at=test_case.created_at,
@@ -182,7 +182,7 @@ class TestCaseService:
                     middle_messages=tc.middle_messages,
                     tools=tc.tools,
                     model_name=tc.model_name,
-                    temperature=tc.temperature,
+                    model_settings=tc.model_settings,
                     system_prompt=tc.system_prompt,
                     last_user_message=tc.last_user_message,
                     created_at=tc.created_at,
@@ -236,7 +236,7 @@ class TestCaseService:
                 middle_messages=updated_test_case.middle_messages,
                 tools=updated_test_case.tools,
                 model_name=updated_test_case.model_name,
-                temperature=updated_test_case.temperature,
+                model_settings=updated_test_case.model_settings,
                 system_prompt=updated_test_case.system_prompt,
                 last_user_message=updated_test_case.last_user_message,
                 created_at=updated_test_case.created_at,
@@ -292,7 +292,7 @@ class TestCaseService:
                     middle_messages=tc.middle_messages,
                     tools=tc.tools,
                     model_name=tc.model_name,
-                    temperature=tc.temperature,
+                    model_settings=tc.model_settings,
                     system_prompt=tc.system_prompt,
                     last_user_message=tc.last_user_message,
                     created_at=tc.created_at,

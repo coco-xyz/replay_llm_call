@@ -18,7 +18,7 @@ class ParsedLLMData(BaseModel):
     middle_messages: List[Dict] = Field(..., description="Messages except system prompt and last user message")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration")
     model_name: str = Field(..., description="Model name")
-    temperature: Optional[float] = Field(None, description="Temperature parameter for model")
+    model_settings: Optional[Dict] = Field(None, description="Model settings JSON (temperature, max_tokens, etc.)")
 
     # Parsed key data (used for page display and replay concatenation)
     system_prompt: str = Field(..., description="System prompt")
@@ -59,7 +59,24 @@ def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
         all_messages = request_body.get("messages", [])
         tools = request_body.get("tools", [])
         model_name = request_body.get("model", "")
-        temperature = request_body.get("temperature")
+
+        # Extract model settings (temperature, max_tokens, top_p, etc.)
+        model_settings = {}
+
+        # Direct mapping for most parameters
+        for key in ["temperature", "top_p", "parallel_tool_calls",
+                   "seed", "presence_penalty", "frequency_penalty"]:
+            if key in request_body:
+                model_settings[key] = request_body[key]
+
+        # Handle parameter name mapping: max_completion_tokens -> max_tokens
+        if "max_completion_tokens" in request_body:
+            model_settings["max_tokens"] = request_body["max_completion_tokens"]
+        elif "max_tokens" in request_body:
+            model_settings["max_tokens"] = request_body["max_tokens"]
+
+        # Only keep model_settings if it has any values
+        model_settings = model_settings if model_settings else None
 
         if not all_messages:
             raise ValueError("No messages found in request body")
@@ -99,14 +116,14 @@ def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
             f"last_user_message={len(last_user_message)} chars, "
             f"middle_messages={len(middle_messages)} items, "
             f"tools={len(tools) if tools else 0} items, "
-            f"temperature={temperature}"
+            f"model_settings={model_settings}"
         )
 
         return ParsedLLMData(
             middle_messages=middle_messages,
             tools=tools if tools else None,
             model_name=model_name,
-            temperature=temperature,
+            model_settings=model_settings,
             system_prompt=system_prompt,
             last_user_message=last_user_message
         )

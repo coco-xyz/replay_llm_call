@@ -27,7 +27,7 @@ class TestExecutionData(BaseModel):
     modified_system_prompt: Optional[str] = Field(None, description="Override system prompt")
     modified_last_user_message: Optional[str] = Field(None, description="Override user message")
     modified_tools: Optional[List[Dict]] = Field(None, description="Override tools configuration")
-    modified_temperature: Optional[float] = Field(None, description="Override temperature parameter")
+    modified_model_settings: Optional[Dict] = Field(None, description="Override model settings JSON")
 
 class TestExecutionResult(BaseModel):
     """Service layer result of test execution."""
@@ -78,7 +78,7 @@ class TestExecutionService:
             system_prompt = request.modified_system_prompt or test_case.system_prompt
             user_message = request.modified_last_user_message or test_case.last_user_message
             tools = request.modified_tools or test_case.tools
-            temperature = request.modified_temperature if request.modified_temperature is not None else test_case.temperature
+            model_settings = request.modified_model_settings if request.modified_model_settings is not None else test_case.model_settings
             
             if not model_name:
                 raise ValueError("No model name specified")
@@ -97,7 +97,7 @@ class TestExecutionService:
                     user_message=user_message,
                     original_tools=test_case.tools,
                     modified_tools=tools,
-                    temperature=temperature
+                    model_settings=model_settings
                 )
                 
                 # Calculate response time
@@ -108,7 +108,7 @@ class TestExecutionService:
                     id=str(uuid.uuid4()),
                     test_case_id=request.test_case_id,
                     model_name=model_name,
-                    temperature=temperature,
+                    model_settings=model_settings,
                     system_prompt=system_prompt,
                     user_message=user_message,
                     tools=tools,
@@ -142,7 +142,7 @@ class TestExecutionService:
                     id=str(uuid.uuid4()),
                     test_case_id=request.test_case_id,
                     model_name=model_name,
-                    temperature=temperature,
+                    model_settings=model_settings,
                     system_prompt=system_prompt,
                     user_message=user_message,
                     tools=tools,

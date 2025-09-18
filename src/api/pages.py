@@ -48,6 +48,17 @@ async def test_logs_page(request: Request):
     return templates.TemplateResponse("test_logs.html", {"request": request})
 
 
+@router.get("/test-cases/{case_id}", response_class=HTMLResponse)
+async def test_case_detail_page(request: Request, case_id: str):
+    """
+    Test case detail page.
+    """
+    return templates.TemplateResponse(
+        "test_case_detail.html",
+        {"request": request, "case_id": case_id}
+    )
+
+
 @router.get("/test-logs/{log_id}", response_class=HTMLResponse)
 async def test_log_detail_page(request: Request, log_id: str):
     """

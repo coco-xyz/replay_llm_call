@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const testCaseId = urlParams.get('id');
     if (testCaseId) {
         // Wait a bit for test cases to load, then show the specific test case
-        setTimeout(() => viewTestCase(testCaseId), 1000);
+        setTimeout(() => viewTestCaseInNewPage(testCaseId), 1000);
     }
 });
 
@@ -101,7 +101,7 @@ function displayTestCases(testCases) {
             </td>
             <td>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewTestCase('${testCase.id}')" title="View Details">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewTestCaseInNewPage('${testCase.id}')" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editTestCase('${testCase.id}')" title="Edit">
@@ -518,4 +518,9 @@ function truncateText(text, maxLength) {
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+// New function to open test case details in a new page
+function viewTestCaseInNewPage(testCaseId) {
+    window.open(`/test-cases/${testCaseId}`, '_blank');
 }

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Log Details - LLM Replay System</title>
+    <title>Test Case Details - LLM Replay System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -161,22 +161,6 @@
             border-radius: 0.5rem;
         }
 
-        /* Back Button */
-        .back-button {
-            margin-bottom: 1.5rem;
-        }
-
-        /* Status Styles */
-        .status-success {
-            color: var(--success-color);
-            font-weight: 600;
-        }
-
-        .status-failed {
-            color: var(--danger-color);
-            font-weight: 600;
-        }
-
         /* Table Styles */
         .info-table {
             margin-bottom: 0;
@@ -243,42 +227,6 @@
             margin: 1rem 0;
         }
 
-        /* Accordion Styles */
-        .accordion-item {
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem !important;
-            margin-bottom: 0.5rem;
-        }
-
-        .accordion-button {
-            background-color: var(--card-background);
-            color: var(--text-primary);
-            font-weight: 500;
-            border-radius: 0.5rem !important;
-        }
-
-        .accordion-button:not(.collapsed) {
-            background-color: #f8fafc;
-            color: var(--primary-color);
-            box-shadow: none;
-        }
-
-        .accordion-button:focus {
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .accordion-body {
-            padding: 1rem;
-        }
-
-        /* Alert Styles */
-        .alert-danger {
-            background-color: #fef2f2;
-            border-color: #fecaca;
-            color: var(--danger-color);
-            border-radius: 0.5rem;
-        }
-
         /* Responsive Improvements */
         @media (max-width: 768px) {
             .page-title {
@@ -303,6 +251,7 @@
 </head>
 
 <body>
+    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg">
         <div class="container">
             <a class="navbar-brand" href="/">
@@ -322,17 +271,20 @@
         <div class="page-header d-flex justify-content-between align-items-start">
             <div>
                 <h1 class="page-title">
-                    <i class="fas fa-file-alt me-3"></i>Test Log Details
+                    <i class="fas fa-file-code me-3"></i>Test Case Details
                 </h1>
-                <p class="page-subtitle">Detailed view of test execution log</p>
+                <p class="page-subtitle">Detailed view of test case configuration</p>
             </div>
             <div id="actionButtons" class="d-none">
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-success" onclick="reExecuteTest()">
-                        <i class="fas fa-redo me-2"></i>Re-execute Test
+                    <button type="button" class="btn btn-outline-secondary" onclick="viewTestLogs()">
+                        <i class="fas fa-history me-2"></i>View Test Logs
                     </button>
-                    <button type="button" class="btn btn-outline-danger" onclick="deleteLog()">
-                        <i class="fas fa-trash me-2"></i>Delete Log
+                    <button type="button" class="btn btn-success" onclick="executeTest()">
+                        <i class="fas fa-play me-2"></i>Execute Test
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="deleteTestCase()">
+                        <i class="fas fa-trash me-2"></i>Delete Test Case
                     </button>
                 </div>
             </div>
@@ -344,7 +296,7 @@
                 <div class="spinner-border" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <span>Loading test log details...</span>
+                <span>Loading test case details...</span>
             </div>
         </div>
 
@@ -354,172 +306,183 @@
             <span id="errorText"></span>
         </div>
 
-        <!-- Log Details Content -->
-        <div id="logDetailsContent" class="d-none">
+        <!-- Test Case Details Content -->
+        <div id="testCaseDetailsContent" class="d-none">
             <!-- Content will be loaded here -->
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Get log ID from URL
-        const logId = '{{ log_id }}';
-        let currentLog = null;
-        let testCasesData = [];
+        const caseId = '{{ case_id }}';
+        let currentTestCase = null;
 
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', async function () {
-            await loadTestCases();
-            await loadLogDetails();
+        document.addEventListener('DOMContentLoaded', function () {
+            loadTestCaseDetails();
         });
 
-        async function loadTestCases() {
+        async function loadTestCaseDetails() {
             try {
-                const response = await fetch('/v1/api/test-cases/');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                testCasesData = await response.json();
-            } catch (error) {
-                console.error('Error loading test cases:', error);
-            }
-        }
-
-        async function loadLogDetails() {
-            try {
-                const response = await fetch(`/v1/api/test-logs/${logId}`);
+                const response = await fetch(`/v1/api/test-cases/${caseId}`);
                 if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error('Test log not found');
-                    }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                currentLog = await response.json();
-                displayLogDetails(currentLog);
+                currentTestCase = await response.json();
+                displayTestCaseDetails(currentTestCase);
+
+                // Show action buttons and hide loading
+                document.getElementById('actionButtons').classList.remove('d-none');
+                document.getElementById('loadingSpinner').classList.add('d-none');
+                document.getElementById('testCaseDetailsContent').classList.remove('d-none');
 
             } catch (error) {
-                console.error('Error loading log details:', error);
-                showError(error.message);
-            } finally {
-                hideLoading();
+                console.error('Error loading test case details:', error);
+                document.getElementById('errorText').textContent = 'Failed to load test case details: ' + error.message;
+                document.getElementById('errorMessage').classList.remove('d-none');
+                document.getElementById('loadingSpinner').classList.add('d-none');
             }
         }
 
-        function displayLogDetails(log) {
-            const testCase = findTestCaseById(log.test_case_id);
+        // Helper function to format middle messages
+        function formatMiddleMessages(messages) {
+            if (!messages || messages.length === 0) {
+                return '<div class="text-muted">No middle messages</div>';
+            }
 
+            return messages.map((message, index) => {
+                const role = message.role || 'unknown';
+                const content = message.content || '';
+                const toolCalls = message.tool_calls || [];
+                const roleColor = {
+                    'user': 'text-primary',
+                    'assistant': 'text-success',
+                    'tool': 'text-warning',
+                    'system': 'text-info'
+                }[role] || 'text-secondary';
+
+                // Format tool calls if present
+                const formatToolCalls = (calls) => {
+                    if (!calls || calls.length === 0) return '';
+
+                    return calls.map((call, callIndex) => {
+                        const toolId = call.id || 'unknown';
+                        const toolName = call.function?.name || 'unknown';
+                        const toolArgs = call.function?.arguments || '';
+
+                        // Try to format arguments as JSON for better readability
+                        let formattedArgs = toolArgs;
+                        try {
+                            if (typeof toolArgs === 'string') {
+                                const parsed = JSON.parse(toolArgs);
+                                formattedArgs = JSON.stringify(parsed, null, 2);
+                            } else if (typeof toolArgs === 'object') {
+                                formattedArgs = JSON.stringify(toolArgs, null, 2);
+                            }
+                        } catch (e) {
+                            // Keep original format if JSON parsing fails
+                            formattedArgs = String(toolArgs);
+                        }
+
+                        return `
+                            <div class="mt-2 p-2 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded">
+                                <div class="d-flex align-items-center mb-1">
+                                    <i class="fas fa-tools text-warning me-2"></i>
+                                    <strong class="text-warning">Tool Call #${callIndex + 1}</strong>
+                                </div>
+                                <div class="small">
+                                    <div><strong>Name:</strong> <code>${escapeHtml(toolName)}</code></div>
+                                    <div><strong>ID:</strong> <code>${escapeHtml(toolId)}</code></div>
+                                    <div><strong>Arguments:</strong></div>
+                                    <pre class="bg-light p-2 rounded mt-1 mb-0" style="font-size: 0.8em; max-height: 100px; overflow-y: auto;">${escapeHtml(formattedArgs)}</pre>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                };
+
+                return `
+                    <div class="mb-2 border-start border-3 ps-2" style="border-color: var(--bs-${role === 'user' ? 'primary' : role === 'assistant' ? 'success' : role === 'tool' ? 'warning' : 'secondary'}) !important;">
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="badge bg-secondary me-2">#${index + 1}</span>
+                            <strong class="${roleColor}">${escapeHtml(role.toUpperCase())}</strong>
+                            ${toolCalls.length > 0 ? `<span class="badge bg-warning ms-2">${toolCalls.length} tool call${toolCalls.length > 1 ? 's' : ''}</span>` : ''}
+                        </div>
+                        ${content ? `<pre class="bg-light p-2 rounded mb-0" style="font-size: 0.85em; max-height: 150px; overflow-y: auto;">${escapeHtml(content)}</pre>` : ''}
+                        ${formatToolCalls(toolCalls)}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function displayTestCaseDetails(testCase) {
             const detailsHtml = `
                 <div class="row">
                     <!-- Left Column -->
                     <div class="col-md-6">
-                        <!-- Execution Information -->
+                        <!-- Basic Information -->
                         <div class="card mb-4">
                             <div class="card-header">
-                                <i class="fas fa-info-circle me-2"></i>Execution Information
+                                <i class="fas fa-info-circle me-2"></i>Basic Information
                             </div>
                             <div class="card-body p-0">
                                 <table class="table info-table mb-0">
                                     <tr>
-                                        <td>Log ID:</td>
-                                        <td><code>${escapeHtml(log.id)}</code></td>
+                                        <td>Test Case ID:</td>
+                                        <td><code>${escapeHtml(testCase.id)}</code></td>
                                     </tr>
                                     <tr>
-                                        <td>Status:</td>
-                                        <td>
-                                            <span class="status-${log.status}">
-                                                <i class="fas fa-${log.status === 'success' ? 'check-circle' : 'times-circle'} me-1"></i>
-                                                ${log.status.toUpperCase()}
-                                            </span>
-                                        </td>
+                                        <td>Name:</td>
+                                        <td><strong>${escapeHtml(testCase.name)}</strong></td>
                                     </tr>
                                     <tr>
-                                        <td>Model:</td>
-                                        <td>${escapeHtml(log.model_name)}</td>
+                                        <td>Description:</td>
+                                        <td>${escapeHtml(testCase.description || 'No description provided')}</td>
                                     </tr>
                                     <tr>
-                                        <td>Response Time:</td>
-                                        <td><strong>${log.response_time_ms}ms</strong></td>
+                                        <td>Created At:</td>
+                                        <td>${formatDate(testCase.created_at)}</td>
                                     </tr>
                                     <tr>
-                                        <td>Test Case:</td>
-                                        <td>
-                                            <a href="/test-cases?id=${log.test_case_id}" class="text-decoration-none" target="_blank">
-                                                ${escapeHtml(testCase?.name || log.test_case_id)}
-                                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Executed At:</td>
-                                        <td>${formatDate(log.created_at)}</td>
+                                        <td>Updated At:</td>
+                                        <td>${formatDate(testCase.updated_at)}</td>
                                     </tr>
                                 </table>
                             </div>
                         </div>
 
-                        <!-- System Prompt -->
+                        <!-- Middle Messages -->
                         <div class="card mb-4">
                             <div class="card-header">
-                                <i class="fas fa-terminal me-2"></i>System Prompt
+                                <i class="fas fa-comments me-2"></i>Middle Messages
                             </div>
                             <div class="card-body">
-                                <div class="code-block">${escapeHtml(log.system_prompt)}</div>
+                                <div style="max-height: 400px; overflow-y: auto;">
+                                    ${formatMiddleMessages(testCase.middle_messages)}
+                                </div>
                             </div>
                         </div>
-
-                        <!-- User Message -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-comment me-2"></i>User Message
-                            </div>
-                            <div class="card-body">
-                                <div class="code-block">${escapeHtml(log.user_message)}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column -->
-                    <div class="col-md-6">
-                        <!-- LLM Response -->
-                        ${log.llm_response ? `
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <i class="fas fa-robot me-2"></i>LLM Response
-                                </div>
-                                <div class="card-body">
-                                    <div class="code-block">${escapeHtml(log.llm_response)}</div>
-                                </div>
-                            </div>
-                        ` : `
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <i class="fas fa-robot me-2"></i>LLM Response
-                                </div>
-                                <div class="card-body">
-                                    <p class="text-muted mb-0">No LLM response available</p>
-                                </div>
-                            </div>
-                        `}
 
                         <!-- Tools Configuration -->
-                        ${log.tools && log.tools.length > 0 ? `
+                        ${testCase.tools && testCase.tools.length > 0 ? `
                             <div class="card mb-4">
                                 <div class="card-header">
                                     <i class="fas fa-wrench me-2"></i>Tools Configuration
                                 </div>
                                 <div class="card-body">
-                                    <div class="accordion" id="logToolsAccordion">
-                                        ${log.tools.map((tool, index) => `
+                                    <div class="accordion" id="testCaseToolsAccordion">
+                                        ${testCase.tools.map((tool, index) => `
                                             <div class="accordion-item">
-                                                <h2 class="accordion-header" id="logHeading${index}">
+                                                <h2 class="accordion-header" id="testCaseHeading${index}">
                                                     <button class="accordion-button collapsed" type="button"
-                                                            data-bs-toggle="collapse" data-bs-target="#logCollapse${index}"
-                                                            aria-expanded="false" aria-controls="logCollapse${index}">
+                                                            data-bs-toggle="collapse" data-bs-target="#testCaseCollapse${index}"
+                                                            aria-expanded="false" aria-controls="testCaseCollapse${index}">
                                                         <i class="fas fa-wrench me-2"></i>
                                                         <strong>${escapeHtml(tool.function?.name || 'Unknown Tool')}</strong>
                                                     </button>
                                                 </h2>
-                                                <div id="logCollapse${index}" class="accordion-collapse collapse"
-                                                     aria-labelledby="logHeading${index}" data-bs-parent="#logToolsAccordion">
+                                                <div id="testCaseCollapse${index}" class="accordion-collapse collapse"
+                                                     aria-labelledby="testCaseHeading${index}" data-bs-parent="#testCaseToolsAccordion">
                                                     <div class="accordion-body">
                                                         <div class="code-block" style="font-size: 0.85em;">${escapeHtml(JSON.stringify(tool, null, 2))}</div>
                                                     </div>
@@ -535,86 +498,108 @@
                                     <i class="fas fa-wrench me-2"></i>Tools
                                 </div>
                                 <div class="card-body">
-                                    <p class="text-muted mb-0">No tools used</p>
+                                    <p class="text-muted mb-0">No tools configured</p>
                                 </div>
                             </div>
                         `}
                     </div>
-                </div>
 
-                ${log.error_message ? `
-                    <div class="row">
-                        <div class="col-12 mb-4">
-                            <div class="card">
-                                <div class="card-header text-danger">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>Error Message
-                                </div>
-                                <div class="card-body">
-                                    <div class="alert alert-danger mb-0">
-                                        ${escapeHtml(log.error_message)}
-                                    </div>
-                                </div>
+                    <!-- Right Column -->
+                    <div class="col-md-6">
+                        <!-- System Prompt -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="fas fa-terminal me-2"></i>System Prompt
+                            </div>
+                            <div class="card-body">
+                                <div class="code-block">${escapeHtml(testCase.system_prompt || 'No system prompt provided')}</div>
+                            </div>
+                        </div>
+
+                        <!-- User Message -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="fas fa-comment me-2"></i>User Message
+                            </div>
+                            <div class="card-body">
+                                <div class="code-block">${escapeHtml(testCase.last_user_message || 'No user message provided')}</div>
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                </div>
             `;
 
-            document.getElementById('logDetailsContent').innerHTML = detailsHtml;
-            document.getElementById('logDetailsContent').classList.remove('d-none');
-            document.getElementById('actionButtons').classList.remove('d-none');
-        }
-
-        // Helper functions
-        function findTestCaseById(testCaseId) {
-            return testCasesData.find(tc => tc.id === testCaseId);
-        }
-
-        function hideLoading() {
-            document.getElementById('loadingSpinner').style.display = 'none';
-        }
-
-        function showError(message) {
-            document.getElementById('errorText').textContent = message;
-            document.getElementById('errorMessage').classList.remove('d-none');
+            document.getElementById('testCaseDetailsContent').innerHTML = detailsHtml;
         }
 
         function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            if (text === null || text === undefined) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.toString().replace(/[&<>"']/g, function (m) { return map[m]; });
         }
 
         function formatDate(dateString) {
+            if (!dateString) return 'N/A';
             const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
         }
 
-        function reExecuteTest() {
-            if (currentLog) {
-                window.location.href = `/test-execution?testCaseId=${currentLog.test_case_id}`;
+        async function executeTest() {
+            if (!currentTestCase) return;
+
+            try {
+                // Redirect to test execution page with this test case
+                window.open(`/test-execution?testCaseId=${currentTestCase.id}`, '_blank');
+            } catch (error) {
+                console.error('Error executing test:', error);
+                alert('Error executing test: ' + error.message);
             }
         }
 
-        async function deleteLog() {
-            if (!confirm('Are you sure you want to delete this test log? This action cannot be undone.')) {
+        function viewTestLogs() {
+            if (currentTestCase) {
+                window.open(`/test-logs?testCaseId=${currentTestCase.id}`, '_blank');
+            } else {
+                window.open('/test-logs', '_blank');
+            }
+        }
+
+        async function deleteTestCase() {
+            if (!currentTestCase) return;
+
+            if (!confirm(`Are you sure you want to delete the test case "${currentTestCase.name}"? This action cannot be undone.`)) {
                 return;
             }
 
             try {
-                const response = await fetch(`/v1/api/test-logs/${logId}`, {
+                const response = await fetch(`/v1/api/test-cases/${currentTestCase.id}`, {
                     method: 'DELETE'
                 });
 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-                alert('Test log deleted successfully!');
-                window.location.href = '/test-logs';
+                alert('Test case deleted successfully!');
+                // Redirect back to test cases page
+                window.location.href = '/test-cases';
 
             } catch (error) {
-                console.error('Error deleting test log:', error);
-                alert('Error deleting test log: ' + error.message);
+                console.error('Error deleting test case:', error);
+                alert('Error deleting test case: ' + error.message);
             }
         }
     </script>

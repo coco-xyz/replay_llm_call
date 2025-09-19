@@ -198,11 +198,14 @@ class TestCaseService:
     def update_test_case(self, test_case_id: str, request: TestCaseUpdateData) -> Optional[TestCaseData]:
         """
         Update an existing test case.
-        
+
+        If raw_data is provided, it will be re-parsed and all parsed fields will be updated.
+        Otherwise, only the specified fields will be updated.
+
         Args:
             test_case_id: Test case ID to update
             request: Update request data
-            
+
         Returns:
             TestCaseData or None if not found
         """
@@ -212,17 +215,42 @@ class TestCaseService:
             if not test_case:
                 logger.debug(f"Test case not found for update: {test_case_id}")
                 return None
-            
-            # Update fields
+
+            # If raw_data is provided, re-parse it and update all parsed fields
+            if request.raw_data is not None:
+                logger.info(f"Re-importing raw data for test case: {test_case_id}")
+
+                # Validate raw data format
+                if not validate_raw_data_format(request.raw_data):
+                    raise ValueError("Invalid raw data format")
+
+                # Parse the new raw data
+                parsed_data = parse_llm_raw_data(request.raw_data)
+
+                # Update all fields with parsed data
+                test_case.raw_data = request.raw_data
+                test_case.middle_messages = parsed_data.middle_messages
+                test_case.tools = parsed_data.tools
+                test_case.model_name = parsed_data.model_name
+                test_case.model_settings = parsed_data.model_settings
+                test_case.system_prompt = parsed_data.system_prompt
+                test_case.last_user_message = parsed_data.last_user_message
+
+                logger.info(f"Raw data re-parsed successfully for test case: {test_case_id}")
+
+            # Update other fields if provided
             if request.name is not None:
                 test_case.name = request.name
             if request.description is not None:
                 test_case.description = request.description
-            if request.system_prompt is not None:
-                test_case.system_prompt = request.system_prompt
-            if request.last_user_message is not None:
-                test_case.last_user_message = request.last_user_message
-            
+
+            # Only update these fields if raw_data was not provided (to avoid overriding parsed data)
+            if request.raw_data is None:
+                if request.system_prompt is not None:
+                    test_case.system_prompt = request.system_prompt
+                if request.last_user_message is not None:
+                    test_case.last_user_message = request.last_user_message
+
             # Save changes
             updated_test_case = self.store.update(test_case)
             

@@ -107,6 +107,9 @@ function displayTestCases(testCases) {
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editTestCase('${testCase.id}')" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="reimportTestCase('${testCase.id}')" title="Re-import Raw Data">
+                        <i class="fas fa-upload"></i>
+                    </button>
                     <button type="button" class="btn btn-sm btn-outline-success" onclick="executeTestCase('${testCase.id}')" title="Execute">
                         <i class="fas fa-play"></i>
                     </button>
@@ -237,6 +240,75 @@ async function updateTestCase() {
     } catch (error) {
         console.error('Error updating test case:', error);
         showAlert('Error updating test case: ' + error.message, 'danger');
+    }
+}
+
+async function reimportTestCase(testCaseId) {
+    try {
+        // Set the test case ID in the modal
+        document.getElementById('reimportTestCaseId').value = testCaseId;
+
+        // Clear the textarea
+        document.getElementById('reimportRawData').value = '';
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('reimportTestCaseModal'));
+        modal.show();
+
+    } catch (error) {
+        console.error('Error opening reimport modal:', error);
+        showAlert('Error opening reimport modal: ' + error.message, 'danger');
+    }
+}
+
+async function confirmReimportTestCase() {
+    const testCaseId = document.getElementById('reimportTestCaseId').value;
+    const rawDataText = document.getElementById('reimportRawData').value.trim();
+
+    if (!rawDataText) {
+        showAlert('Please enter the raw data', 'warning');
+        return;
+    }
+
+    let rawData;
+    try {
+        rawData = JSON.parse(rawDataText);
+    } catch (error) {
+        showAlert('Invalid JSON format in raw data', 'danger');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/v1/api/test-cases/${testCaseId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                raw_data: rawData
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+
+        showAlert('Test case raw data re-imported successfully!', 'success');
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('reimportTestCaseModal'));
+        modal.hide();
+
+        // Reset form
+        document.getElementById('reimportTestCaseForm').reset();
+
+        // Reload test cases
+        loadTestCases();
+
+    } catch (error) {
+        console.error('Error re-importing test case:', error);
+        showAlert('Error re-importing test case: ' + error.message, 'danger');
     }
 }
 

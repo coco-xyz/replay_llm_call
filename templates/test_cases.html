@@ -509,6 +509,42 @@
         </div>
     </div>
 
+    <!-- Re-import Test Case Modal -->
+    <div class="modal fade" id="reimportTestCaseModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Re-import Raw Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> Re-importing will overwrite all parsed data (system prompt, user
+                        message, model settings, etc.) with the new raw data. Only the test case name and description
+                        will be preserved.
+                    </div>
+                    <form id="reimportTestCaseForm">
+                        <input type="hidden" id="reimportTestCaseId">
+                        <div class="mb-3">
+                            <label for="reimportRawData" class="form-label">New Raw Data (JSON) *</label>
+                            <textarea class="form-control" id="reimportRawData" rows="10" required
+                                placeholder='Paste your new logfire raw data JSON here...'></textarea>
+                            <div class="form-text">Paste the complete logfire raw data JSON to replace the existing data
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="confirmReimportTestCase()">
+                        <i class="fas fa-upload me-2"></i>Re-import Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- View Test Case Modal -->
     <div class="modal fade" id="viewTestCaseModal" tabindex="-1">
         <div class="modal-dialog modal-xl">

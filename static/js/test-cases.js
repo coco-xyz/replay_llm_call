@@ -507,13 +507,15 @@ async function viewTestCase(testCaseId) {
 function executeTestCase(testCaseId) {
     // Open test execution page in a new tab with the selected test case ID
     const executionUrl = `/test-execution?testCaseId=${testCaseId}`;
-    const newWindow = window.open(executionUrl, '_blank', 'noopener,noreferrer');
-    if (newWindow) {
-        newWindow.opener = null;
-    } else {
+    const newWindow = window.open(executionUrl, '_blank');
+    if (!newWindow) {
         // Fallback if the browser blocks popups
         window.location.href = executionUrl;
+        return;
     }
+
+    // Ensure the newly opened tab cannot control the original window
+    newWindow.opener = null;
 }
 
 function executeFromView() {

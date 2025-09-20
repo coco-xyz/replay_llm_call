@@ -250,6 +250,7 @@ async function reimportTestCase(testCaseId) {
 
         // Clear the textarea
         document.getElementById('reimportRawData').value = '';
+        clearModalAlert('reimportAlertContainer');
 
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('reimportTestCaseModal'));
@@ -266,7 +267,7 @@ async function confirmReimportTestCase() {
     const rawDataText = document.getElementById('reimportRawData').value.trim();
 
     if (!rawDataText) {
-        showAlert('Please enter the raw data', 'warning');
+        showModalAlert('reimportAlertContainer', 'Please enter the raw data', 'warning');
         return;
     }
 
@@ -274,7 +275,7 @@ async function confirmReimportTestCase() {
     try {
         rawData = JSON.parse(rawDataText);
     } catch (error) {
-        showAlert('Invalid JSON format in raw data', 'danger');
+        showModalAlert('reimportAlertContainer', 'Invalid JSON format in raw data', 'danger');
         return;
     }
 
@@ -294,21 +295,22 @@ async function confirmReimportTestCase() {
             throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
         }
 
-        showAlert('Test case raw data re-imported successfully!', 'success');
-
         // Close modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('reimportTestCaseModal'));
         modal.hide();
 
         // Reset form
         document.getElementById('reimportTestCaseForm').reset();
+        clearModalAlert('reimportAlertContainer');
 
         // Reload test cases
         loadTestCases();
 
+        showAlert('Test case raw data re-imported successfully!', 'success');
+
     } catch (error) {
         console.error('Error re-importing test case:', error);
-        showAlert('Error re-importing test case: ' + error.message, 'danger');
+        showModalAlert('reimportAlertContainer', 'Error re-importing test case: ' + error.message, 'danger');
     }
 }
 
@@ -503,8 +505,15 @@ async function viewTestCase(testCaseId) {
 }
 
 function executeTestCase(testCaseId) {
-    // Redirect to test execution page with the test case ID
-    window.location.href = `/test-execution?testCaseId=${testCaseId}`;
+    // Open test execution page in a new tab with the selected test case ID
+    const executionUrl = `/test-execution?testCaseId=${testCaseId}`;
+    const newWindow = window.open(executionUrl, '_blank', 'noopener,noreferrer');
+    if (newWindow) {
+        newWindow.opener = null;
+    } else {
+        // Fallback if the browser blocks popups
+        window.location.href = executionUrl;
+    }
 }
 
 function executeFromView() {
@@ -551,6 +560,28 @@ function showLoading(show) {
         spinner.classList.add('d-none');
         list.classList.remove('d-none');
     }
+}
+
+function clearModalAlert(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = '';
+    }
+}
+
+function showModalAlert(containerId, message, type) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        showAlert(message, type);
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
 }
 
 function showAlert(message, type) {

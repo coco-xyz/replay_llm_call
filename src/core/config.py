@@ -10,6 +10,9 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+STATIC_ASSET_VERSION = "202509202133"
+
+
 class Settings(BaseSettings):
     """
     Application configuration settings.
@@ -25,6 +28,10 @@ class Settings(BaseSettings):
     )
     environment: Literal["development", "staging", "production"] = Field(
         default="development", description="Application environment"
+    )
+    static__asset_version: str = Field(
+        default=STATIC_ASSET_VERSION,
+        description="Cache-busting version appended to static asset URLs",
     )
 
     @field_validator("log_level")

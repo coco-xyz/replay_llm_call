@@ -42,6 +42,7 @@ def convert_test_case_data_to_response(data: TestCaseData) -> TestCaseResponse:
         model_settings=data.model_settings,
         system_prompt=data.system_prompt,
         last_user_message=data.last_user_message,
+        is_deleted=data.is_deleted,
         created_at=data.created_at,
         updated_at=data.updated_at
     )

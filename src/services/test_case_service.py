@@ -46,6 +46,7 @@ class TestCaseData(BaseModel):
     model_settings: Optional[Dict] = Field(None, description="Model settings JSON")
     system_prompt: str = Field(..., description="System prompt")
     last_user_message: str = Field(..., description="Last user message")
+    is_deleted: bool = Field(False, description="Indicates whether the test case is soft deleted")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     
@@ -94,7 +95,8 @@ class TestCaseService:
                 model_name=parsed_data.model_name,
                 model_settings=parsed_data.model_settings,
                 system_prompt=parsed_data.system_prompt,
-                last_user_message=parsed_data.last_user_message
+                last_user_message=parsed_data.last_user_message,
+                is_deleted=False
             )
             
             # Save to database
@@ -113,6 +115,7 @@ class TestCaseService:
                 model_settings=created_test_case.model_settings,
                 system_prompt=created_test_case.system_prompt,
                 last_user_message=created_test_case.last_user_message,
+                is_deleted=created_test_case.is_deleted,
                 created_at=created_test_case.created_at,
                 updated_at=created_test_case.updated_at
             )
@@ -135,11 +138,14 @@ class TestCaseService:
             TestCaseData or None if not found
         """
         try:
-            test_case = self.store.get_by_id(test_case_id)
+            test_case = self.store.get_by_id(test_case_id, include_deleted=True)
             if not test_case:
                 logger.debug(f"Test case not found: {test_case_id}")
                 return None
-            
+
+            if test_case.is_deleted:
+                logger.debug(f"Test case is marked as deleted: {test_case_id}")
+
             return TestCaseData(
                 id=test_case.id,
                 name=test_case.name,
@@ -151,6 +157,7 @@ class TestCaseService:
                 model_settings=test_case.model_settings,
                 system_prompt=test_case.system_prompt,
                 last_user_message=test_case.last_user_message,
+                is_deleted=test_case.is_deleted,
                 created_at=test_case.created_at,
                 updated_at=test_case.updated_at
             )
@@ -185,6 +192,7 @@ class TestCaseService:
                     model_settings=tc.model_settings,
                     system_prompt=tc.system_prompt,
                     last_user_message=tc.last_user_message,
+                    is_deleted=tc.is_deleted,
                     created_at=tc.created_at,
                     updated_at=tc.updated_at
                 )
@@ -211,9 +219,13 @@ class TestCaseService:
         """
         try:
             # Get existing test case
-            test_case = self.store.get_by_id(test_case_id)
+            test_case = self.store.get_by_id(test_case_id, include_deleted=True)
             if not test_case:
                 logger.debug(f"Test case not found for update: {test_case_id}")
+                return None
+
+            if test_case.is_deleted:
+                logger.debug(f"Cannot update deleted test case: {test_case_id}")
                 return None
 
             # If raw_data is provided, re-parse it and update all parsed fields
@@ -267,6 +279,7 @@ class TestCaseService:
                 model_settings=updated_test_case.model_settings,
                 system_prompt=updated_test_case.system_prompt,
                 last_user_message=updated_test_case.last_user_message,
+                is_deleted=updated_test_case.is_deleted,
                 created_at=updated_test_case.created_at,
                 updated_at=updated_test_case.updated_at
             )
@@ -277,11 +290,11 @@ class TestCaseService:
 
     def delete_test_case(self, test_case_id: str) -> bool:
         """
-        Delete a test case by ID.
-        
+        Soft delete a test case by ID.
+
         Args:
             test_case_id: Test case ID to delete
-            
+
         Returns:
             bool: True if deleted, False if not found
         """
@@ -323,6 +336,7 @@ class TestCaseService:
                     model_settings=tc.model_settings,
                     system_prompt=tc.system_prompt,
                     last_user_message=tc.last_user_message,
+                    is_deleted=tc.is_deleted,
                     created_at=tc.created_at,
                     updated_at=tc.updated_at
                 )
@@ -336,16 +350,22 @@ class TestCaseService:
     def get_test_case_for_execution(self, test_case_id: str) -> Optional[TestCase]:
         """
         Get a test case with all data needed for execution.
-        
+
         Args:
             test_case_id: Test case ID
-            
+
         Returns:
             TestCase model with all execution data or None if not found
         """
         try:
-            return self.store.get_by_id(test_case_id)
-            
+            test_case = self.store.get_by_id(test_case_id, include_deleted=True)
+            if test_case and test_case.is_deleted:
+                logger.debug(
+                    f"Test case {test_case_id} is marked as deleted; skipping execution"
+                )
+                return None
+            return test_case
+
         except Exception as e:
             logger.error(f"Failed to get test case for execution {test_case_id}: {e}")
             raise

@@ -5,6 +5,9 @@ This directory contains database migration files for the LLM Replay System.
 ## Migration Files
 
 - `001_add_temperature_column.sql` - Adds temperature parameter support to test_cases table
+- `002_add_temperature_to_test_logs.sql` - Mirrors temperature support in test_logs
+- `003_replace_temperature_with_model_settings.sql` - Replaces temperature columns with model_settings JSON fields
+- `004_add_is_deleted_to_test_cases.sql` - Introduces soft delete flag for test cases
 
 ## How to Apply Migrations
 
@@ -43,4 +46,4 @@ Migration files should follow the pattern: `{version}_{description}.sql`
 
 ## Current Schema Version
 
-After applying all migrations, your database should be at version: **001**
+After applying all migrations, your database should be at version: **004**

@@ -1,7 +1,11 @@
-"""
-Test Log Store
+"""Test Log Store.
 
 Data access layer for test log operations.
+
+The list-style queries in this store deliberately exclude logs that belong to
+soft-deleted test cases so that UI listings stay in sync with the visible test
+case catalog. Individual log lookups remain unrestricted and can still access
+records tied to archived test cases.
 """
 
 from typing import List, Optional
@@ -12,7 +16,7 @@ from sqlalchemy.orm import Session
 from src.core.error_codes import DatabaseErrorCode
 from src.core.exceptions import DatabaseException
 from src.core.logger import get_logger
-from src.models import TestLog
+from src.models import TestCase, TestLog
 from src.stores.database import database_session
 
 logger = get_logger(__name__)
@@ -118,6 +122,15 @@ class TestLogStore:
                 f"Failed to get test logs: {str(e)}"
             ) from e
 
+    def _query_with_active_test_cases(self, db: Session):
+        """Return a base query scoped to logs whose test cases are not deleted."""
+
+        return (
+            db.query(TestLog)
+            .join(TestLog.test_case)
+            .filter(TestCase.is_deleted.is_(False))
+        )
+
     def get_all(self, limit: int = 100, offset: int = 0) -> List[TestLog]:
         """
         Get all test logs with pagination.
@@ -134,9 +147,9 @@ class TestLogStore:
         """
         try:
             with database_session() as db:
+                query = self._query_with_active_test_cases(db)
                 test_logs = (
-                    db.query(TestLog)
-                    .order_by(desc(TestLog.created_at))
+                    query.order_by(desc(TestLog.created_at))
                     .limit(limit)
                     .offset(offset)
                     .all()
@@ -173,9 +186,9 @@ class TestLogStore:
         """
         try:
             with database_session() as db:
+                query = self._query_with_active_test_cases(db)
                 test_logs = (
-                    db.query(TestLog)
-                    .filter(TestLog.status == status)
+                    query.filter(TestLog.status == status)
                     .order_by(desc(TestLog.created_at))
                     .limit(limit)
                     .offset(offset)
@@ -215,7 +228,7 @@ class TestLogStore:
         """
         try:
             with database_session() as db:
-                query = db.query(TestLog)
+                query = self._query_with_active_test_cases(db)
 
                 # Apply filters
                 if status:

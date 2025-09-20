@@ -173,6 +173,9 @@ async def update_test_case(test_case_id: str, request: TestCaseUpdateRequest):
         # Convert service layer data to API response
         return convert_test_case_data_to_response(result)
 
+    except ValueError as e:
+        logger.error(f"API: Invalid test case update data: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:

@@ -8,27 +8,28 @@ Implements the replay mechanism by concatenating system prompt, other messages, 
 import json
 from typing import Dict, List, Optional
 
+from pydantic_ai import ModelSettings, ToolDefinition
 from pydantic_ai.direct import model_request
 from pydantic_ai.messages import (
     ModelRequest,
-    SystemPromptPart,
-    UserPromptPart,
-    ToolReturnPart,
     ModelResponse,
+    SystemPromptPart,
     TextPart,
     ToolCallPart,
+    ToolReturnPart,
+    UserPromptPart,
 )
-
 from pydantic_ai.models import ModelRequestParameters
-from pydantic_ai import ToolDefinition, ModelSettings
 
-from src.core.logger import get_logger
 from src.core.llm_factory import create_llm_model
+from src.core.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-def convert_logfire_tools_to_pydantic_ai(logfire_tools: list[dict]) -> ModelRequestParameters:
+def convert_logfire_tools_to_pydantic_ai(
+    logfire_tools: list[dict],
+) -> ModelRequestParameters:
     """
     Convert logfire-exported tools format to pydantic-ai ModelRequestParameters format.
 
@@ -61,13 +62,13 @@ def convert_logfire_tools_to_pydantic_ai(logfire_tools: list[dict]) -> ModelRequ
                 name=func_def.get("name", ""),
                 description=func_def.get("description", ""),
                 parameters_json_schema=func_def.get("parameters", {}),
-                strict=func_def.get("strict", False)
+                strict=func_def.get("strict", False),
             )
             function_tools.append(tool_definition)
 
     return ModelRequestParameters(
         function_tools=function_tools,
-        allow_text_output=True  # Allow model to either use tools or respond directly
+        allow_text_output=True,  # Allow model to either use tools or respond directly
     )
 
 
@@ -78,7 +79,7 @@ async def execute_llm_test(
     user_message: str = "",
     original_tools: Optional[List[Dict]] = None,
     modified_tools: Optional[List[Dict]] = None,
-    model_settings: Optional[Dict] = None
+    model_settings: Optional[Dict] = None,
 ) -> str:
     """
     Execute LLM test using Direct Model Requests with concatenation replay strategy.
@@ -111,10 +112,7 @@ async def execute_llm_test(
 
         # 1. Add system prompt (if provided)
         if system_prompt:
-            replay_messages.append({
-                "role": "system",
-                "content": system_prompt
-            })
+            replay_messages.append({"role": "system", "content": system_prompt})
             logger.debug("Added system prompt to replay messages")
 
         # 2. Add middle messages (other messages from the original request)
@@ -124,10 +122,7 @@ async def execute_llm_test(
 
         # 3. Add user message (if provided)
         if user_message:
-            replay_messages.append({
-                "role": "user",
-                "content": user_message
-            })
+            replay_messages.append({"role": "user", "content": user_message})
             logger.debug("Added user message to replay messages")
 
         if not replay_messages:
@@ -144,26 +139,36 @@ async def execute_llm_test(
             content = message.get("content", "")
 
             if role == "system":
-                pydantic_messages.append(ModelRequest(parts=[SystemPromptPart(content=content)]))
+                pydantic_messages.append(
+                    ModelRequest(parts=[SystemPromptPart(content=content)])
+                )
             elif role == "user":
-                pydantic_messages.append(ModelRequest(parts=[UserPromptPart(content=content)]))
+                pydantic_messages.append(
+                    ModelRequest(parts=[UserPromptPart(content=content)])
+                )
             elif role == "assistant":
                 msg = ModelResponse(parts=[TextPart(content=content)])
                 if "tool_calls" in message:
                     for tool_call in message["tool_calls"]:
                         func_set = tool_call.get("function")
-                        msg.parts.append(ToolCallPart(
-                            tool_call_id=tool_call.get("id"),
-                            tool_name=func_set.get("name"),
-                            args=func_set.get("arguments"),
-                        ))
+                        msg.parts.append(
+                            ToolCallPart(
+                                tool_call_id=tool_call.get("id"),
+                                tool_name=func_set.get("name"),
+                                args=func_set.get("arguments"),
+                            )
+                        )
                 pydantic_messages.append(msg)
             elif role == "tool":
-                msg = ModelRequest(parts=[ToolReturnPart(
-                    tool_name=message.get("name", ""),
-                    tool_call_id=message.get("tool_call_id", ""),
-                    content=content,
-                )])
+                msg = ModelRequest(
+                    parts=[
+                        ToolReturnPart(
+                            tool_name=message.get("name", ""),
+                            tool_call_id=message.get("tool_call_id", ""),
+                            content=content,
+                        )
+                    ]
+                )
                 pydantic_messages.append(msg)
             else:
                 logger.warning(f"Unknown message role: {role}")
@@ -178,7 +183,9 @@ async def execute_llm_test(
         model_request_parameters = None
         if tools_to_use:
             try:
-                model_request_parameters = convert_logfire_tools_to_pydantic_ai(tools_to_use)
+                model_request_parameters = convert_logfire_tools_to_pydantic_ai(
+                    tools_to_use
+                )
                 logger.debug(
                     f"Successfully converted {len(tools_to_use)} tools to pydantic-ai format"
                 )
@@ -200,9 +207,8 @@ async def execute_llm_test(
             model=create_llm_model(model_name, "openrouter"),
             messages=pydantic_messages,
             model_settings=pydantic_model_settings,
-            model_request_parameters=model_request_parameters
+            model_request_parameters=model_request_parameters,
         )
-
 
         # Extract response content and tool calls
         response_content = ""
@@ -219,11 +225,13 @@ async def execute_llm_test(
                     tool_call_info = {
                         "tool_name": part.tool_name,
                         "tool_call_id": part.tool_call_id,
-                        "args": part.args
+                        "args": part.args,
                     }
                     tool_calls.append(tool_call_info)
                     logger.debug(
-                        "Found tool call: %s with ID: %s", part.tool_name, part.tool_call_id
+                        "Found tool call: %s with ID: %s",
+                        part.tool_name,
+                        part.tool_call_id,
                     )
 
         # Format comprehensive response content
@@ -244,17 +252,21 @@ async def execute_llm_test(
                 formatted_response += f"  ID: {tool_call['tool_call_id']}\n"
                 # Try to format arguments as JSON, fall back to string representation
                 try:
-                    if isinstance(tool_call['args'], str):
+                    if isinstance(tool_call["args"], str):
                         # Try to parse and re-format JSON string for better readability
-                        parsed_args = json.loads(tool_call['args'])
-                        formatted_args = json.dumps(parsed_args, indent=2, ensure_ascii=False)
+                        parsed_args = json.loads(tool_call["args"])
+                        formatted_args = json.dumps(
+                            parsed_args, indent=2, ensure_ascii=False
+                        )
                     else:
                         # Convert to JSON string for consistent formatting
-                        formatted_args = json.dumps(tool_call['args'], indent=2, ensure_ascii=False)
+                        formatted_args = json.dumps(
+                            tool_call["args"], indent=2, ensure_ascii=False
+                        )
                 except (json.JSONDecodeError, TypeError, ValueError):
                     # Fall back to string representation if JSON processing fails
-                    formatted_args = str(tool_call['args'])
-                
+                    formatted_args = str(tool_call["args"])
+
                 formatted_response += f"  Arguments: {formatted_args}\n"
                 if i < len(tool_calls):
                     formatted_response += "\n"
@@ -269,12 +281,13 @@ async def execute_llm_test(
         tool_count = len(tool_calls)
         logger.info(
             "LLM test completed successfully - Text length: %d, Tool calls: %d",
-            content_length, tool_count
+            content_length,
+            tool_count,
         )
 
         if tool_calls:
-            tool_names = [tc['tool_name'] for tc in tool_calls]
-            logger.info("Tools called: %s", ', '.join(tool_names))
+            tool_names = [tc["tool_name"] for tc in tool_calls]
+            logger.info("Tools called: %s", ", ".join(tool_names))
 
         return formatted_response
     except Exception as e:
@@ -283,9 +296,7 @@ async def execute_llm_test(
 
 
 def build_replay_messages(
-    system_prompt: str,
-    middle_messages: List[Dict],
-    user_message: str
+    system_prompt: str, middle_messages: List[Dict], user_message: str
 ) -> List[Dict]:
     """
     Build the complete message list for replay by concatenation.
@@ -301,10 +312,7 @@ def build_replay_messages(
     replay_messages = []
     # 1. System prompt first
     if system_prompt:
-        replay_messages.append({
-            "role": "system",
-            "content": system_prompt
-        })
+        replay_messages.append({"role": "system", "content": system_prompt})
 
     # 2. Middle messages in the middle
     if middle_messages:
@@ -312,10 +320,7 @@ def build_replay_messages(
 
     # 3. User message last
     if user_message:
-        replay_messages.append({
-            "role": "user",
-            "content": user_message
-        })
+        replay_messages.append({"role": "user", "content": user_message})
 
     return replay_messages
 
@@ -352,7 +357,7 @@ def extract_response_metadata(model_response) -> Dict:
         metadata = {
             "parts_count": len(model_response.parts) if model_response.parts else 0,
             "has_content": False,
-            "content_length": 0
+            "content_length": 0,
         }
 
         if model_response.parts:
@@ -371,16 +376,12 @@ def extract_response_metadata(model_response) -> Dict:
 
     except Exception as e:
         logger.error(f"Failed to extract response metadata: {e}")
-        return {
-            "parts_count": 0,
-            "has_content": False,
-            "content_length": 0
-        }
+        return {"parts_count": 0, "has_content": False, "content_length": 0}
 
 
 __all__ = [
     "execute_llm_test",
     "build_replay_messages",
     "validate_model_name",
-    "extract_response_metadata"
+    "extract_response_metadata",
 ]

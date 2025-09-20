@@ -8,14 +8,14 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from src.core.logger import get_logger
-from src.api.v1.schemas.requests import TestCaseCreateRequest, TestCaseUpdateRequest
-from src.api.v1.schemas.responses import TestCaseResponse
 from src.api.v1.converters import (
     convert_test_case_create_request,
+    convert_test_case_data_to_response,
     convert_test_case_update_request,
-    convert_test_case_data_to_response
 )
+from src.api.v1.schemas.requests import TestCaseCreateRequest, TestCaseUpdateRequest
+from src.api.v1.schemas.responses import TestCaseResponse
+from src.core.logger import get_logger
 from src.services.test_case_service import TestCaseService
 
 logger = get_logger(__name__)
@@ -28,13 +28,13 @@ test_case_service = TestCaseService()
 async def create_test_case(request: TestCaseCreateRequest):
     """
     Create a new test case with automatic parsing of raw data.
-    
+
     Args:
         request: Test case creation request
-        
+
     Returns:
         TestCaseResponse: Created test case data
-        
+
     Raises:
         HTTPException: If creation fails or data is invalid
     """
@@ -58,26 +58,31 @@ async def create_test_case(request: TestCaseCreateRequest):
 @router.get("/", response_model=List[TestCaseResponse])
 async def get_test_cases(
     limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
+    agent_id: Optional[str] = Query(
+        None, description="Filter test cases by owning agent"
+    ),
 ):
     """
     Get all test cases with pagination.
-    
+
     Args:
         limit: Maximum number of results
         offset: Number of results to skip
-        
+
     Returns:
         List of test cases
-        
+
     Raises:
         HTTPException: If retrieval fails
     """
     try:
         logger.debug(f"API: Getting test cases (limit={limit}, offset={offset})")
-        result = test_case_service.get_all_test_cases(limit=limit, offset=offset)
+        result = test_case_service.get_all_test_cases(
+            limit=limit, offset=offset, agent_id=agent_id
+        )
         logger.debug(f"API: Retrieved {len(result)} test cases")
-        return result
+        return [convert_test_case_data_to_response(item) for item in result]
 
     except Exception as e:
         logger.error(f"API: Failed to get test cases: {e}")
@@ -87,26 +92,29 @@ async def get_test_cases(
 @router.get("/search", response_model=List[TestCaseResponse])
 async def search_test_cases(
     q: str = Query(..., min_length=1, description="Search query"),
-    limit: int = Query(50, ge=1, le=500)
+    limit: int = Query(50, ge=1, le=500),
+    agent_id: Optional[str] = Query(
+        None, description="Filter results to a specific agent"
+    ),
 ):
     """
     Search test cases by name.
-    
+
     Args:
         q: Search query string
         limit: Maximum number of results
-        
+
     Returns:
         List of matching test cases
-        
+
     Raises:
         HTTPException: If search fails
     """
     try:
         logger.debug(f"API: Searching test cases with query: '{q}'")
-        result = test_case_service.search_test_cases(q, limit=limit)
+        result = test_case_service.search_test_cases(q, limit=limit, agent_id=agent_id)
         logger.debug(f"API: Found {len(result)} test cases matching '{q}'")
-        return result
+        return [convert_test_case_data_to_response(item) for item in result]
 
     except Exception as e:
         logger.error(f"API: Failed to search test cases: {e}")
@@ -117,13 +125,13 @@ async def search_test_cases(
 async def get_test_case(test_case_id: str):
     """
     Get a test case by ID.
-    
+
     Args:
         test_case_id: Test case ID
-        
+
     Returns:
         TestCaseResponse: Test case data
-        
+
     Raises:
         HTTPException: If test case not found or retrieval fails
     """
@@ -135,7 +143,7 @@ async def get_test_case(test_case_id: str):
             logger.debug(f"API: Test case not found: {test_case_id}")
             raise HTTPException(status_code=404, detail="Test case not found")
 
-        return result
+        return convert_test_case_data_to_response(result)
 
     except HTTPException:
         raise
@@ -148,14 +156,14 @@ async def get_test_case(test_case_id: str):
 async def update_test_case(test_case_id: str, request: TestCaseUpdateRequest):
     """
     Update an existing test case.
-    
+
     Args:
         test_case_id: Test case ID to update
         request: Update request data
-        
+
     Returns:
         TestCaseResponse: Updated test case data
-        
+
     Raises:
         HTTPException: If test case not found or update fails
     """
@@ -187,13 +195,13 @@ async def update_test_case(test_case_id: str, request: TestCaseUpdateRequest):
 async def delete_test_case(test_case_id: str):
     """
     Delete a test case by ID.
-    
+
     Args:
         test_case_id: Test case ID to delete
-        
+
     Returns:
         Dict with success message
-        
+
     Raises:
         HTTPException: If test case not found or deletion fails
     """

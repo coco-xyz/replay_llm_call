@@ -55,8 +55,6 @@ def _sanitize_attributes(attrs: Dict[str, Any]) -> Dict[str, Any]:
 _session_id_context: ContextVar[Optional[str]] = ContextVar("session_id", default=None)
 
 
-
-
 def set_session_id(session_id: str) -> None:
     """Set the session ID in the current context for logging."""
     _session_id_context.set(session_id)
@@ -342,7 +340,6 @@ def setup_logfire_handler() -> None:
     except (AttributeError, TypeError, ValueError) as e:
         # Use print instead of logger since logging might not be fully configured
         print(f"⚠️  Failed to configure Logfire handler: {e}")
-
 
 
 @lru_cache(maxsize=1)

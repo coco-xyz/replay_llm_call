@@ -1,34 +1,35 @@
-"""
-Test Log Model
-
-Data model for LLM test execution logs in the replay system.
-"""
+"""Test Log SQLAlchemy model."""
 
 from typing import Optional
 
-from sqlalchemy import Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import JSON, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseDBModel
 
 
 class TestLog(BaseDBModel):
-    """
-    Test log model for storing LLM test execution results.
-    
-    Records the actual execution parameters (which may be modified from the original)
-    and the results of the LLM call.
-    """
-    
+    """Test log model for storing LLM test execution results."""
+
     __tablename__ = "test_logs"
-    
-    # Reference to the test case
+
+    # Reference to the test case and agent
     test_case_id: Mapped[str] = mapped_column(
-        String, 
+        String,
         ForeignKey("test_cases.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
     )
-    
+    agent_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("agents.id"),
+        nullable=False,
+    )
+    regression_test_id: Mapped[Optional[str]] = mapped_column(
+        String,
+        ForeignKey("regression_tests.id"),
+        nullable=True,
+    )
+
     # Model information
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     model_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
@@ -37,26 +38,33 @@ class TestLog(BaseDBModel):
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     user_message: Mapped[str] = mapped_column(Text, nullable=False)
     tools: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    
+
     # Output data
     llm_response: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     response_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    
+
     # Execution status (synchronous execution: success or failed)
     status: Mapped[str] = mapped_column(String(20), default="success", nullable=False)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    
+
     # Relationships
     test_case: Mapped["TestCase"] = relationship(
-        "TestCase", 
-        back_populates="test_logs"
+        "TestCase",
+        back_populates="test_logs",
     )
-    
+    agent: Mapped["Agent"] = relationship(
+        "Agent",
+        back_populates="test_logs",
+    )
+    regression_test: Mapped[Optional["RegressionTest"]] = relationship(
+        "RegressionTest",
+        back_populates="test_logs",
+    )
+
     def __repr__(self) -> str:
         return (
-            f"<TestLog(id='{self.id}', "
-            f"test_case_id='{self.test_case_id}', "
-            f"status='{self.status}')>"
+            f"<TestLog(id='{self.id}', test_case_id='{self.test_case_id}', "
+            f"agent_id='{self.agent_id}', status='{self.status}')>"
         )
 
 

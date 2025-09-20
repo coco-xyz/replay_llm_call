@@ -23,6 +23,7 @@ class TestCaseResponse(BaseModel):
     model_settings: Optional[Dict] = Field(None, description="Model settings JSON (temperature, max_tokens, etc.)")
     system_prompt: str = Field(..., description="System prompt")
     last_user_message: str = Field(..., description="Last user message")
+    is_deleted: bool = Field(False, description="Indicates whether the test case is soft deleted")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     

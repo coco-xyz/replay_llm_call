@@ -6,7 +6,7 @@ Data model for LLM test cases in the replay system.
 
 from typing import List, Optional
 
-from sqlalchemy import JSON, String, Text, Float
+from sqlalchemy import Boolean, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseDBModel
@@ -41,6 +41,13 @@ class TestCase(BaseDBModel):
     # Parsed key components for display and replay
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     last_user_message: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Soft delete flag
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
     
     # Relationships
     test_logs: Mapped[List["TestLog"]] = relationship(

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS test_cases (
     model_settings JSONB,
     system_prompt TEXT NOT NULL,
     last_user_message TEXT NOT NULL,
+    is_deleted BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS test_logs (
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_test_cases_name ON test_cases(name);
 CREATE INDEX IF NOT EXISTS idx_test_cases_created_at ON test_cases(created_at);
+CREATE INDEX IF NOT EXISTS idx_test_cases_is_deleted ON test_cases(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_test_logs_test_case_id ON test_logs(test_case_id);
 CREATE INDEX IF NOT EXISTS idx_test_logs_status ON test_logs(status);
 CREATE INDEX IF NOT EXISTS idx_test_logs_created_at ON test_logs(created_at);
@@ -54,6 +56,7 @@ COMMENT ON COLUMN test_cases.model_name IS 'Model name used in original request'
 COMMENT ON COLUMN test_cases.model_settings IS 'Model settings JSON (temperature, max_tokens, top_p, etc.) from original LLM request';
 COMMENT ON COLUMN test_cases.system_prompt IS 'Extracted system prompt for display and replay';
 COMMENT ON COLUMN test_cases.last_user_message IS 'Extracted last user message for display and replay';
+COMMENT ON COLUMN test_cases.is_deleted IS 'Soft delete flag to hide test cases from listings without removing history';
 
 COMMENT ON COLUMN test_logs.system_prompt IS 'Actual system prompt used in execution (may be modified)';
 COMMENT ON COLUMN test_logs.user_message IS 'Actual user message used in execution (may be modified)';

@@ -7,7 +7,6 @@ Data access layer for test case operations.
 from typing import List, Optional
 
 from sqlalchemy import desc
-from sqlalchemy.orm import Session
 
 from src.core.error_codes import DatabaseErrorCode
 from src.core.exceptions import DatabaseException
@@ -49,12 +48,13 @@ class TestCaseStore:
                 f"Failed to create test case: {str(e)}"
             ) from e
 
-    def get_by_id(self, test_case_id: str) -> Optional[TestCase]:
+    def get_by_id(self, test_case_id: str, include_deleted: bool = False) -> Optional[TestCase]:
         """
         Get test case by ID.
 
         Args:
             test_case_id: Test case ID
+            include_deleted: Whether to return test cases that have been soft deleted
 
         Returns:
             TestCase or None if not found
@@ -64,7 +64,11 @@ class TestCaseStore:
         """
         try:
             with database_session() as db:
-                test_case = db.query(TestCase).filter(TestCase.id == test_case_id).first()
+                query = db.query(TestCase).filter(TestCase.id == test_case_id)
+                if not include_deleted:
+                    query = query.filter(TestCase.is_deleted.is_(False))
+
+                test_case = query.first()
                 if test_case:
                     logger.debug(f"Found test case: {test_case_id}")
                 else:
@@ -96,6 +100,7 @@ class TestCaseStore:
             with database_session() as db:
                 test_cases = (
                     db.query(TestCase)
+                    .filter(TestCase.is_deleted.is_(False))
                     .order_by(desc(TestCase.created_at))
                     .limit(limit)
                     .offset(offset)
@@ -142,7 +147,7 @@ class TestCaseStore:
 
     def delete(self, test_case_id: str) -> bool:
         """
-        Delete a test case by ID.
+        Soft delete a test case by ID.
 
         Args:
             test_case_id: Test case ID to delete
@@ -157,9 +162,13 @@ class TestCaseStore:
             with database_session() as db:
                 test_case = db.query(TestCase).filter(TestCase.id == test_case_id).first()
                 if test_case:
-                    db.delete(test_case)
+                    if test_case.is_deleted:
+                        logger.debug(f"Test case already marked as deleted: {test_case_id}")
+                        return True
+
+                    test_case.is_deleted = True
                     db.commit()
-                    logger.info(f"Deleted test case: {test_case_id}")
+                    logger.info(f"Soft deleted test case: {test_case_id}")
                     return True
                 else:
                     logger.debug(f"Test case not found for deletion: {test_case_id}")
@@ -190,6 +199,7 @@ class TestCaseStore:
             with database_session() as db:
                 test_cases = (
                     db.query(TestCase)
+                    .filter(TestCase.is_deleted.is_(False))
                     .filter(TestCase.name.ilike(f"%{name_pattern}%"))
                     .order_by(desc(TestCase.created_at))
                     .limit(limit)

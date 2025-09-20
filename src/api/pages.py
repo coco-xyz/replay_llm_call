@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from src.core.config import settings
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,7 +22,10 @@ async def home_page(request: Request):
     """
     Home page - redirects to test cases.
     """
-    return templates.TemplateResponse("test_cases.html", {"request": request})
+    return templates.TemplateResponse(
+        "test_cases.html",
+        {"request": request, "static_asset_version": settings.static__asset_version},
+    )
 
 
 @router.get("/test-cases", response_class=HTMLResponse)
@@ -29,7 +33,10 @@ async def test_cases_page(request: Request):
     """
     Test cases management page.
     """
-    return templates.TemplateResponse("test_cases.html", {"request": request})
+    return templates.TemplateResponse(
+        "test_cases.html",
+        {"request": request, "static_asset_version": settings.static__asset_version},
+    )
 
 
 @router.get("/test-execution", response_class=HTMLResponse)
@@ -37,7 +44,10 @@ async def test_execution_page(request: Request):
     """
     Test execution page.
     """
-    return templates.TemplateResponse("test_execution.html", {"request": request})
+    return templates.TemplateResponse(
+        "test_execution.html",
+        {"request": request, "static_asset_version": settings.static__asset_version},
+    )
 
 
 @router.get("/test-logs", response_class=HTMLResponse)
@@ -45,7 +55,10 @@ async def test_logs_page(request: Request):
     """
     Test logs viewing page.
     """
-    return templates.TemplateResponse("test_logs.html", {"request": request})
+    return templates.TemplateResponse(
+        "test_logs.html",
+        {"request": request, "static_asset_version": settings.static__asset_version},
+    )
 
 
 @router.get("/test-cases/{case_id}", response_class=HTMLResponse)
@@ -55,7 +68,11 @@ async def test_case_detail_page(request: Request, case_id: str):
     """
     return templates.TemplateResponse(
         "test_case_detail.html",
-        {"request": request, "case_id": case_id}
+        {
+            "request": request,
+            "case_id": case_id,
+            "static_asset_version": settings.static__asset_version,
+        }
     )
 
 
@@ -66,7 +83,11 @@ async def test_log_detail_page(request: Request, log_id: str):
     """
     return templates.TemplateResponse(
         "test_log_detail.html",
-        {"request": request, "log_id": log_id}
+        {
+            "request": request,
+            "log_id": log_id,
+            "static_asset_version": settings.static__asset_version,
+        }
     )
 
 

@@ -3,7 +3,6 @@ from types import SimpleNamespace
 
 from src.services.test_case_service import TestCaseService, TestCaseUpdateData
 
-
 TestCaseService.__test__ = False
 TestCaseUpdateData.__test__ = False
 
@@ -11,6 +10,8 @@ TestCaseUpdateData.__test__ = False
 def _build_test_case(**overrides):
     base = {
         "id": "case-1",
+        "agent_id": "agent-1",
+        "agent": None,
         "name": "Sample",
         "description": "desc",
         "raw_data": {"messages": []},

@@ -75,9 +75,7 @@ async def run_cli_mode() -> None:
                 print(
                     f"🤖 Demo Agent: You said '{user_input}'. This is where your agent logic would go!"
                 )
-                print(
-                    "   💡 Tip: Implement your agent in replay_llm_call/agents/"
-                )
+                print("   💡 Tip: Implement your agent in replay_llm_call/agents/")
                 print()
             else:
                 print("Please enter a command or message.")

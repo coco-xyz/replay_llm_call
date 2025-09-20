@@ -72,7 +72,7 @@ async def test_case_detail_page(request: Request, case_id: str):
             "request": request,
             "case_id": case_id,
             "static_asset_version": settings.static__asset_version,
-        }
+        },
     )
 
 
@@ -87,7 +87,7 @@ async def test_log_detail_page(request: Request, log_id: str):
             "request": request,
             "log_id": log_id,
             "static_asset_version": settings.static__asset_version,
-        }
+        },
     )
 
 

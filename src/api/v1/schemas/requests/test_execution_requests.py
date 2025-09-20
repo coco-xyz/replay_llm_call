@@ -15,7 +15,15 @@ class TestExecutionRequest(BaseModel):
     test_case_id: str = Field(..., description="ID of the test case to execute")
     # User may modify these parameters (if None, use original values)
     modified_model_name: Optional[str] = Field(None, description="Override model name")
-    modified_system_prompt: Optional[str] = Field(None, description="Override system prompt")
-    modified_last_user_message: Optional[str] = Field(None, description="Override user message")
-    modified_tools: Optional[List[Dict]] = Field(None, description="Override tools configuration")
-    modified_model_settings: Optional[Dict] = Field(None, description="Override model settings JSON")
+    modified_system_prompt: Optional[str] = Field(
+        None, description="Override system prompt"
+    )
+    modified_last_user_message: Optional[str] = Field(
+        None, description="Override user message"
+    )
+    modified_tools: Optional[List[Dict]] = Field(
+        None, description="Override tools configuration"
+    )
+    modified_model_settings: Optional[Dict] = Field(
+        None, description="Override model settings JSON"
+    )

@@ -84,9 +84,9 @@ function displayAgents(agentList) {
 
     const rows = agentList
         .map((agent) => {
-            const description = agent.description
-                ? `<small class="text-muted">${escapeHtml(truncateText(agent.description, 80))}</small>`
-                : '';
+            const descriptionHtml = agent.description
+                ? `<div class="text-muted small text-break">${escapeHtml(truncateText(agent.description, 160))}</div>`
+                : '<span class="text-muted">—</span>';
             const systemPrompt = agent.default_system_prompt
                 ? `<div class="text-truncate" style="max-width: 260px;" title="${escapeHtml(agent.default_system_prompt)}">${escapeHtml(truncateText(agent.default_system_prompt, 120))}</div>`
                 : '<span class="text-muted">—</span>';
@@ -103,9 +103,9 @@ function displayAgents(agentList) {
                         <div class="d-flex align-items-center gap-2">
                             <strong>${escapeHtml(agent.name)}</strong>
                         </div>
-                        ${description}
                     </div>
                 </td>
+                <td>${descriptionHtml}</td>
                 <td>
                     <div class="d-flex flex-column gap-1">
                         <span class="badge bg-primary">${escapeHtml(agent.default_model_name || 'Not set')}</span>
@@ -119,7 +119,6 @@ function displayAgents(agentList) {
                         <small class="text-muted">Created ${formatDate(agent.created_at)}</small>
                     </div>
                 </td>
-                <td><span class="badge bg-success">Active</span></td>
                 <td class="text-end">
                     <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-outline-primary" onclick="openEditAgent('${agent.id}')">

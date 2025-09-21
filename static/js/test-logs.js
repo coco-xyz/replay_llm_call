@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const urlParams = new URLSearchParams(window.location.search);
     const logId = urlParams.get('logId');
     const testCaseId = urlParams.get('testCaseId');
+    const regressionTestId = urlParams.get('regressionTestId');
 
     if (logId) {
         setTimeout(() => viewLogInNewPage(logId), 1000);
@@ -36,6 +37,16 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (testCaseFilter) {
                 testCaseFilter.value = testCaseId;
                 currentFilters.testCaseId = testCaseId;
+                currentPage = 1;
+                loadTestLogs();
+            }
+        }, 1000);
+    } else if (regressionTestId) {
+        setTimeout(() => {
+            const regressionFilter = document.getElementById('regressionFilter');
+            if (regressionFilter) {
+                regressionFilter.value = regressionTestId;
+                currentFilters.regressionTestId = regressionTestId;
                 currentPage = 1;
                 loadTestLogs();
             }
@@ -310,16 +321,10 @@ function displayTestLogs(logs) {
         return `
         <tr>
             <td>
-                <div class="d-flex flex-column">
-                    <strong>${escapeHtml(testCaseName)}</strong>
-                    <small class="text-muted">Log ID: ${escapeHtml(log.id)}</small>
-                </div>
+                ${testCase ? `<a href="/test-cases/${escapeHtml(log.test_case_id)}" class="text-decoration-none" target="_blank"><strong>${escapeHtml(testCaseName)}</strong></a>` : `<span class="text-muted">${escapeHtml(testCaseName)}</span>`}
             </td>
             <td>
-                <div class="d-flex flex-column">
-                    <span class="badge bg-primary">${escapeHtml(agentName)}</span>
-                    <small class="text-muted">${escapeHtml(log.agent_id)}</small>
-                </div>
+                ${agent ? `<a href="/agents/${escapeHtml(log.agent_id)}" class="badge bg-primary text-decoration-none" target="_blank">${escapeHtml(agentName)}</a>` : `<span class="text-muted">${escapeHtml(agentName)}</span>`}
             </td>
             <td>${regressionLabel}</td>
             <td>

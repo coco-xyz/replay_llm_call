@@ -225,8 +225,10 @@ function displayTestCases(testCases) {
             </td>
             <td>
                 <div class="d-flex flex-column">
-                    <span>${agentDisplay}</span>
-                    <small class="text-muted">${escapeHtml(testCase.agent_id)}</small>
+                    ${testCase.agent ?
+                `<a href="/agents/${escapeHtml(testCase.agent_id)}" class="text-decoration-none" target="_blank">${agentDisplay}</a>` :
+                `<span class="text-muted">${agentDisplay}</span>`
+            }
                 </div>
             </td>
             <td>
@@ -581,7 +583,7 @@ async function viewTestCase(testCaseId) {
                     <table class="table table-sm">
                         <tr><td><strong>Name:</strong></td><td>${escapeHtml(testCase.name)}</td></tr>
                         <tr><td><strong>Description:</strong></td><td>${escapeHtml(testCase.description || 'N/A')}</td></tr>
-                        <tr><td><strong>Agent:</strong></td><td>${testCase.agent ? `<span class="badge bg-primary">${escapeHtml(testCase.agent.name)}</span>` : 'Unknown'}<br><small class="text-muted">${escapeHtml(testCase.agent_id)}</small></td></tr>
+                        <tr><td><strong>Agent:</strong></td><td>${testCase.agent ? `<a href="/agents/${escapeHtml(testCase.agent_id)}" class="badge bg-primary text-decoration-none" target="_blank">${escapeHtml(testCase.agent.name)}</a>` : '<span class="text-muted">Unknown</span>'}</td></tr>
                         <tr><td><strong>Model:</strong></td><td>${escapeHtml(testCase.model_name)}</td></tr>
                         <tr><td><strong>Has Tools:</strong></td><td>${testCase.tools ? 'Yes' : 'No'}</td></tr>
                         <tr><td><strong>Created:</strong></td><td>${formatDate(testCase.created_at)}</td></tr>

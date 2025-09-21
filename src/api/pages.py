@@ -91,6 +91,21 @@ async def agents_page(request: Request):
     )
 
 
+@router.get("/agents/{agent_id}", response_class=HTMLResponse)
+async def agent_detail_page(request: Request, agent_id: str):
+    """Agent detail page."""
+
+    return templates.TemplateResponse(
+        "agent_detail.html",
+        {
+            "request": request,
+            "agent_id": agent_id,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "agents",
+        },
+    )
+
+
 @router.get("/regression-tests", response_class=HTMLResponse)
 async def regression_tests_page(request: Request):
     """Regression tests listing page."""

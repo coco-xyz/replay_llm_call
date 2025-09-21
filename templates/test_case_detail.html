@@ -186,126 +186,126 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container py-4">
-        <!-- Header with Action Buttons -->
-        <div class="page-header d-flex justify-content-between align-items-start">
-            <div>
-                <h1 class="page-title">
-                    <i class="fas fa-file-code me-3"></i>Test Case Details
-                </h1>
-                <p class="page-subtitle">Detailed view of test case configuration</p>
-            </div>
-            <div id="actionButtons" class="d-none">
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-secondary" onclick="viewTestLogs()">
-                        <i class="fas fa-history me-2"></i>View Test Logs
-                    </button>
-                    <button type="button" class="btn btn-success" onclick="executeTest()">
-                        <i class="fas fa-play me-2"></i>Execute Test
-                    </button>
-                    <button type="button" class="btn btn-outline-danger" onclick="deleteTestCase()">
-                        <i class="fas fa-trash me-2"></i>Delete Test Case
-                    </button>
-                </div>
-            </div>
+<div class="container py-4">
+    <!-- Header with Action Buttons -->
+    <div class="page-header d-flex justify-content-between align-items-start">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-file-code me-3"></i>Test Case Details
+            </h1>
+            <p class="page-subtitle">Detailed view of test case configuration</p>
         </div>
-
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner" class="loading-state">
-            <div class="loading-spinner">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <span>Loading test case details...</span>
+        <div id="actionButtons" class="d-none">
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary" onclick="viewTestLogs()">
+                    <i class="fas fa-history me-2"></i>View Test Logs
+                </button>
+                <button type="button" class="btn btn-success" onclick="executeTest()">
+                    <i class="fas fa-play me-2"></i>Execute Test
+                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="deleteTestCase()">
+                    <i class="fas fa-trash me-2"></i>Delete Test Case
+                </button>
             </div>
-        </div>
-
-        <!-- Error Message -->
-        <div id="errorMessage" class="error-message d-none">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <span id="errorText"></span>
-        </div>
-
-        <!-- Test Case Details Content -->
-        <div id="testCaseDetailsContent" class="d-none">
-            <!-- Content will be loaded here -->
         </div>
     </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-state">
+        <div class="loading-spinner">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span>Loading test case details...</span>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="errorMessage" class="error-message d-none">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <span id="errorText"></span>
+    </div>
+
+    <!-- Test Case Details Content -->
+    <div id="testCaseDetailsContent" class="d-none">
+        <!-- Content will be loaded here -->
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-    <script>
-            const caseId = '{{ case_id }}';
-            let currentTestCase = null;
+<script>
+    const caseId = '{{ case_id }}';
+    let currentTestCase = null;
 
-            document.addEventListener('DOMContentLoaded', function () {
-                loadTestCaseDetails();
-            });
+    document.addEventListener('DOMContentLoaded', function () {
+        loadTestCaseDetails();
+    });
 
-            async function loadTestCaseDetails() {
-                try {
-                    const response = await fetch(`/v1/api/test-cases/${caseId}`);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    currentTestCase = await response.json();
-                    displayTestCaseDetails(currentTestCase);
-
-                    // Show action buttons and hide loading
-                    document.getElementById('actionButtons').classList.remove('d-none');
-                    document.getElementById('loadingSpinner').classList.add('d-none');
-                    document.getElementById('testCaseDetailsContent').classList.remove('d-none');
-
-                } catch (error) {
-                    console.error('Error loading test case details:', error);
-                    document.getElementById('errorText').textContent = 'Failed to load test case details: ' + error.message;
-                    document.getElementById('errorMessage').classList.remove('d-none');
-                    document.getElementById('loadingSpinner').classList.add('d-none');
-                }
+    async function loadTestCaseDetails() {
+        try {
+            const response = await fetch(`/v1/api/test-cases/${caseId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            // Helper function to format middle messages
-            function formatMiddleMessages(messages) {
-                if (!messages || messages.length === 0) {
-                    return '<div class="text-muted">No middle messages</div>';
-                }
+            currentTestCase = await response.json();
+            displayTestCaseDetails(currentTestCase);
 
-                return messages.map((message, index) => {
-                    const role = message.role || 'unknown';
-                    const content = message.content || '';
-                    const toolCalls = message.tool_calls || [];
-                    const roleColor = {
-                        'user': 'text-primary',
-                        'assistant': 'text-success',
-                        'tool': 'text-warning',
-                        'system': 'text-info'
-                    }[role] || 'text-secondary';
+            // Show action buttons and hide loading
+            document.getElementById('actionButtons').classList.remove('d-none');
+            document.getElementById('loadingSpinner').classList.add('d-none');
+            document.getElementById('testCaseDetailsContent').classList.remove('d-none');
 
-                    // Format tool calls if present
-                    const formatToolCalls = (calls) => {
-                        if (!calls || calls.length === 0) return '';
+        } catch (error) {
+            console.error('Error loading test case details:', error);
+            document.getElementById('errorText').textContent = 'Failed to load test case details: ' + error.message;
+            document.getElementById('errorMessage').classList.remove('d-none');
+            document.getElementById('loadingSpinner').classList.add('d-none');
+        }
+    }
 
-                        return calls.map((call, callIndex) => {
-                            const toolId = call.id || 'unknown';
-                            const toolName = call.function?.name || 'unknown';
-                            const toolArgs = call.function?.arguments || '';
+    // Helper function to format middle messages
+    function formatMiddleMessages(messages) {
+        if (!messages || messages.length === 0) {
+            return '<div class="text-muted">No middle messages</div>';
+        }
 
-                            // Try to format arguments as JSON for better readability
-                            let formattedArgs = toolArgs;
-                            try {
-                                if (typeof toolArgs === 'string') {
-                                    const parsed = JSON.parse(toolArgs);
-                                    formattedArgs = JSON.stringify(parsed, null, 2);
-                                } else if (typeof toolArgs === 'object') {
-                                    formattedArgs = JSON.stringify(toolArgs, null, 2);
-                                }
-                            } catch (e) {
-                                // Keep original format if JSON parsing fails
-                                formattedArgs = String(toolArgs);
-                            }
+        return messages.map((message, index) => {
+            const role = message.role || 'unknown';
+            const content = message.content || '';
+            const toolCalls = message.tool_calls || [];
+            const roleColor = {
+                'user': 'text-primary',
+                'assistant': 'text-success',
+                'tool': 'text-warning',
+                'system': 'text-info'
+            }[role] || 'text-secondary';
 
-                            return `
+            // Format tool calls if present
+            const formatToolCalls = (calls) => {
+                if (!calls || calls.length === 0) return '';
+
+                return calls.map((call, callIndex) => {
+                    const toolId = call.id || 'unknown';
+                    const toolName = call.function?.name || 'unknown';
+                    const toolArgs = call.function?.arguments || '';
+
+                    // Try to format arguments as JSON for better readability
+                    let formattedArgs = toolArgs;
+                    try {
+                        if (typeof toolArgs === 'string') {
+                            const parsed = JSON.parse(toolArgs);
+                            formattedArgs = JSON.stringify(parsed, null, 2);
+                        } else if (typeof toolArgs === 'object') {
+                            formattedArgs = JSON.stringify(toolArgs, null, 2);
+                        }
+                    } catch (e) {
+                        // Keep original format if JSON parsing fails
+                        formattedArgs = String(toolArgs);
+                    }
+
+                    return `
                                 <div class="mt-2 p-2 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded">
                                     <div class="d-flex align-items-center mb-1">
                                         <i class="fas fa-tools text-warning me-2"></i>
@@ -319,10 +319,10 @@
                                     </div>
                                 </div>
                             `;
-                        }).join('');
-                    };
+                }).join('');
+            };
 
-                    return `
+            return `
                         <div class="mb-2 border-start border-3 ps-2" style="border-color: var(--bs-${role === 'user' ? 'primary' : role === 'assistant' ? 'success' : role === 'tool' ? 'warning' : 'secondary'}) !important;">
                             <div class="d-flex align-items-center mb-1">
                                 <span class="badge bg-secondary me-2">#${index + 1}</span>
@@ -333,33 +333,17 @@
                             ${formatToolCalls(toolCalls)}
                         </div>
                     `;
-                }).join('');
-            }
+        }).join('');
+    }
 
-            function displayTestCaseDetails(testCase) {
-                const agentName = testCase.agent ? testCase.agent.name : null;
-                const agentId = testCase.agent_id || '';
-                const agentBadge = agentName
-                    ? `<span class="badge bg-primary">${escapeHtml(agentName)}</span>`
-                    : '<span class="text-muted">Unknown agent</span>';
-                const agentIdHtml = agentId ? `<small class="text-muted ms-2">${escapeHtml(agentId)}</small>` : '';
-                const agentLinks = agentId
-                    ? `
-                        <div class="mt-2 small">
-                            <a href="/test-cases?agentId=${encodeURIComponent(agentId)}" class="text-decoration-none" target="_blank">
-                                View test cases for this agent
-                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                            </a>
-                            <span class="text-muted mx-1">•</span>
-                            <a href="/agents" class="text-decoration-none" target="_blank">
-                                Manage agents
-                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                            </a>
-                        </div>
-                    `
-                    : '';
+    function displayTestCaseDetails(testCase) {
+        const agentName = testCase.agent ? testCase.agent.name : null;
+        const agentId = testCase.agent_id || '';
+        const agentBadge = agentName && agentId
+            ? `<a href="/agents/${escapeHtml(agentId)}" class="badge bg-primary text-decoration-none" target="_blank">${escapeHtml(agentName)}</a>`
+            : '<span class="text-muted">Unknown agent</span>';
 
-                const detailsHtml = `
+        const detailsHtml = `
                     <div class="row">
                         <!-- Left Column -->
                         <div class="col-md-6">
@@ -384,15 +368,7 @@
                                         </tr>
                                         <tr>
                                             <td>Agent:</td>
-                                            <td>
-                                                <div class="d-flex flex-column">
-                                                    <div>
-                                                        ${agentBadge}
-                                                        ${agentIdHtml}
-                                                    </div>
-                                                    ${agentLinks}
-                                                </div>
-                                            </td>
+                                            <td>${agentBadge}</td>
                                         </tr>
                                         <tr>
                                             <td>Created At:</td>
@@ -492,78 +468,78 @@
                     </div>
                 `;
 
-                document.getElementById('testCaseDetailsContent').innerHTML = detailsHtml;
+        document.getElementById('testCaseDetailsContent').innerHTML = detailsHtml;
+    }
+
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, function (m) { return map[m]; });
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    async function executeTest() {
+        if (!currentTestCase) return;
+
+        try {
+            // Redirect to test execution page with this test case
+            window.open(`/test-execution?testCaseId=${currentTestCase.id}`, '_blank');
+        } catch (error) {
+            console.error('Error executing test:', error);
+            alert('Error executing test: ' + error.message);
+        }
+    }
+
+    function viewTestLogs() {
+        if (currentTestCase) {
+            window.open(`/test-logs?testCaseId=${currentTestCase.id}`, '_blank');
+        } else {
+            window.open('/test-logs', '_blank');
+        }
+    }
+
+    async function deleteTestCase() {
+        if (!currentTestCase) return;
+
+        if (!confirm(`Are you sure you want to delete the test case "${currentTestCase.name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/v1/api/test-cases/${currentTestCase.id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            function escapeHtml(text) {
-                if (text === null || text === undefined) return '';
-                const map = {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                };
-                return text.toString().replace(/[&<>"']/g, function (m) { return map[m]; });
-            }
+            alert('Test case deleted successfully!');
+            // Redirect back to test cases page
+            window.location.href = '/test-cases';
 
-            function formatDate(dateString) {
-                if (!dateString) return 'N/A';
-                const date = new Date(dateString);
-                return date.toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-            }
-
-            async function executeTest() {
-                if (!currentTestCase) return;
-
-                try {
-                    // Redirect to test execution page with this test case
-                    window.open(`/test-execution?testCaseId=${currentTestCase.id}`, '_blank');
-                } catch (error) {
-                    console.error('Error executing test:', error);
-                    alert('Error executing test: ' + error.message);
-                }
-            }
-
-            function viewTestLogs() {
-                if (currentTestCase) {
-                    window.open(`/test-logs?testCaseId=${currentTestCase.id}`, '_blank');
-                } else {
-                    window.open('/test-logs', '_blank');
-                }
-            }
-
-            async function deleteTestCase() {
-                if (!currentTestCase) return;
-
-                if (!confirm(`Are you sure you want to delete the test case "${currentTestCase.name}"? This action cannot be undone.`)) {
-                    return;
-                }
-
-                try {
-                    const response = await fetch(`/v1/api/test-cases/${currentTestCase.id}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    alert('Test case deleted successfully!');
-                    // Redirect back to test cases page
-                    window.location.href = '/test-cases';
-
-                } catch (error) {
-                    console.error('Error deleting test case:', error);
-                    alert('Error deleting test case: ' + error.message);
-                }
-            }
-        </script>
+        } catch (error) {
+            console.error('Error deleting test case:', error);
+            alert('Error deleting test case: ' + error.message);
+        }
+    }
+</script>
 {% endblock %}

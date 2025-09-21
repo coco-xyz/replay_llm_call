@@ -7,7 +7,6 @@
 window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     loadRegressionDetail();
-    loadRegressionLogs();
 });
 
 function setupEventListeners() {
@@ -15,13 +14,7 @@ function setupEventListeners() {
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
             loadRegressionDetail();
-            loadRegressionLogs();
         });
-    }
-
-    const refreshLogsBtn = document.getElementById('refreshLogsBtn');
-    if (refreshLogsBtn) {
-        refreshLogsBtn.addEventListener('click', () => loadRegressionLogs());
     }
 }
 
@@ -66,10 +59,9 @@ function displayRegressionDetail(regression) {
     setPre('overrideSettings', settingsPretty);
 
     const openLogsBtn = document.getElementById('openLogsBtn');
-    const viewAllLogsBtn = document.getElementById('viewAllLogsBtn');
-    const logsLink = `/test-logs?regressionTestId=${encodeURIComponent(regression.id)}`;
-    if (openLogsBtn) openLogsBtn.href = logsLink;
-    if (viewAllLogsBtn) viewAllLogsBtn.href = logsLink;
+    if (openLogsBtn) {
+        openLogsBtn.href = `/test-logs?regressionTestId=${encodeURIComponent(regression.id)}`;
+    }
 
     const errorSection = document.getElementById('errorSection');
     const errorMessageText = document.getElementById('errorMessageText');
@@ -81,65 +73,6 @@ function displayRegressionDetail(regression) {
     } else {
         errorSection.classList.add('d-none');
     }
-}
-
-async function loadRegressionLogs() {
-    const logsContainer = document.getElementById('logsList');
-    if (logsContainer) {
-        logsContainer.innerHTML = '<tr><td colspan="5" class="text-muted">Loading logs...</td></tr>';
-    }
-
-    try {
-        const response = await fetch(`/v1/api/regression-tests/${regressionId}/logs?limit=50`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const logs = await response.json();
-        displayRegressionLogs(logs);
-    } catch (error) {
-        console.error('Error loading regression logs:', error);
-        showDetailError('Failed to load regression logs: ' + error.message);
-    }
-}
-
-function displayRegressionLogs(logs) {
-    const list = document.getElementById('logsList');
-    const emptyState = document.getElementById('logsEmptyState');
-    if (!list || !emptyState) return;
-
-    if (!logs || logs.length === 0) {
-        list.innerHTML = '';
-        emptyState.classList.remove('d-none');
-        return;
-    }
-
-    emptyState.classList.add('d-none');
-
-    const rows = logs
-        .map((log) => {
-            const statusBadge = buildLogStatusBadge(log.status);
-            const executedAt = formatDate(log.created_at);
-            const responseTime = log.response_time_ms != null ? `${log.response_time_ms} ms` : '—';
-            return `
-            <tr>
-                <td>
-                    <div class="d-flex flex-column">
-                        <a href="/test-cases/${log.test_case_id}" target="_blank" class="fw-semibold text-decoration-none">
-                            ${escapeHtml(log.test_case_id)}
-                        </a>
-                        <small class="text-muted">Log ID: ${escapeHtml(log.id)}</small>
-                    </div>
-                </td>
-                <td>${statusBadge}</td>
-                <td><span class="badge bg-primary">${escapeHtml(log.model_name)}</span></td>
-                <td>${responseTime}</td>
-                <td>${executedAt}</td>
-            </tr>`;
-        })
-        .join('');
-
-    list.innerHTML = rows;
 }
 
 function toggleDetailLoading(show) {
@@ -184,32 +117,49 @@ function setPre(elementId, value) {
         element.textContent = value;
     }
 }
-
 function buildStatusBadge(status) {
     const normalized = (status || '').toLowerCase();
+    const label = formatStatus(status);
+    let icon = 'fa-circle';
+    let pillClass = 'status-secondary';
+
     switch (normalized) {
         case 'pending':
-            return '<span class="badge bg-secondary"><i class="fas fa-clock me-1"></i>Pending</span>';
+            pillClass = 'status-warning';
+            icon = 'fa-clock';
+            break;
         case 'running':
-            return '<span class="badge bg-warning"><i class="fas fa-spinner fa-spin me-1"></i>Running</span>';
+            pillClass = 'status-warning';
+            icon = 'fa-spinner fa-spin';
+            break;
         case 'completed':
-            return '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Completed</span>';
+            pillClass = 'status-success';
+            icon = 'fa-check';
+            break;
         case 'failed':
-            return '<span class="badge bg-danger"><i class="fas fa-triangle-exclamation me-1"></i>Failed</span>';
+            pillClass = 'status-danger';
+            icon = 'fa-triangle-exclamation';
+            break;
         default:
-            return `<span class="badge bg-secondary">${escapeHtml(status)}</span>`;
+            pillClass = 'status-secondary';
+            icon = 'fa-circle';
+            break;
     }
+
+    return `
+        <span class="status-pill ${pillClass}">
+            <i class="fas ${icon}"></i>
+            <span>${label}</span>
+        </span>
+    `;
 }
 
-function buildLogStatusBadge(status) {
-    const normalized = (status || '').toLowerCase();
-    if (normalized === 'success') {
-        return '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Success</span>';
+function formatStatus(status) {
+    if (!status) {
+        return 'Unknown';
     }
-    if (normalized === 'failed') {
-        return '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
-    }
-    return `<span class="badge bg-secondary">${escapeHtml(status)}</span>`;
+    const normalized = status.toString().toLowerCase();
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function escapeHtml(text) {

@@ -161,21 +161,25 @@ function displayRegressionTests(regressions) {
     emptyState.classList.add('d-none');
     table.style.display = 'table';
 
-    container.innerHTML = regressions.map(buildRegressionRow).join('');
+    const sorted = [...regressions].sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return timeB - timeA;
+    });
+
+    container.innerHTML = sorted.map(buildRegressionRow).join('');
 }
 
 function buildRegressionRow(regression) {
     const statusBadge = buildStatusBadge(regression.status);
     const agentName = regression.agent ? regression.agent.name : 'Unknown agent';
-    const overrides = `
-        <div class="d-flex flex-column gap-1">
-            <span class="badge bg-primary">${escapeHtml(regression.model_name_override)}</span>
-            <small class="text-muted text-truncate" style="max-width: 260px;" title="${escapeHtml(regression.system_prompt_override)}">
-                ${escapeHtml(truncateText(regression.system_prompt_override, 120))}
-            </small>
-        </div>
-    `;
-    const settings = `<code class="text-muted">${escapeHtml(truncateText(JSON.stringify(regression.model_settings_override), 120))}</code>`;
+    const agentId = regression.agent ? regression.agent.id : null;
+    const agentPrimaryLine = agentId
+        ? `<a href="/agents/${encodeURIComponent(agentId)}" class="text-decoration-none fw-semibold" target="_blank" rel="noopener noreferrer">${escapeHtml(agentName)}</a>`
+        : `<span class="fw-semibold">${escapeHtml(agentName)}</span>`;
+    const modelName = regression.model_name_override
+        ? `<span class="badge bg-primary">${escapeHtml(regression.model_name_override)}</span>`
+        : '<span class="text-muted">—</span>';
     const results = `
         <div class="d-flex flex-wrap gap-2">
             <span class="badge bg-primary">Total ${regression.total_count}</span>
@@ -184,37 +188,26 @@ function buildRegressionRow(regression) {
         </div>
     `;
 
-    const started = formatDate(regression.started_at);
-    const completed = formatDate(regression.completed_at);
-    const timing = `
-        <div class="d-flex flex-column">
-            <span><strong>Start:</strong> ${started}</span>
-            <span><strong>End:</strong> ${completed}</span>
-        </div>
-    `;
+    const created = formatDate(regression.created_at);
 
     return `
         <tr data-regression-id="${escapeHtml(regression.id)}">
             <td>
                 <div class="d-flex flex-column">
-                    <strong>${escapeHtml(agentName)}</strong>
-                    <small class="text-muted">${escapeHtml(regression.id)}</small>
+                    ${agentPrimaryLine}
                 </div>
             </td>
             <td>${statusBadge}</td>
-            <td>
-                ${overrides}
-                <div class="small mt-2">${settings}</div>
-            </td>
+            <td>${modelName}</td>
             <td>${results}</td>
-            <td>${timing}</td>
+            <td>${created}</td>
             <td class="text-end">
                 <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-primary" onclick="openRegressionDetail('${regression.id}')">
+                    <button type="button" class="btn btn-outline-primary" onclick="openRegressionDetail('${regression.id}')" title="View regression details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="loadRegressions()" title="Refresh list">
-                        <i class="fas fa-rotate"></i>
+                    <button type="button" class="btn btn-outline-secondary" onclick="openRegressionLogs('${regression.id}')" title="View related test logs">
+                        <i class="fas fa-clipboard-list"></i>
                     </button>
                 </div>
             </td>
@@ -402,6 +395,12 @@ function updateRegressionRows(regressions) {
         return;
     }
 
+    const sorted = [...regressions].sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return timeB - timeA;
+    });
+
     emptyState.classList.add('d-none');
     table.style.display = 'table';
 
@@ -414,7 +413,7 @@ function updateRegressionRows(regressions) {
         }
     });
 
-    regressions.forEach((regression, index) => {
+    sorted.forEach((regression, index) => {
         const wrapper = document.createElement('tbody');
         wrapper.innerHTML = buildRegressionRow(regression).trim();
         const newRow = wrapper.firstElementChild;
@@ -443,10 +442,17 @@ function updateRegressionRows(regressions) {
     });
 }
 
-}
-
 function openRegressionDetail(regressionId) {
     window.open(`/regression-tests/${regressionId}`, '_blank');
+}
+
+function openRegressionLogs(regressionId) {
+    if (!regressionId) return;
+    const url = `/test-logs?regressionTestId=${encodeURIComponent(regressionId)}`;
+    const newWindow = window.open(url, '_blank');
+    if (newWindow) {
+        newWindow.opener = null;
+    }
 }
 
 function toggleLoading(show) {
@@ -536,3 +542,4 @@ function formatDate(dateString) {
 }
 
 window.openRegressionDetail = openRegressionDetail;
+window.openRegressionLogs = openRegressionLogs;

@@ -120,6 +120,9 @@ function displayAgents(agentList) {
                 </td>
                 <td class="text-end">
                     <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-info" onclick="viewAgentDetails('${agent.id}')" title="View details">
+                            <i class="fas fa-eye"></i>
+                        </button>
                         <button type="button" class="btn btn-outline-primary" onclick="openEditAgent('${agent.id}')">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -409,7 +412,12 @@ function formatDate(dateString) {
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
 }
 
+function viewAgentDetails(agentId) {
+    window.open(`/agents/${agentId}`, '_blank');
+}
+
 // expose functions used by inline handlers
 window.openEditAgent = openEditAgent;
+window.viewAgentDetails = viewAgentDetails;
 window.deleteAgent = deleteAgent;
 window.openAgentTestCases = openAgentTestCases;

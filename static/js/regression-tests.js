@@ -478,23 +478,32 @@ async function safeJson(response) {
 }
 
 function showAlert(message, type) {
-    const container = document.querySelector('.container');
-    if (!container) return;
-
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show`;
-    alert.innerHTML = `
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
 
-    container.insertBefore(alert, container.firstChild);
+    const toastRoot = document.getElementById('toast-root');
+    if (toastRoot) {
+        toastRoot.appendChild(alertDiv);
+    } else {
+        const container = document.querySelector('.container');
+        if (container) {
+            if (container.firstChild) {
+                container.insertBefore(alertDiv, container.firstChild);
+            } else {
+                container.appendChild(alertDiv);
+            }
+        }
+    }
 
     setTimeout(() => {
-        if (alert.parentNode) {
-            alert.remove();
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
         }
-    }, 6000);
+    }, 5000);
 }
 
 function showModalAlert(containerId, message, type) {

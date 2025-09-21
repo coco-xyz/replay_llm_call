@@ -751,7 +751,6 @@ function showModalAlert(containerId, message, type) {
 }
 
 function showAlert(message, type) {
-    // Create alert element
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
     alertDiv.innerHTML = `
@@ -759,11 +758,20 @@ function showAlert(message, type) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
 
-    // Insert at top of container
-    const container = document.querySelector('.container');
-    container.insertBefore(alertDiv, container.firstChild);
+    const toastRoot = document.getElementById('toast-root');
+    if (toastRoot) {
+        toastRoot.appendChild(alertDiv);
+    } else {
+        const container = document.querySelector('.container');
+        if (container) {
+            if (container.firstChild) {
+                container.insertBefore(alertDiv, container.firstChild);
+            } else {
+                container.appendChild(alertDiv);
+            }
+        }
+    }
 
-    // Auto-dismiss after 5 seconds
     setTimeout(() => {
         if (alertDiv.parentNode) {
             alertDiv.remove();

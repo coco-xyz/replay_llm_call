@@ -238,111 +238,111 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container py-4">
-        <!-- Header with Action Buttons -->
-        <div class="page-header d-flex justify-content-between align-items-start">
-            <div>
-                <h1 class="page-title">
-                    <i class="fas fa-file-alt me-3"></i>Test Log Details
-                </h1>
-                <p class="page-subtitle">Detailed view of test execution log</p>
-            </div>
-            <div id="actionButtons" class="d-none">
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-success" onclick="reExecuteTest()">
-                        <i class="fas fa-redo me-2"></i>Re-execute Test
-                    </button>
-                    <button type="button" class="btn btn-outline-danger" onclick="deleteLog()">
-                        <i class="fas fa-trash me-2"></i>Delete Log
-                    </button>
-                </div>
-            </div>
+<div class="container py-4">
+    <!-- Header with Action Buttons -->
+    <div class="page-header d-flex justify-content-between align-items-start">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-file-alt me-3"></i>Test Log Details
+            </h1>
+            <p class="page-subtitle">Detailed view of test execution log</p>
         </div>
-
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner" class="loading-state">
-            <div class="loading-spinner">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <span>Loading test log details...</span>
+        <div id="actionButtons" class="d-none">
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-success" onclick="reExecuteTest()">
+                    <i class="fas fa-redo me-2"></i>Re-execute Test
+                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="deleteLog()">
+                    <i class="fas fa-trash me-2"></i>Delete Log
+                </button>
             </div>
-        </div>
-
-        <!-- Error Message -->
-        <div id="errorMessage" class="error-message d-none">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <span id="errorText"></span>
-        </div>
-
-        <!-- Log Details Content -->
-        <div id="logDetailsContent" class="d-none">
-            <!-- Content will be loaded here -->
         </div>
     </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-state">
+        <div class="loading-spinner">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span>Loading test log details...</span>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="errorMessage" class="error-message d-none">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <span id="errorText"></span>
+    </div>
+
+    <!-- Log Details Content -->
+    <div id="logDetailsContent" class="d-none">
+        <!-- Content will be loaded here -->
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-    <script>
-            // Get log ID from URL
-            const logId = '{{ log_id }}';
-            let currentLog = null;
-            let testCasesData = [];
-            let agentSummary = null;
-            let regressionSummary = null;
-            const agentCache = new Map();
-            const regressionCache = new Map();
+<script>
+    // Get log ID from URL
+    const logId = '{{ log_id }}';
+    let currentLog = null;
+    let testCasesData = [];
+    let agentSummary = null;
+    let regressionSummary = null;
+    const agentCache = new Map();
+    const regressionCache = new Map();
 
-            // Initialize page
-            document.addEventListener('DOMContentLoaded', async function () {
-                await loadTestCases();
-                await loadLogDetails();
-            });
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', async function () {
+        await loadTestCases();
+        await loadLogDetails();
+    });
 
-            async function loadTestCases() {
-                try {
-                    const response = await fetch('/v1/api/test-cases/');
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    testCasesData = await response.json();
-                } catch (error) {
-                    console.error('Error loading test cases:', error);
+    async function loadTestCases() {
+        try {
+            const response = await fetch('/v1/api/test-cases/');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            testCasesData = await response.json();
+        } catch (error) {
+            console.error('Error loading test cases:', error);
+        }
+    }
+
+    async function loadLogDetails() {
+        try {
+            const response = await fetch(`/v1/api/test-logs/${logId}`);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('Test log not found');
                 }
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            async function loadLogDetails() {
-                try {
-                    const response = await fetch(`/v1/api/test-logs/${logId}`);
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            throw new Error('Test log not found');
-                        }
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
+            currentLog = await response.json();
 
-                    currentLog = await response.json();
-
-                    await loadAgentSummary(currentLog.agent_id);
-                    if (currentLog.regression_test_id) {
-                        await loadRegressionSummary(currentLog.regression_test_id);
-                    } else {
-                        regressionSummary = null;
-                    }
-
-                    displayLogDetails(currentLog);
-
-                } catch (error) {
-                    console.error('Error loading log details:', error);
-                    showError(error.message);
-                } finally {
-                    hideLoading();
-                }
+            await loadAgentSummary(currentLog.agent_id);
+            if (currentLog.regression_test_id) {
+                await loadRegressionSummary(currentLog.regression_test_id);
+            } else {
+                regressionSummary = null;
             }
 
-            function displayLogDetails(log) {
-                const testCase = findTestCaseById(log.test_case_id);
-                const responseTime = formatResponseTime(log.response_time_ms);
+            displayLogDetails(currentLog);
 
-                const detailsHtml = `
+        } catch (error) {
+            console.error('Error loading log details:', error);
+            showError(error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function displayLogDetails(log) {
+        const testCase = findTestCaseById(log.test_case_id);
+        const responseTime = formatResponseTime(log.response_time_ms);
+
+        const detailsHtml = `
                     <div class="row">
                         <!-- Left Column -->
                         <div class="col-md-6">
@@ -385,19 +385,10 @@
                                         <tr>
                                             <td>Test Case:</td>
                                             <td>
-                                                <div>
-                                                    <a href="/test-cases/${log.test_case_id}" class="text-decoration-none" target="_blank">
-                                                        ${escapeHtml(testCase?.name || log.test_case_id)}
-                                                        <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                                                    </a>
-                                                </div>
-                                                ${testCase?.description ? `
-                                                    <div class="text-muted mt-1" style="font-size: 0.9em;">
-                                                        <span title="${escapeHtml(testCase.description)}" style="cursor: help;">
-                                                            ${truncateText(testCase.description, 100)}
-                                                        </span>
-                                                    </div>
-                                                ` : ''}
+                                                <a href="/test-cases/${log.test_case_id}" class="text-decoration-none" target="_blank">
+                                                    ${escapeHtml(testCase?.name || log.test_case_id)}
+                                                    <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                                                </a>
                                             </td>
                                         </tr>
                                         <tr>
@@ -480,9 +471,9 @@
                                 <div class="collapse" id="modelSettingsCollapse">
                                     <div class="card-body">
                                         ${log.model_settings !== null && log.model_settings !== undefined ?
-                        `<pre class="bg-light p-3 rounded mb-0"><code>${escapeHtml(JSON.stringify(log.model_settings, null, 2))}</code></pre>` :
-                        '<p class="text-muted mb-0">No model settings specified</p>'
-                    }
+                `<pre class="bg-light p-3 rounded mb-0"><code>${escapeHtml(JSON.stringify(log.model_settings, null, 2))}</code></pre>` :
+                '<p class="text-muted mb-0">No model settings specified</p>'
+            }
                                     </div>
                                 </div>
                             </div>
@@ -547,297 +538,263 @@
                     ` : ''}
                 `;
 
-                document.getElementById('logDetailsContent').innerHTML = detailsHtml;
-                document.getElementById('logDetailsContent').classList.remove('d-none');
-                document.getElementById('actionButtons').classList.remove('d-none');
+        document.getElementById('logDetailsContent').innerHTML = detailsHtml;
+        document.getElementById('logDetailsContent').classList.remove('d-none');
+        document.getElementById('actionButtons').classList.remove('d-none');
 
-                // Setup Model Settings collapse handlers
-                setupModelSettingsCollapse(log);
-            }
+        // Setup Model Settings collapse handlers
+        setupModelSettingsCollapse(log);
+    }
 
-            async function loadAgentSummary(agentId) {
-                if (!agentId) {
+    async function loadAgentSummary(agentId) {
+        if (!agentId) {
+            agentSummary = null;
+            return;
+        }
+
+        if (agentCache.has(agentId)) {
+            agentSummary = agentCache.get(agentId);
+            return;
+        }
+
+        try {
+            const response = await fetch(`/v1/api/agents/${agentId}`);
+            if (!response.ok) {
+                if (response.status === 404) {
                     agentSummary = null;
                     return;
                 }
-
-                if (agentCache.has(agentId)) {
-                    agentSummary = agentCache.get(agentId);
-                    return;
-                }
-
-                try {
-                    const response = await fetch(`/v1/api/agents/${agentId}`);
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            agentSummary = null;
-                            return;
-                        }
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    agentCache.set(agentId, data);
-                    agentSummary = data;
-                } catch (error) {
-                    console.error('Error loading agent summary:', error);
-                    agentSummary = null;
-                }
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            async function loadRegressionSummary(regressionId) {
-                if (!regressionId) {
+            const data = await response.json();
+            agentCache.set(agentId, data);
+            agentSummary = data;
+        } catch (error) {
+            console.error('Error loading agent summary:', error);
+            agentSummary = null;
+        }
+    }
+
+    async function loadRegressionSummary(regressionId) {
+        if (!regressionId) {
+            regressionSummary = null;
+            return;
+        }
+
+        if (regressionCache.has(regressionId)) {
+            regressionSummary = regressionCache.get(regressionId);
+            return;
+        }
+
+        try {
+            const response = await fetch(`/v1/api/regression-tests/${regressionId}`);
+            if (!response.ok) {
+                if (response.status === 404) {
                     regressionSummary = null;
                     return;
                 }
-
-                if (regressionCache.has(regressionId)) {
-                    regressionSummary = regressionCache.get(regressionId);
-                    return;
-                }
-
-                try {
-                    const response = await fetch(`/v1/api/regression-tests/${regressionId}`);
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            regressionSummary = null;
-                            return;
-                        }
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    regressionCache.set(regressionId, data);
-                    regressionSummary = data;
-                } catch (error) {
-                    console.error('Error loading regression summary:', error);
-                    regressionSummary = null;
-                }
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            function setupModelSettingsCollapse(log) {
-                const modelSettingsCollapse = document.getElementById('modelSettingsCollapse');
-                const modelSettingsChevron = document.getElementById('modelSettingsChevron');
+            const data = await response.json();
+            regressionCache.set(regressionId, data);
+            regressionSummary = data;
+        } catch (error) {
+            console.error('Error loading regression summary:', error);
+            regressionSummary = null;
+        }
+    }
 
-                if (!modelSettingsCollapse || !modelSettingsChevron) return;
+    function setupModelSettingsCollapse(log) {
+        const modelSettingsCollapse = document.getElementById('modelSettingsCollapse');
+        const modelSettingsChevron = document.getElementById('modelSettingsChevron');
 
-                // Handle chevron icon rotation
-                modelSettingsCollapse.addEventListener('show.bs.collapse', function () {
-                    modelSettingsChevron.classList.remove('fa-chevron-right');
-                    modelSettingsChevron.classList.add('fa-chevron-down');
-                });
+        if (!modelSettingsCollapse || !modelSettingsChevron) return;
 
-                modelSettingsCollapse.addEventListener('hide.bs.collapse', function () {
-                    modelSettingsChevron.classList.remove('fa-chevron-down');
-                    modelSettingsChevron.classList.add('fa-chevron-right');
-                });
+        // Handle chevron icon rotation
+        modelSettingsCollapse.addEventListener('show.bs.collapse', function () {
+            modelSettingsChevron.classList.remove('fa-chevron-right');
+            modelSettingsChevron.classList.add('fa-chevron-down');
+        });
 
-                // Auto-expand if there are model settings
-                if (log.model_settings !== null && log.model_settings !== undefined) {
-                    const bsCollapse = new bootstrap.Collapse(modelSettingsCollapse, { show: true });
-                }
+        modelSettingsCollapse.addEventListener('hide.bs.collapse', function () {
+            modelSettingsChevron.classList.remove('fa-chevron-down');
+            modelSettingsChevron.classList.add('fa-chevron-right');
+        });
+
+        // Auto-expand if there are model settings
+        if (log.model_settings !== null && log.model_settings !== undefined) {
+            const bsCollapse = new bootstrap.Collapse(modelSettingsCollapse, { show: true });
+        }
+    }
+
+    // Helper functions
+    function findTestCaseById(testCaseId) {
+        return testCasesData.find(tc => tc.id === testCaseId);
+    }
+
+    function formatAgentSummary(agentId) {
+        if (!agentId) {
+            return '<span class="text-muted">Unknown agent</span>';
+        }
+
+        const summary = agentCache.get(agentId) || agentSummary;
+        if (!summary) {
+            return `<span class="badge bg-secondary">${escapeHtml(agentId)}</span>`;
+        }
+
+        const agentName = summary.name ? escapeHtml(summary.name) : 'Unnamed agent';
+        return `<a href="/agents/${escapeHtml(agentId)}" class="badge bg-primary text-decoration-none" target="_blank">${agentName}</a>`;
+    }
+
+    function formatRegressionTimestamp(createdAt) {
+        if (!createdAt) {
+            return 'Unknown';
+        }
+        const date = new Date(createdAt);
+        if (Number.isNaN(date.getTime())) {
+            return 'Unknown';
+        }
+
+        const pad = (value) => String(value).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        const MM = pad(date.getMonth() + 1);
+        const dd = pad(date.getDate());
+        const hh = pad(date.getHours());
+        const mm = pad(date.getMinutes());
+        const ss = pad(date.getSeconds());
+
+        return `${yyyy}${MM}${dd}${hh}${mm}${ss}`;
+    }
+
+    function formatRegressionSummary(regressionId) {
+        if (!regressionId) {
+            return '<span class="text-muted">Ad-hoc execution</span>';
+        }
+
+        const summary = regressionCache.get(regressionId) || regressionSummary;
+        const encodedRegressionId = encodeURIComponent(regressionId);
+
+        if (!summary) {
+            return `<a href="/regression-tests/${encodedRegressionId}" class="text-decoration-none" target="_blank">${escapeHtml(regressionId)}</a>`;
+        }
+
+        const timestamp = formatRegressionTimestamp(summary.created_at);
+        const display = timestamp || regressionId;
+        return `<a href="/regression-tests/${encodedRegressionId}" class="text-decoration-none" target="_blank">${escapeHtml(display)}</a>`;
+    }
+
+    function formatResponseTime(value) {
+        if (value === null || value === undefined) {
+            return '—';
+        }
+        return `${value}ms`;
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingSpinner').style.display = 'none';
+    }
+
+    function showError(message) {
+        document.getElementById('errorText').textContent = message;
+        document.getElementById('errorMessage').classList.remove('d-none');
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    }
+
+    function truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return escapeHtml(text);
+        return escapeHtml(text.substring(0, maxLength)) + '...';
+    }
+
+    async function copyToClipboard(elementId, buttonElement) {
+        try {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                console.error('Element not found:', elementId);
+                return;
             }
 
-            // Helper functions
-            function findTestCaseById(testCaseId) {
-                return testCasesData.find(tc => tc.id === testCaseId);
+            // Get the text content (without HTML tags)
+            const textToCopy = element.textContent || element.innerText;
+
+            // Use the modern clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(textToCopy);
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                textArea.remove();
             }
 
-            function formatAgentSummary(agentId) {
-                if (!agentId) {
-                    return '<span class="text-muted">Unknown agent</span>';
-                }
+            // Visual feedback
+            const originalIcon = buttonElement.innerHTML;
+            buttonElement.innerHTML = '<i class="fas fa-check text-success"></i>';
+            buttonElement.disabled = true;
 
-                const summary = agentCache.get(agentId) || agentSummary;
-                if (!summary) {
-                    return `<span class="badge bg-secondary">${escapeHtml(agentId)}</span>`;
-                }
+            setTimeout(() => {
+                buttonElement.innerHTML = originalIcon;
+                buttonElement.disabled = false;
+            }, 1500);
 
-                const encodedAgentId = encodeURIComponent(agentId);
-                const agentName = summary.name ? escapeHtml(summary.name) : 'Unnamed agent';
-                const description = summary.description ? `<div class="text-muted small mt-1">${escapeHtml(summary.description)}</div>` : '';
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
 
-                return `
-                    <div class="d-flex flex-column">
-                        <div>
-                            <span class="badge bg-primary">${agentName}</span>
-                            <small class="text-muted ms-2">${escapeHtml(agentId)}</small>
-                        </div>
-                        ${description}
-                        <div class="mt-2 small">
-                            <a href="/test-cases?agentId=${encodedAgentId}" class="text-decoration-none" target="_blank">
-                                View test cases for this agent
-                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                            </a>
-                            <span class="text-muted mx-1">•</span>
-                            <a href="/agents" class="text-decoration-none" target="_blank">
-                                Manage agents
-                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                            </a>
-                        </div>
-                    </div>
-                `;
-            }
+            // Show error feedback
+            const originalIcon = buttonElement.innerHTML;
+            buttonElement.innerHTML = '<i class="fas fa-times text-danger"></i>';
 
-            function formatRegressionSummary(regressionId) {
-                if (!regressionId) {
-                    return '<span class="text-muted">Ad-hoc execution</span>';
-                }
+            setTimeout(() => {
+                buttonElement.innerHTML = originalIcon;
+            }, 1500);
+        }
+    }
 
-                const summary = regressionCache.get(regressionId) || regressionSummary;
-                const encodedRegressionId = encodeURIComponent(regressionId);
+    function reExecuteTest() {
+        if (currentLog) {
+            window.location.href = `/test-execution?logId=${currentLog.id}`;
+        }
+    }
 
-                if (!summary) {
-                    return `<a href="/regression-tests/${encodedRegressionId}" class="text-decoration-none" target="_blank">${escapeHtml(regressionId)}<i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i></a>`;
-                }
+    async function deleteLog() {
+        if (!confirm('Are you sure you want to delete this test log? This action cannot be undone.')) {
+            return;
+        }
 
-                const labelParts = [];
-                if (summary.agent && summary.agent.name) {
-                    labelParts.push(summary.agent.name);
-                }
-                if (summary.status) {
-                    labelParts.push(summary.status);
-                }
+        try {
+            const response = await fetch(`/v1/api/test-logs/${logId}`, {
+                method: 'DELETE'
+            });
 
-                const label = labelParts.length > 0 ? labelParts.join(' · ') : regressionId;
-                const successCount = summary.success_count ?? 0;
-                const failedCount = summary.failed_count ?? 0;
-                const totalCount = summary.total_count ?? successCount + failedCount;
-                const counts = `${successCount} passed · ${failedCount} failed (total ${totalCount})`;
-                const timing = summary.completed_at
-                    ? `Completed ${escapeHtml(formatDate(summary.completed_at))}`
-                    : summary.started_at
-                        ? `Started ${escapeHtml(formatDate(summary.started_at))}`
-                        : '';
-                const errorInfo = summary.error_message
-                    ? `<div class="text-danger small mt-1">${escapeHtml(summary.error_message)}</div>`
-                    : '';
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-                return `
-                    <div class="d-flex flex-column">
-                        <div>
-                            <a href="/regression-tests/${encodedRegressionId}" class="text-decoration-none" target="_blank">
-                                ${escapeHtml(label)}
-                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                            </a>
-                        </div>
-                        <div class="text-muted small">${escapeHtml(counts)}</div>
-                        ${timing ? `<div class="text-muted small">${timing}</div>` : ''}
-                        ${errorInfo}
-                    </div>
-                `;
-            }
+            alert('Test log deleted successfully!');
+            window.location.href = '/test-logs';
 
-            function formatResponseTime(value) {
-                if (value === null || value === undefined) {
-                    return '—';
-                }
-                return `${value}ms`;
-            }
-
-            function hideLoading() {
-                document.getElementById('loadingSpinner').style.display = 'none';
-            }
-
-            function showError(message) {
-                document.getElementById('errorText').textContent = message;
-                document.getElementById('errorMessage').classList.remove('d-none');
-            }
-
-            function escapeHtml(text) {
-                if (!text) return '';
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
-
-            function formatDate(dateString) {
-                const date = new Date(dateString);
-                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-            }
-
-            function truncateText(text, maxLength) {
-                if (!text) return '';
-                if (text.length <= maxLength) return escapeHtml(text);
-                return escapeHtml(text.substring(0, maxLength)) + '...';
-            }
-
-            async function copyToClipboard(elementId, buttonElement) {
-                try {
-                    const element = document.getElementById(elementId);
-                    if (!element) {
-                        console.error('Element not found:', elementId);
-                        return;
-                    }
-
-                    // Get the text content (without HTML tags)
-                    const textToCopy = element.textContent || element.innerText;
-
-                    // Use the modern clipboard API
-                    if (navigator.clipboard && window.isSecureContext) {
-                        await navigator.clipboard.writeText(textToCopy);
-                    } else {
-                        // Fallback for older browsers
-                        const textArea = document.createElement('textarea');
-                        textArea.value = textToCopy;
-                        textArea.style.position = 'fixed';
-                        textArea.style.left = '-999999px';
-                        textArea.style.top = '-999999px';
-                        document.body.appendChild(textArea);
-                        textArea.focus();
-                        textArea.select();
-                        document.execCommand('copy');
-                        textArea.remove();
-                    }
-
-                    // Visual feedback
-                    const originalIcon = buttonElement.innerHTML;
-                    buttonElement.innerHTML = '<i class="fas fa-check text-success"></i>';
-                    buttonElement.disabled = true;
-
-                    setTimeout(() => {
-                        buttonElement.innerHTML = originalIcon;
-                        buttonElement.disabled = false;
-                    }, 1500);
-
-                } catch (err) {
-                    console.error('Failed to copy text: ', err);
-
-                    // Show error feedback
-                    const originalIcon = buttonElement.innerHTML;
-                    buttonElement.innerHTML = '<i class="fas fa-times text-danger"></i>';
-
-                    setTimeout(() => {
-                        buttonElement.innerHTML = originalIcon;
-                    }, 1500);
-                }
-            }
-
-            function reExecuteTest() {
-                if (currentLog) {
-                    window.location.href = `/test-execution?logId=${currentLog.id}`;
-                }
-            }
-
-            async function deleteLog() {
-                if (!confirm('Are you sure you want to delete this test log? This action cannot be undone.')) {
-                    return;
-                }
-
-                try {
-                    const response = await fetch(`/v1/api/test-logs/${logId}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                    alert('Test log deleted successfully!');
-                    window.location.href = '/test-logs';
-
-                } catch (error) {
-                    console.error('Error deleting test log:', error);
-                    alert('Error deleting test log: ' + error.message);
-                }
-            }
-        </script>
+        } catch (error) {
+            console.error('Error deleting test log:', error);
+            alert('Error deleting test log: ' + error.message);
+        }
+    }
+</script>
 {% endblock %}

@@ -76,3 +76,24 @@ body {
     background-color: rgba(37, 99, 235, 0.1);
     font-weight: 600;
 }
+
+#toast-root {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    width: min(90vw, 420px);
+    pointer-events: none;
+}
+
+#toast-root .alert {
+    pointer-events: auto;
+    box-shadow: 0 18px 35px -15px rgba(15, 23, 42, 0.45);
+    border: none;
+    border-radius: 0.75rem;
+}
+
+#toast-root .alert + .alert {
+    margin-top: 0.75rem;
+}

@@ -65,7 +65,10 @@ def _has_filter(filters, column_name: str, table_name: str) -> bool:
     for condition in filters:
         left = getattr(condition, "left", None)
         table = getattr(left, "table", None)
-        if getattr(left, "key", None) == column_name and getattr(table, "name", None) == table_name:
+        if (
+            getattr(left, "key", None) == column_name
+            and getattr(table, "name", None) == table_name
+        ):
             return True
     return False
 
@@ -85,7 +88,9 @@ def test_get_all_excludes_soft_deleted_cases(monkeypatch: pytest.MonkeyPatch) ->
     assert _has_filter(query.filters, "is_deleted", "test_cases")
 
 
-def test_get_filtered_excludes_soft_deleted_cases(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_filtered_excludes_soft_deleted_cases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     store = TestLogStore()
     fake_results = [object()]
     query = FakeQuery(results=fake_results)
@@ -102,3 +107,17 @@ def test_get_filtered_excludes_soft_deleted_cases(monkeypatch: pytest.MonkeyPatc
     assert _has_filter(query.filters, "is_deleted", "test_cases")
     assert _has_filter(query.filters, "status", "test_logs")
     assert _has_filter(query.filters, "test_case_id", "test_logs")
+
+
+def test_get_filtered_supports_agent_and_regression(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = TestLogStore()
+    query = FakeQuery(results=[object()])
+    _patch_database_session(monkeypatch, query)
+
+    result = store.get_filtered(agent_id="agent-7", regression_test_id="reg-2")
+
+    assert result
+    assert _has_filter(query.filters, "agent_id", "test_logs")
+    assert _has_filter(query.filters, "regression_test_id", "test_logs")

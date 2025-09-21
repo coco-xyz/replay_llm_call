@@ -6,7 +6,7 @@ Response models for API health check endpoints.
 
 from typing import Any, Dict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class HealthResponse(BaseModel):
@@ -22,8 +22,8 @@ class HealthResponse(BaseModel):
         ..., description="Health status of individual components"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "healthy",
                 "timestamp": "2024-01-15T10:30:00.000Z",
@@ -46,3 +46,4 @@ class HealthResponse(BaseModel):
                 },
             }
         }
+    )

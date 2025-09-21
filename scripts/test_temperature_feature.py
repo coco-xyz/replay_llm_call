@@ -14,6 +14,7 @@ sys.path.insert(0, str(project_root))
 
 from src.core.logger import get_logger
 from src.services.llm_parser_service import parse_llm_raw_data
+from src.services.agent_service import AgentService
 from src.services.test_case_service import TestCaseService, TestCaseCreateData
 from src.stores.database import test_connection
 
@@ -70,6 +71,14 @@ def test_database_storage():
     
     try:
         service = TestCaseService()
+        agent_service = AgentService()
+        agents = agent_service.list_agents()
+        if not agents:
+            logger.warning(
+                "Skipping database storage test: no agents available"
+            )
+            return True
+        default_agent = agents[0]
         
         # Test data with temperature
         raw_data = {
@@ -89,20 +98,23 @@ def test_database_storage():
         create_request = TestCaseCreateData(
             name="Temperature Test Case",
             raw_data=raw_data,
-            description="Test case for temperature feature"
+            description="Test case for temperature feature",
+            agent_id=default_agent.id,
         )
         
         created_case = service.create_test_case(create_request)
         logger.info(f"✓ Test case created with ID: {created_case.id}")
         
         # Verify temperature was stored
-        assert created_case.temperature == 0.3, f"Expected 0.3, got {created_case.temperature}"
+        created_temperature = (created_case.model_settings or {}).get("temperature")
+        assert created_temperature == 0.3, f"Expected 0.3, got {created_temperature}"
         logger.info("✓ Temperature stored correctly in database")
         
         # Retrieve test case
         retrieved_case = service.get_test_case(created_case.id)
         assert retrieved_case is not None, "Test case not found"
-        assert retrieved_case.temperature == 0.3, f"Expected 0.3, got {retrieved_case.temperature}"
+        retrieved_temperature = (retrieved_case.model_settings or {}).get("temperature")
+        assert retrieved_temperature == 0.3, f"Expected 0.3, got {retrieved_temperature}"
         logger.info("✓ Temperature retrieved correctly from database")
         
         # Clean up

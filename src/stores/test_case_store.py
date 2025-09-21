@@ -1,5 +1,4 @@
-"""
-Test Case Store
+"""Test Case Store
 
 Data access layer for test case operations.
 """
@@ -7,6 +6,7 @@ Data access layer for test case operations.
 from typing import List, Optional
 
 from sqlalchemy import desc
+from sqlalchemy.orm import selectinload
 
 from src.core.error_codes import DatabaseErrorCode
 from src.core.exceptions import DatabaseException
@@ -23,13 +23,13 @@ class TestCaseStore:
     def create(self, test_case: TestCase) -> TestCase:
         """
         Create a new test case.
-        
+
         Args:
             test_case: TestCase instance to create
-            
+
         Returns:
             TestCase: Created test case
-            
+
         Raises:
             DatabaseException: If creation fails
         """
@@ -38,17 +38,18 @@ class TestCaseStore:
                 db.add(test_case)
                 db.commit()
                 db.refresh(test_case)
-                logger.info(f"Created test case: {test_case.id}")
+                logger.info("Created test case: %s", test_case.id)
                 return test_case
-                
+
         except Exception as e:
             logger.error(f"Failed to create test case: {e}")
             raise DatabaseException(
-                DatabaseErrorCode.QUERY_FAILED,
-                f"Failed to create test case: {str(e)}"
+                DatabaseErrorCode.QUERY_FAILED, f"Failed to create test case: {str(e)}"
             ) from e
 
-    def get_by_id(self, test_case_id: str, include_deleted: bool = False) -> Optional[TestCase]:
+    def get_by_id(
+        self, test_case_id: str, include_deleted: bool = False
+    ) -> Optional[TestCase]:
         """
         Get test case by ID.
 
@@ -64,25 +65,34 @@ class TestCaseStore:
         """
         try:
             with database_session() as db:
-                query = db.query(TestCase).filter(TestCase.id == test_case_id)
+                query = (
+                    db.query(TestCase)
+                    .options(selectinload(TestCase.agent))
+                    .filter(TestCase.id == test_case_id)
+                )
                 if not include_deleted:
                     query = query.filter(TestCase.is_deleted.is_(False))
 
                 test_case = query.first()
                 if test_case:
-                    logger.debug(f"Found test case: {test_case_id}")
+                    logger.debug("Found test case: %s", test_case_id)
                 else:
-                    logger.debug(f"Test case not found: {test_case_id}")
+                    logger.debug("Test case not found: %s", test_case_id)
                 return test_case
-                
+
         except Exception as e:
             logger.error(f"Failed to get test case {test_case_id}: {e}")
             raise DatabaseException(
-                DatabaseErrorCode.QUERY_FAILED,
-                f"Failed to get test case: {str(e)}"
+                DatabaseErrorCode.QUERY_FAILED, f"Failed to get test case: {str(e)}"
             ) from e
 
-    def get_all(self, limit: int = 100, offset: int = 0) -> List[TestCase]:
+    def get_all(
+        self,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+        agent_id: Optional[str] = None,
+    ) -> List[TestCase]:
         """
         Get all test cases with pagination.
 
@@ -98,22 +108,26 @@ class TestCaseStore:
         """
         try:
             with database_session() as db:
-                test_cases = (
+                query = (
                     db.query(TestCase)
+                    .options(selectinload(TestCase.agent))
                     .filter(TestCase.is_deleted.is_(False))
-                    .order_by(desc(TestCase.created_at))
+                )
+                if agent_id:
+                    query = query.filter(TestCase.agent_id == agent_id)
+                test_cases = (
+                    query.order_by(desc(TestCase.created_at))
                     .limit(limit)
                     .offset(offset)
                     .all()
                 )
-                logger.debug(f"Retrieved {len(test_cases)} test cases")
+                logger.debug("Retrieved %s test cases", len(test_cases))
                 return test_cases
-                
+
         except Exception as e:
             logger.error(f"Failed to get test cases: {e}")
             raise DatabaseException(
-                DatabaseErrorCode.QUERY_FAILED,
-                f"Failed to get test cases: {str(e)}"
+                DatabaseErrorCode.QUERY_FAILED, f"Failed to get test cases: {str(e)}"
             ) from e
 
     def update(self, test_case: TestCase) -> TestCase:
@@ -135,14 +149,13 @@ class TestCaseStore:
                 merged_test_case = db.merge(test_case)
                 db.commit()
                 db.refresh(merged_test_case)
-                logger.info(f"Updated test case: {merged_test_case.id}")
+                logger.info("Updated test case: %s", merged_test_case.id)
                 return merged_test_case
-                
+
         except Exception as e:
             logger.error(f"Failed to update test case {test_case.id}: {e}")
             raise DatabaseException(
-                DatabaseErrorCode.QUERY_FAILED,
-                f"Failed to update test case: {str(e)}"
+                DatabaseErrorCode.QUERY_FAILED, f"Failed to update test case: {str(e)}"
             ) from e
 
     def delete(self, test_case_id: str) -> bool:
@@ -160,28 +173,82 @@ class TestCaseStore:
         """
         try:
             with database_session() as db:
-                test_case = db.query(TestCase).filter(TestCase.id == test_case_id).first()
+                test_case = (
+                    db.query(TestCase).filter(TestCase.id == test_case_id).first()
+                )
                 if test_case:
                     if test_case.is_deleted:
-                        logger.debug(f"Test case already marked as deleted: {test_case_id}")
+                        logger.debug(
+                            "Test case already marked as deleted: %s", test_case_id
+                        )
                         return True
 
                     test_case.is_deleted = True
                     db.commit()
-                    logger.info(f"Soft deleted test case: {test_case_id}")
+                    logger.info("Soft deleted test case: %s", test_case_id)
                     return True
                 else:
-                    logger.debug(f"Test case not found for deletion: {test_case_id}")
+                    logger.debug("Test case not found for deletion: %s", test_case_id)
                     return False
-                    
+
         except Exception as e:
             logger.error(f"Failed to delete test case {test_case_id}: {e}")
             raise DatabaseException(
-                DatabaseErrorCode.QUERY_FAILED,
-                f"Failed to delete test case: {str(e)}"
+                DatabaseErrorCode.QUERY_FAILED, f"Failed to delete test case: {str(e)}"
             ) from e
 
-    def search_by_name(self, name_pattern: str, limit: int = 50) -> List[TestCase]:
+    def soft_delete_by_agent(self, agent_id: str) -> int:
+        """Soft delete all test cases for a given agent."""
+
+        try:
+            with database_session() as db:
+                updated = (
+                    db.query(TestCase)
+                    .filter(TestCase.agent_id == agent_id)
+                    .filter(TestCase.is_deleted.is_(False))
+                    .update({TestCase.is_deleted: True}, synchronize_session=False)
+                )
+                db.commit()
+                logger.info(
+                    "Soft deleted %s test cases for agent %s", updated, agent_id
+                )
+                return updated
+        except Exception as e:  # pragma: no cover
+            logger.error(
+                "Failed to soft delete test cases for agent %s: %s", agent_id, e
+            )
+            raise DatabaseException(
+                DatabaseErrorCode.QUERY_FAILED,
+                f"Failed to delete test cases for agent: {str(e)}",
+            ) from e
+
+    def get_by_agent(self, agent_id: str) -> List[TestCase]:
+        """Return all non-deleted test cases for the given agent."""
+
+        try:
+            with database_session() as db:
+                return (
+                    db.query(TestCase)
+                    .options(selectinload(TestCase.agent))
+                    .filter(TestCase.agent_id == agent_id)
+                    .filter(TestCase.is_deleted.is_(False))
+                    .order_by(desc(TestCase.created_at))
+                    .all()
+                )
+        except Exception as e:  # pragma: no cover
+            logger.error("Failed to get test cases for agent %s: %s", agent_id, e)
+            raise DatabaseException(
+                DatabaseErrorCode.QUERY_FAILED,
+                f"Failed to get test cases for agent: {str(e)}",
+            ) from e
+
+    def search_by_name(
+        self,
+        name_pattern: str,
+        *,
+        limit: int = 50,
+        agent_id: Optional[str] = None,
+    ) -> List[TestCase]:
         """
         Search test cases by name pattern.
 
@@ -197,22 +264,26 @@ class TestCaseStore:
         """
         try:
             with database_session() as db:
-                test_cases = (
+                query = (
                     db.query(TestCase)
+                    .options(selectinload(TestCase.agent))
                     .filter(TestCase.is_deleted.is_(False))
                     .filter(TestCase.name.ilike(f"%{name_pattern}%"))
-                    .order_by(desc(TestCase.created_at))
-                    .limit(limit)
-                    .all()
                 )
-                logger.debug(f"Found {len(test_cases)} test cases matching '{name_pattern}'")
+                if agent_id:
+                    query = query.filter(TestCase.agent_id == agent_id)
+                test_cases = (
+                    query.order_by(desc(TestCase.created_at)).limit(limit).all()
+                )
+                logger.debug(
+                    "Found %s test cases matching '%s'", len(test_cases), name_pattern
+                )
                 return test_cases
-                
+
         except Exception as e:
             logger.error(f"Failed to search test cases: {e}")
             raise DatabaseException(
-                DatabaseErrorCode.QUERY_FAILED,
-                f"Failed to search test cases: {str(e)}"
+                DatabaseErrorCode.QUERY_FAILED, f"Failed to search test cases: {str(e)}"
             ) from e
 
 

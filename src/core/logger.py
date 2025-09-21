@@ -55,8 +55,6 @@ def _sanitize_attributes(attrs: Dict[str, Any]) -> Dict[str, Any]:
 _session_id_context: ContextVar[Optional[str]] = ContextVar("session_id", default=None)
 
 
-
-
 def set_session_id(session_id: str) -> None:
     """Set the session ID in the current context for logging."""
     _session_id_context.set(session_id)
@@ -200,9 +198,12 @@ class SessionAwareLogfireHandler(logging.Handler):
                 msg = str(record.msg)
 
             # Send to logfire
+            # For messages coming from standard logging, we have already formatted messages
+            # We need to escape braces to prevent Logfire from treating them as placeholders
+            escaped_msg = msg.replace("{", "{{").replace("}", "}}")
             logfire_with_session.log(
                 level=record.levelname.lower(),
-                msg_template=msg,
+                msg_template=escaped_msg,
                 attributes=attributes,
                 exc_info=record.exc_info,
             )
@@ -342,7 +343,6 @@ def setup_logfire_handler() -> None:
     except (AttributeError, TypeError, ValueError) as e:
         # Use print instead of logger since logging might not be fully configured
         print(f"⚠️  Failed to configure Logfire handler: {e}")
-
 
 
 @lru_cache(maxsize=1)

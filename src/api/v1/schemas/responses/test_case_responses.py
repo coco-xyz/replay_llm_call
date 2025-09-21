@@ -7,7 +7,9 @@ API response models for test case endpoints.
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from .agent_responses import AgentSummaryResponse
 
 
 class TestCaseResponse(BaseModel):
@@ -20,12 +22,19 @@ class TestCaseResponse(BaseModel):
     middle_messages: List[Dict] = Field(..., description="Middle messages for replay")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration")
     model_name: str = Field(..., description="Model name")
-    model_settings: Optional[Dict] = Field(None, description="Model settings JSON (temperature, max_tokens, etc.)")
+    model_settings: Optional[Dict] = Field(
+        None, description="Model settings JSON (temperature, max_tokens, etc.)"
+    )
     system_prompt: str = Field(..., description="System prompt")
     last_user_message: str = Field(..., description="Last user message")
-    is_deleted: bool = Field(False, description="Indicates whether the test case is soft deleted")
+    agent_id: str = Field(..., description="Owning agent ID")
+    agent: Optional[AgentSummaryResponse] = Field(
+        None, description="Owning agent summary"
+    )
+    is_deleted: bool = Field(
+        False, description="Indicates whether the test case is soft deleted"
+    )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)

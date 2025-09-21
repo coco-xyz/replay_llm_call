@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}LLM Replay System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/main.css?v={{ static_asset_version }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    {% set current_page = active_page | default('') %}
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-robot"></i>
+                <div class="brand-text">
+                    <span class="brand-title">LLM Replay System</span>
+                    <span class="brand-subtitle">working with pydantic-ai and logfire</span>
+                </div>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link {% if current_page == 'agents' %}active{% endif %}" href="/agents">Agents</a>
+                <a class="nav-link {% if current_page == 'test-cases' %}active{% endif %}" href="/test-cases">Test Cases</a>
+                <a class="nav-link {% if current_page == 'regression-tests' %}active{% endif %}" href="/regression-tests">Regression Tests</a>
+                <a class="nav-link {% if current_page == 'test-execution' %}active{% endif %}" href="/test-execution">Execute Tests</a>
+                <a class="nav-link {% if current_page == 'test-logs' %}active{% endif %}" href="/test-logs">Test Logs</a>
+            </div>
+        </div>
+    </nav>
+
+        <div id="toast-root"></div>
+
+{% block content %}{% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

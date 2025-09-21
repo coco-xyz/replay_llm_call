@@ -6,10 +6,12 @@
 
 let currentLogs = [];
 let currentPage = 1;
-let currentLimit = 100;
-let currentFilters = {};
+let currentLimit = 50;
+let currentFilters = { status: '', testCaseId: '', agentId: '', regressionTestId: '' };
 let currentLogId = null;
 let testCasesData = []; // Store test cases data for lookup
+let agentsData = [];
+let regressionsData = [];
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', async function () {
@@ -17,30 +19,111 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Load test cases first, then test logs
     await loadTestCases();
+    await loadAgents();
+    await loadRegressions();
     await loadTestLogs();
 
     // Check if specific log or test case is requested
     const urlParams = new URLSearchParams(window.location.search);
     const logId = urlParams.get('logId');
     const testCaseId = urlParams.get('testCaseId');
+    const regressionTestId = urlParams.get('regressionTestId');
 
     if (logId) {
         setTimeout(() => viewLogInNewPage(logId), 1000);
     } else if (testCaseId) {
         setTimeout(() => {
-            document.getElementById('testCaseFilter').value = testCaseId;
-            applyFilters();
+            const testCaseFilter = document.getElementById('testCaseFilter');
+            if (testCaseFilter) {
+                testCaseFilter.value = testCaseId;
+                currentFilters.testCaseId = testCaseId;
+                currentPage = 1;
+                loadTestLogs();
+            }
+        }, 1000);
+    } else if (regressionTestId) {
+        setTimeout(() => {
+            const regressionFilter = document.getElementById('regressionFilter');
+            if (regressionFilter) {
+                regressionFilter.value = regressionTestId;
+                currentFilters.regressionTestId = regressionTestId;
+                currentPage = 1;
+                loadTestLogs();
+            }
         }, 1000);
     }
 });
 
 function setupEventListeners() {
-    // Limit selection
-    document.getElementById('limitSelect').addEventListener('change', function () {
-        currentLimit = parseInt(this.value);
-        currentPage = 1;
-        applyFilters();
-    });
+    // Refresh button
+    const refreshTestLogsBtn = document.getElementById('refreshTestLogsBtn');
+    if (refreshTestLogsBtn) {
+        refreshTestLogsBtn.addEventListener('click', () => {
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
+
+    // Clear filters button
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            const statusFilter = document.getElementById('statusFilter');
+            const testCaseFilter = document.getElementById('testCaseFilter');
+            const agentFilter = document.getElementById('agentFilter');
+            const regressionFilter = document.getElementById('regressionFilter');
+
+            if (statusFilter) statusFilter.value = '';
+            if (testCaseFilter) testCaseFilter.value = '';
+            if (agentFilter) agentFilter.value = '';
+            if (regressionFilter) regressionFilter.value = '';
+
+            currentFilters = { status: '', testCaseId: '', agentId: '', regressionTestId: '' };
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
+
+    // Auto-apply filters on change
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', (event) => {
+            currentFilters.status = event.target.value;
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
+
+    const testCaseFilter = document.getElementById('testCaseFilter');
+    if (testCaseFilter) {
+        testCaseFilter.addEventListener('change', async (event) => {
+            currentFilters.testCaseId = event.target.value;
+            currentPage = 1;
+            // Ensure test cases are loaded before loading logs
+            if (testCasesData.length === 0) {
+                await loadTestCases();
+            }
+            await loadTestLogs();
+        });
+    }
+
+    const agentFilter = document.getElementById('agentFilter');
+    if (agentFilter) {
+        agentFilter.addEventListener('change', (event) => {
+            currentFilters.agentId = event.target.value;
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
+
+    const regressionFilter = document.getElementById('regressionFilter');
+    if (regressionFilter) {
+        regressionFilter.addEventListener('change', (event) => {
+            currentFilters.regressionTestId = event.target.value;
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
 }
 
 async function loadTestLogs() {
@@ -51,26 +134,23 @@ async function loadTestLogs() {
             offset: (currentPage - 1) * currentLimit
         });
 
-        // Add filters
-        if (currentFilters.status || currentFilters.testCaseId) {
-            // Use combined filter endpoint for better flexibility
-            if (currentFilters.status) {
-                params.append('status', currentFilters.status);
-            }
-            if (currentFilters.testCaseId) {
-                params.append('test_case_id', currentFilters.testCaseId);
-            }
-
-            const response = await fetch(`/v1/api/test-logs/filter/combined?${params}`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const logs = await response.json();
-            currentLogs = logs;
-        } else {
-            const response = await fetch(`/v1/api/test-logs/?${params}`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const logs = await response.json();
-            currentLogs = logs;
+        if (currentFilters.status) {
+            params.append('status', currentFilters.status);
         }
+        if (currentFilters.testCaseId) {
+            params.append('test_case_id', currentFilters.testCaseId);
+        }
+        if (currentFilters.agentId) {
+            params.append('agent_id', currentFilters.agentId);
+        }
+        if (currentFilters.regressionTestId) {
+            params.append('regression_test_id', currentFilters.regressionTestId);
+        }
+
+        const response = await fetch(`/v1/api/test-logs/filter/combined?${params}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const logs = await response.json();
+        currentLogs = logs;
 
         displayTestLogs(currentLogs);
         updatePagination();
@@ -97,6 +177,34 @@ async function loadTestCases() {
     }
 }
 
+async function loadAgents() {
+    try {
+        const response = await fetch('/v1/api/agents/');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const agents = await response.json();
+        agentsData = agents.filter((agent) => !agent.is_deleted);
+        populateAgentFilter(agentsData);
+    } catch (error) {
+        console.error('Error loading agents:', error);
+    }
+}
+
+async function loadRegressions() {
+    try {
+        const url = new URL('/v1/api/regression-tests/', window.location.origin);
+        url.searchParams.append('limit', '200');
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const regressions = await response.json();
+        regressionsData = regressions;
+        populateRegressionFilter(regressionsData);
+    } catch (error) {
+        console.error('Error loading regression tests:', error);
+    }
+}
+
 function populateTestCaseFilter(testCases) {
     const select = document.getElementById('testCaseFilter');
 
@@ -111,9 +219,101 @@ function populateTestCaseFilter(testCases) {
     });
 }
 
+function populateAgentFilter(agents) {
+    const select = document.getElementById('agentFilter');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">All Agents</option>';
+    agents.forEach((agent) => {
+        const option = document.createElement('option');
+        option.value = agent.id;
+        option.textContent = agent.name;
+        select.appendChild(option);
+    });
+}
+
+function populateRegressionFilter(regressions) {
+    const select = document.getElementById('regressionFilter');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">All Regressions</option>';
+    regressions.forEach((regression) => {
+        const agentName = regression.agent ? regression.agent.name : 'Unknown agent';
+        const timestamp = formatRegressionTimestamp(regression.created_at);
+        const label = `${agentName} · ${timestamp}`;
+        const option = document.createElement('option');
+        option.value = regression.id;
+        option.textContent = label;
+        select.appendChild(option);
+    });
+}
+
+function formatRegressionTimestamp(createdAt) {
+    if (!createdAt) {
+        return 'Unknown';
+    }
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) {
+        return 'Unknown';
+    }
+
+    const pad = (value) => String(value).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const MM = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const mm = pad(date.getMinutes());
+    const ss = pad(date.getSeconds());
+
+    return `${yyyy}${MM}${dd}${hh}${mm}${ss}`;
+}
+
 // Helper function to find test case by ID
 function findTestCaseById(testCaseId) {
     return testCasesData.find(tc => tc.id === testCaseId);
+}
+
+function findAgentById(agentId) {
+    return agentsData.find((agent) => agent.id === agentId);
+}
+
+function findRegressionById(regressionId) {
+    return regressionsData.find((regression) => regression.id === regressionId);
+}
+
+function formatResponseTime(value) {
+    if (value === null || value === undefined) {
+        return '—';
+    }
+    return `${value}ms`;
+}
+
+function formatRegressionLabel(regressionId) {
+    if (!regressionId) {
+        return '<span class="text-muted">—</span>';
+    }
+
+    const regression = findRegressionById(regressionId);
+    const encodedId = encodeURIComponent(regressionId);
+
+    if (!regression) {
+        return `<a href="/regression-tests/${encodedId}" target="_blank">${escapeHtml(regressionId)}</a>`;
+    }
+
+    const timestamp = formatRegressionTimestamp(regression.created_at);
+    const display = timestamp || regressionId;
+    return `<a href="/regression-tests/${encodedId}" target="_blank">${escapeHtml(display)}</a>`;
+}
+
+function formatAgentLabel(agentId) {
+    if (!agentId) {
+        return '<span class="text-muted">—</span>';
+    }
+    const agent = findAgentById(agentId);
+    if (agent) {
+        return `<span class="badge bg-primary">${escapeHtml(agent.name)}</span> <small class="text-muted ms-2">${escapeHtml(agent.id)}</small>`;
+    }
+    return escapeHtml(agentId);
 }
 
 function displayTestLogs(logs) {
@@ -131,21 +331,23 @@ function displayTestLogs(logs) {
     emptyState.classList.add('d-none');
     table.style.display = 'table';
 
-    const html = logs.map(log => {
+    const html = logs.map((log) => {
         const testCase = findTestCaseById(log.test_case_id);
-        const testCaseName = testCase ? testCase.name : `Unknown Test Case`;
+        const testCaseName = testCase ? testCase.name : 'Unknown Test Case';
+        const agent = findAgentById(log.agent_id);
+        const agentName = agent ? agent.name : 'Unknown agent';
+        const regressionLabel = formatRegressionLabel(log.regression_test_id);
+        const responseTime = formatResponseTime(log.response_time_ms);
 
         return `
         <tr>
             <td>
-                <div class="d-flex flex-column">
-                    <strong>${escapeHtml(testCaseName)}</strong>
-                    <small class="text-muted">Log ID: ${log.id}</small>
-                </div>
+                ${testCase ? `<a href="/test-cases/${escapeHtml(log.test_case_id)}" class="text-decoration-none" target="_blank"><strong>${escapeHtml(testCaseName)}</strong></a>` : `<span class="text-muted">${escapeHtml(testCaseName)}</span>`}
             </td>
             <td>
-                <span class="badge bg-primary">${escapeHtml(log.model_name)}</span>
+                ${agent ? `<a href="/agents/${escapeHtml(log.agent_id)}" class="badge bg-primary text-decoration-none" target="_blank">${escapeHtml(agentName)}</a>` : `<span class="text-muted">${escapeHtml(agentName)}</span>`}
             </td>
+            <td>${regressionLabel}</td>
             <td>
                 <span class="badge ${log.status === 'success' ? 'bg-success' : 'bg-danger'}">
                     <i class="fas fa-${log.status === 'success' ? 'check-circle' : 'times-circle'} me-1"></i>
@@ -154,7 +356,10 @@ function displayTestLogs(logs) {
                 ${log.error_message ? `<br><small class="text-danger">${escapeHtml(truncateText(log.error_message, 50))}</small>` : ''}
             </td>
             <td>
-                <strong>${log.response_time_ms}ms</strong>
+                <span class="badge bg-secondary">${escapeHtml(log.model_name)}</span>
+            </td>
+            <td>
+                <strong>${responseTime}</strong>
             </td>
             <td>
                 <small class="text-muted">${formatDate(log.created_at)}</small>
@@ -164,7 +369,7 @@ function displayTestLogs(logs) {
                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewLogInNewPage('${log.id}')" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="reExecuteTest('${log.test_case_id}')" title="Re-execute">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="reExecuteLog('${log.id}')" title="Re-execute">
                         <i class="fas fa-redo"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteLog('${log.id}')" title="Delete">
@@ -211,7 +416,9 @@ async function viewLog(logId) {
                             </span>
                         </td></tr>
                         <tr><td><strong>Model:</strong></td><td>${escapeHtml(log.model_name)}</td></tr>
-                        <tr><td><strong>Response Time:</strong></td><td>${log.response_time_ms}ms</td></tr>
+                        <tr><td><strong>Agent:</strong></td><td>${formatAgentLabel(log.agent_id)}</td></tr>
+                        <tr><td><strong>Regression:</strong></td><td>${formatRegressionLabel(log.regression_test_id)}</td></tr>
+                        <tr><td><strong>Response Time:</strong></td><td>${formatResponseTime(log.response_time_ms)}</td></tr>
                         <tr><td><strong>Test Case:</strong></td><td>
                             <div>
                                 <a href="/test-cases/${log.test_case_id}" class="text-decoration-none" target="_blank">
@@ -303,24 +510,7 @@ async function viewLog(logId) {
     }
 }
 
-async function applyFilters() {
-    const status = document.getElementById('statusFilter').value;
-    const testCaseId = document.getElementById('testCaseFilter').value;
 
-    currentFilters = {
-        status: status || null,
-        testCaseId: testCaseId || null
-    };
-
-    currentPage = 1;
-
-    // Ensure test cases are loaded before loading logs
-    if (testCasesData.length === 0) {
-        await loadTestCases();
-    }
-
-    await loadTestLogs();
-}
 
 async function deleteLog(logId) {
     if (!confirm('Are you sure you want to delete this test log? This action cannot be undone.')) {
@@ -344,17 +534,16 @@ async function deleteLog(logId) {
 }
 
 function reExecuteTest(testCaseId) {
-    window.location.href = `/ test - execution ? testCaseId = ${testCaseId} `;
+    window.location.href = `/test-execution?testCaseId=${testCaseId}`;
+}
+
+function reExecuteLog(logId) {
+    window.location.href = `/test-execution?logId=${logId}`;
 }
 
 function reExecuteFromLog() {
-    // Get the current log and redirect to execution page
     if (currentLogId) {
-        // We need to get the test case ID from the current log
-        const log = currentLogs.find(l => l.id === currentLogId);
-        if (log) {
-            reExecuteTest(log.test_case_id);
-        }
+        reExecuteLog(currentLogId);
     }
 }
 
@@ -413,19 +602,27 @@ function showLoading(show) {
 }
 
 function showAlert(message, type) {
-    // Create alert element
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert - ${type} alert - dismissible fade show`;
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
     alertDiv.innerHTML = `
         ${message}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
 
-    // Insert at top of container
-    const container = document.querySelector('.container');
-    container.insertBefore(alertDiv, container.firstChild);
+    const toastRoot = document.getElementById('toast-root');
+    if (toastRoot) {
+        toastRoot.appendChild(alertDiv);
+    } else {
+        const container = document.querySelector('.container');
+        if (container) {
+            if (container.firstChild) {
+                container.insertBefore(alertDiv, container.firstChild);
+            } else {
+                container.appendChild(alertDiv);
+            }
+        }
+    }
 
-    // Auto-dismiss after 5 seconds
     setTimeout(() => {
         if (alertDiv.parentNode) {
             alertDiv.remove();

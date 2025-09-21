@@ -11,17 +11,25 @@ from pydantic import BaseModel, Field
 
 class TestCaseCreateRequest(BaseModel):
     """Request model for creating a new test case."""
-    
+
     name: str = Field(..., min_length=1, max_length=255, description="Test case name")
     raw_data: Dict = Field(..., description="Raw logfire data")
-    description: Optional[str] = Field(None, max_length=1000, description="Test case description")
+    description: Optional[str] = Field(
+        None, max_length=1000, description="Test case description"
+    )
+    agent_id: str = Field(..., description="Agent that owns the new test case")
 
 
 class TestCaseUpdateRequest(BaseModel):
     """Request model for updating a test case."""
 
-    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Updated test case name")
+    name: Optional[str] = Field(
+        None, min_length=1, max_length=255, description="Updated test case name"
+    )
     raw_data: Optional[Dict] = Field(None, description="Updated raw logfire data")
-    description: Optional[str] = Field(None, max_length=1000, description="Updated test case description")
+    description: Optional[str] = Field(
+        None, max_length=1000, description="Updated test case description"
+    )
     system_prompt: Optional[str] = Field(None, description="Updated system prompt")
     last_user_message: Optional[str] = Field(None, description="Updated user message")
+    agent_id: Optional[str] = Field(None, description="Updated owning agent")

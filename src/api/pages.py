@@ -24,7 +24,11 @@ async def home_page(request: Request):
     """
     return templates.TemplateResponse(
         "test_cases.html",
-        {"request": request, "static_asset_version": settings.static__asset_version},
+        {
+            "request": request,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "test-cases",
+        },
     )
 
 
@@ -35,7 +39,11 @@ async def test_cases_page(request: Request):
     """
     return templates.TemplateResponse(
         "test_cases.html",
-        {"request": request, "static_asset_version": settings.static__asset_version},
+        {
+            "request": request,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "test-cases",
+        },
     )
 
 
@@ -46,7 +54,11 @@ async def test_execution_page(request: Request):
     """
     return templates.TemplateResponse(
         "test_execution.html",
-        {"request": request, "static_asset_version": settings.static__asset_version},
+        {
+            "request": request,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "test-execution",
+        },
     )
 
 
@@ -57,7 +69,69 @@ async def test_logs_page(request: Request):
     """
     return templates.TemplateResponse(
         "test_logs.html",
-        {"request": request, "static_asset_version": settings.static__asset_version},
+        {
+            "request": request,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "test-logs",
+        },
+    )
+
+
+@router.get("/agents", response_class=HTMLResponse)
+async def agents_page(request: Request):
+    """Agent management page."""
+
+    return templates.TemplateResponse(
+        "agents.html",
+        {
+            "request": request,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "agents",
+        },
+    )
+
+
+@router.get("/agents/{agent_id}", response_class=HTMLResponse)
+async def agent_detail_page(request: Request, agent_id: str):
+    """Agent detail page."""
+
+    return templates.TemplateResponse(
+        "agent_detail.html",
+        {
+            "request": request,
+            "agent_id": agent_id,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "agents",
+        },
+    )
+
+
+@router.get("/regression-tests", response_class=HTMLResponse)
+async def regression_tests_page(request: Request):
+    """Regression tests listing page."""
+
+    return templates.TemplateResponse(
+        "regression_tests.html",
+        {
+            "request": request,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "regression-tests",
+        },
+    )
+
+
+@router.get("/regression-tests/{regression_test_id}", response_class=HTMLResponse)
+async def regression_test_detail_page(request: Request, regression_test_id: str):
+    """Regression test detail page."""
+
+    return templates.TemplateResponse(
+        "regression_test_detail.html",
+        {
+            "request": request,
+            "regression_test_id": regression_test_id,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "regression-tests",
+        },
     )
 
 
@@ -72,7 +146,8 @@ async def test_case_detail_page(request: Request, case_id: str):
             "request": request,
             "case_id": case_id,
             "static_asset_version": settings.static__asset_version,
-        }
+            "active_page": "test-cases",
+        },
     )
 
 
@@ -87,7 +162,8 @@ async def test_log_detail_page(request: Request, log_id: str):
             "request": request,
             "log_id": log_id,
             "static_asset_version": settings.static__asset_version,
-        }
+            "active_page": "test-logs",
+        },
     )
 
 

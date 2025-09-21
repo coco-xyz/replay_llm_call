@@ -9,8 +9,7 @@ from typing import List, Literal, Optional
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
-STATIC_ASSET_VERSION = "202509202133"
+STATIC_ASSET_VERSION = "202509210135"
 
 
 class Settings(BaseSettings):

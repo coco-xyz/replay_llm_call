@@ -238,12 +238,34 @@ function populateRegressionFilter(regressions) {
 
     select.innerHTML = '<option value="">All Regressions</option>';
     regressions.forEach((regression) => {
-        const label = regression.agent ? `${regression.agent.name} · ${regression.status}` : regression.status;
+        const agentName = regression.agent ? regression.agent.name : 'Unknown agent';
+        const timestamp = formatRegressionTimestamp(regression.created_at);
+        const label = `${agentName} · ${timestamp}`;
         const option = document.createElement('option');
         option.value = regression.id;
-        option.textContent = `${label} (${new Date(regression.created_at).toLocaleDateString()})`;
+        option.textContent = label;
         select.appendChild(option);
     });
+}
+
+function formatRegressionTimestamp(createdAt) {
+    if (!createdAt) {
+        return 'Unknown';
+    }
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) {
+        return 'Unknown';
+    }
+
+    const pad = (value) => String(value).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const MM = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const mm = pad(date.getMinutes());
+    const ss = pad(date.getSeconds());
+
+    return `${yyyy}${MM}${dd}${hh}${mm}${ss}`;
 }
 
 // Helper function to find test case by ID
@@ -278,9 +300,8 @@ function formatRegressionLabel(regressionId) {
         return `<a href="/regression-tests/${encodedId}" target="_blank">${escapeHtml(regressionId)}</a>`;
     }
 
-    const agentName = regression.agent ? regression.agent.name : null;
-    const status = regression.status || 'unknown';
-    const display = agentName ? `${agentName} · ${status}` : status;
+    const timestamp = formatRegressionTimestamp(regression.created_at);
+    const display = timestamp || regressionId;
     return `<a href="/regression-tests/${encodedId}" target="_blank">${escapeHtml(display)}</a>`;
 }
 

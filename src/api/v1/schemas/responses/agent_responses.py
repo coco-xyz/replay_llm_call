@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AgentResponse(BaseModel):
@@ -25,8 +25,7 @@ class AgentResponse(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AgentSummaryResponse(BaseModel):
@@ -36,8 +35,7 @@ class AgentSummaryResponse(BaseModel):
     name: str = Field(..., description="Agent name")
     description: Optional[str] = Field(None, description="Agent description")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 __all__ = ["AgentResponse", "AgentSummaryResponse"]

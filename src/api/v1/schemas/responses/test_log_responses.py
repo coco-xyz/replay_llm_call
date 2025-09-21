@@ -7,7 +7,7 @@ API response models for test log endpoints.
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TestLogResponse(BaseModel):
@@ -34,5 +34,4 @@ class TestLogResponse(BaseModel):
     error_message: Optional[str] = Field(None, description="Error message if failed")
     created_at: datetime = Field(..., description="Creation timestamp")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

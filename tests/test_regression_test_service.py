@@ -7,11 +7,35 @@ from src.services.regression_test_service import (
     RegressionTestCreateData,
     RegressionTestService,
 )
-from src.services.test_execution_service import TestExecutionResult
+from src.services.test_execution_service import ExecutionResult
 
 
-@pytest.mark.asyncio
-async def test_run_regression_with_no_cases(monkeypatch):
+def _build_stateful_store(monkeypatch, service):
+    state = {}
+
+    def fake_create(record):
+        now = datetime.now(timezone.utc)
+        record.created_at = now
+        record.updated_at = now
+        state[record.id] = record
+        return record
+
+    def fake_update(record):
+        record.updated_at = datetime.now(timezone.utc)
+        state[record.id] = record
+        return record
+
+    def fake_get(regression_id, include_deleted=False):
+        return state.get(regression_id)
+
+    monkeypatch.setattr(service.store, "create", fake_create)
+    monkeypatch.setattr(service.store, "update", fake_update)
+    monkeypatch.setattr(service.store, "get_by_id", fake_get)
+
+    return state
+
+
+def test_create_regression_with_no_cases(monkeypatch):
     service = RegressionTestService()
 
     agent = SimpleNamespace(
@@ -39,18 +63,7 @@ async def test_run_regression_with_no_cases(monkeypatch):
         lambda agent_id: [],
     )
 
-    def fake_create(record):
-        now = datetime.now(timezone.utc)
-        record.created_at = now
-        record.updated_at = now
-        return record
-
-    def fake_update(record):
-        record.updated_at = datetime.now(timezone.utc)
-        return record
-
-    monkeypatch.setattr(service.store, "create", fake_create)
-    monkeypatch.setattr(service.store, "update", fake_update)
+    state = _build_stateful_store(monkeypatch, service)
 
     request = RegressionTestCreateData(
         agent_id="agent-1",
@@ -59,11 +72,13 @@ async def test_run_regression_with_no_cases(monkeypatch):
         model_settings_override={},
     )
 
-    result = await service.run_regression_test(request)
+    result = service.create_regression(request)
     assert result.status == "completed"
     assert result.total_count == 0
     assert result.success_count == 0
     assert result.failed_count == 0
+    stored = state[result.id]
+    assert stored.status == "completed"
 
 
 @pytest.mark.asyncio
@@ -99,23 +114,12 @@ async def test_run_regression_counts_results(monkeypatch):
         "get_by_agent",
         lambda agent_id: test_cases,
     )
-    def fake_create(record):
-        now = datetime.now(timezone.utc)
-        record.created_at = now
-        record.updated_at = now
-        return record
-
-    def fake_update(record):
-        record.updated_at = datetime.now(timezone.utc)
-        return record
-
-    monkeypatch.setattr(service.store, "create", fake_create)
-    monkeypatch.setattr(service.store, "update", fake_update)
+    state = _build_stateful_store(monkeypatch, service)
 
     async def fake_execute(request):
         if request.test_case_id == "case-1":
-            return TestExecutionResult(status="success")
-        return TestExecutionResult(status="failed", error_message="boom")
+            return ExecutionResult(status="success")
+        return ExecutionResult(status="failed", error_message="boom")
 
     monkeypatch.setattr(
         service.test_execution_service,
@@ -130,8 +134,14 @@ async def test_run_regression_counts_results(monkeypatch):
         model_settings_override={},
     )
 
-    result = await service.run_regression_test(request)
-    assert result.total_count == 2
-    assert result.success_count == 1
-    assert result.failed_count == 1
-    assert result.status == "failed"
+    created = service.create_regression(request)
+    assert created.total_count == 2
+    assert created.status == "pending"
+
+    await service.execute_regression(created.id)
+
+    stored = state[created.id]
+    assert stored.total_count == 2
+    assert stored.success_count == 1
+    assert stored.failed_count == 1
+    assert stored.status == "failed"

@@ -317,6 +317,13 @@ async function startRegression() {
         model_settings_override: modelSettings,
     };
 
+    const confirmButton = document.getElementById('confirmStartRegression');
+    if (confirmButton) {
+        confirmButton.disabled = true;
+        confirmButton.dataset.originalText = confirmButton.innerHTML;
+        confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Launching…';
+    }
+
     try {
         const response = await fetch('/v1/api/regression-tests/', {
             method: 'POST',
@@ -338,6 +345,12 @@ async function startRegression() {
     } catch (error) {
         console.error('Error starting regression:', error);
         showModalAlert('startRegressionAlert', 'Error starting regression: ' + error.message, 'danger');
+    } finally {
+        if (confirmButton) {
+            confirmButton.disabled = false;
+            confirmButton.innerHTML = confirmButton.dataset.originalText || confirmButton.innerHTML;
+            delete confirmButton.dataset.originalText;
+        }
     }
 }
 

@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Dict, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .agent_responses import AgentSummaryResponse
 
@@ -31,8 +31,7 @@ class RegressionTestResponse(BaseModel):
         None, description="Summary information about the agent"
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 __all__ = ["RegressionTestResponse"]

@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from src.api.v1.converters import (
     convert_regression_test_create_request,
@@ -13,6 +13,7 @@ from src.api.v1.schemas.requests import RegressionTestCreateRequest
 from src.api.v1.schemas.responses import RegressionTestResponse, TestLogResponse
 from src.core.logger import get_logger
 from src.services.regression_test_service import RegressionTestService
+from src.services.task_dispatcher import BackgroundTaskRegressionDispatcher
 from src.services.test_log_service import TestLogService
 
 logger = get_logger(__name__)
@@ -25,10 +26,18 @@ test_log_service = TestLogService()
 @router.post("/", response_model=RegressionTestResponse)
 async def start_regression(
     request: RegressionTestCreateRequest,
+    background_tasks: BackgroundTasks,
 ) -> RegressionTestResponse:
     try:
         service_request = convert_regression_test_create_request(request)
-        regression = await regression_service.run_regression_test(service_request)
+        regression = regression_service.create_regression(service_request)
+
+        dispatcher = BackgroundTaskRegressionDispatcher(
+            background_tasks, regression_service.execute_regression
+        )
+        if regression.status == "pending":
+            dispatcher.dispatch(regression.id)
+
         return convert_regression_test_data_to_response(regression)
     except ValueError as exc:
         logger.error("API: Invalid regression request: %s", exc)

@@ -7,7 +7,7 @@ Service for viewing and filtering test execution logs.
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.logger import get_logger
 from src.stores.test_log_store import TestLogStore
@@ -45,8 +45,7 @@ class TestLogData(BaseModel):
         None, description="Performance analysis data"
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TestLogService:

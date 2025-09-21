@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.logger import get_logger
 from src.models import RegressionTest
@@ -13,7 +13,7 @@ from src.services.agent_service import AgentService, AgentSummary
 from src.services.test_case_service import TestCaseService
 from src.services.test_execution_service import (
     TestExecutionData,
-    TestExecutionResult,
+    ExecutionResult,
     TestExecutionService,
 )
 from src.stores.regression_test_store import RegressionTestStore
@@ -53,8 +53,7 @@ class RegressionTestData(BaseModel):
     updated_at: datetime
     agent: Optional[AgentSummary] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RegressionTestService:
@@ -68,45 +67,106 @@ class RegressionTestService:
         self.test_execution_service = TestExecutionService()
         self.store = RegressionTestStore()
 
-    async def run_regression_test(
+    def create_regression(
         self, request: RegressionTestCreateData
     ) -> RegressionTestData:
-        """Create and execute a regression test for an agent."""
+        """Create a regression record and return immediately.
+
+        Execution is expected to be scheduled separately via execute_regression().
+        """
 
         agent = self.agent_service.get_active_agent_or_raise(request.agent_id)
         agent_summary = AgentSummary.model_validate(agent)
         test_cases = self.test_case_service.store.get_by_agent(agent.id)
+        total_count = len(test_cases)
+
+        now = datetime.now(timezone.utc)
+        status = "pending"
+        started_at: Optional[datetime] = None
+        completed_at: Optional[datetime] = None
+        success_count = 0
+        failed_count = 0
+        error_message: Optional[str] = None
+
+        if total_count == 0:
+            status = "completed"
+            started_at = now
+            completed_at = now
 
         regression = RegressionTest(
             id=str(uuid.uuid4()),
             agent_id=agent.id,
-            status="running",
+            status=status,
             model_name_override=request.model_name_override,
             system_prompt_override=request.system_prompt_override,
             model_settings_override=request.model_settings_override,
-            total_count=len(test_cases),
-            success_count=0,
-            failed_count=0,
-            error_message=None,
-            started_at=datetime.now(timezone.utc),
-            completed_at=None,
+            total_count=total_count,
+            success_count=success_count,
+            failed_count=failed_count,
+            error_message=error_message,
+            started_at=started_at,
+            completed_at=completed_at,
         )
 
         regression = self.store.create(regression)
 
+        return self._build_regression_test_data(regression, agent_summary)
+
+    async def execute_regression(self, regression_id: str) -> None:
+        """Execute a regression test asynchronously."""
+
+        regression = self.store.get_by_id(regression_id, include_deleted=True)
+        if not regression:
+            logger.warning("Regression %s not found for execution", regression_id)
+            return
+        if regression.is_deleted:
+            logger.info("Regression %s is deleted; skipping execution", regression_id)
+            return
+        if regression.status not in {"pending", "running"}:
+            logger.info(
+                "Regression %s has status %s; skipping execution",
+                regression_id,
+                regression.status,
+            )
+            return
+
+        try:
+            agent = self.agent_service.get_active_agent_or_raise(regression.agent_id)
+        except ValueError as exc:
+            logger.error(
+                "Cannot execute regression %s because agent is inactive: %s",
+                regression_id,
+                exc,
+            )
+            regression.status = "failed"
+            regression.error_message = str(exc)
+            now = datetime.now(timezone.utc)
+            regression.started_at = regression.started_at or now
+            regression.completed_at = now
+            self.store.update(regression)
+            return
+
+        test_cases = self.test_case_service.store.get_by_agent(agent.id)
+        regression.total_count = len(test_cases)
+        regression.status = "running"
+        regression.started_at = datetime.now(timezone.utc)
+        regression.success_count = 0
+        regression.failed_count = 0
+        regression.error_message = None
+        regression = self.store.update(regression)
+
         if not test_cases:
             logger.info(
-                "No test cases available for agent %s; marking regression %s as completed",
-                agent.id,
-                regression.id,
+                "Regression %s has no test cases to execute; marking complete",
+                regression_id,
             )
             regression.status = "completed"
             regression.completed_at = datetime.now(timezone.utc)
-            regression = self.store.update(regression)
-            return self._build_regression_test_data(regression, agent_summary)
+            self.store.update(regression)
+            return
 
         semaphore = asyncio.Semaphore(self.MAX_CONCURRENCY)
-        results: List[TestExecutionResult] = []
+        results: List[ExecutionResult] = []
         execution_errors: List[str] = []
 
         async def execute_case(case) -> None:
@@ -116,9 +176,9 @@ class RegressionTestService:
                         test_case_id=case.id,
                         agent_id=agent.id,
                         regression_test_id=regression.id,
-                        modified_model_name=request.model_name_override,
-                        modified_system_prompt=request.system_prompt_override,
-                        modified_model_settings=request.model_settings_override,
+                        modified_model_name=regression.model_name_override,
+                        modified_system_prompt=regression.system_prompt_override,
+                        modified_model_settings=regression.model_settings_override,
                     )
                     result = await self.test_execution_service.execute_test(
                         execution_request
@@ -139,22 +199,18 @@ class RegressionTestService:
         failed_count = len(test_cases) - success_count
 
         if execution_errors:
-            # Account for cases that raised exceptions and didn't yield results
             failed_count = max(failed_count, len(execution_errors))
 
         regression.success_count = success_count
         regression.failed_count = failed_count
-        has_failures = failed_count > 0
         regression.status = (
-            "failed" if (execution_errors or has_failures) else "completed"
+            "failed" if (execution_errors or failed_count > 0) else "completed"
         )
         regression.error_message = (
             "; ".join(execution_errors) if execution_errors else None
         )
         regression.completed_at = datetime.now(timezone.utc)
-
-        regression = self.store.update(regression)
-        return self._build_regression_test_data(regression, agent_summary)
+        self.store.update(regression)
 
     def get_regression_test(
         self, regression_test_id: str

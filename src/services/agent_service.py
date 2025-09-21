@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.logger import get_logger
 from src.models import Agent
@@ -22,8 +22,7 @@ class AgentSummary(BaseModel):
     name: str = Field(..., description="Agent name")
     description: Optional[str] = Field(None, description="Agent description")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AgentCreateData(BaseModel):
@@ -79,8 +78,7 @@ class AgentData(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Update timestamp")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AgentService:

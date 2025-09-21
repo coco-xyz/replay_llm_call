@@ -47,7 +47,7 @@ class TestExecutionData(BaseModel):
     )
 
 
-class TestExecutionResult(BaseModel):
+class ExecutionResult(BaseModel):
     """Service layer result of test execution."""
 
     status: str = Field(..., description="Execution status (success/failed)")
@@ -82,7 +82,7 @@ class TestExecutionService:
         self.test_log_store = TestLogStore()
         self.agent_service = AgentService()
 
-    async def execute_test(self, request: TestExecutionData) -> TestExecutionResult:
+    async def execute_test(self, request: TestExecutionData) -> ExecutionResult:
         """
         Execute a test case synchronously and record the results.
 
@@ -90,7 +90,7 @@ class TestExecutionService:
             request: Test execution request
 
         Returns:
-            TestExecutionResult: Execution results
+            ExecutionResult: Execution results
 
         Raises:
             ValueError: If test case not found or invalid parameters
@@ -181,7 +181,7 @@ class TestExecutionService:
 
                 logger.info(f"Test executed successfully: {saved_log.id}")
 
-                return TestExecutionResult(
+                return ExecutionResult(
                     log_id=saved_log.id,
                     status="success",
                     agent_id=agent.id,
@@ -219,7 +219,7 @@ class TestExecutionService:
 
                 logger.error(f"Test execution failed: {error_message}")
 
-                return TestExecutionResult(
+                return ExecutionResult(
                     log_id=saved_log.id,
                     status="failed",
                     agent_id=agent.id,
@@ -244,7 +244,7 @@ class TestExecutionService:
         system_prompt: Optional[str] = None,
         user_message: Optional[str] = None,
         tools: Optional[list] = None,
-    ) -> TestExecutionResult:
+    ) -> ExecutionResult:
         """
         Execute a test case with optional parameter modifications.
 
@@ -256,7 +256,7 @@ class TestExecutionService:
             tools: Override tools (optional)
 
         Returns:
-            TestExecutionResult: Execution results
+            ExecutionResult: Execution results
         """
         request = TestExecutionData(
             test_case_id=test_case_id,

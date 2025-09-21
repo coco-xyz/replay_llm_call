@@ -31,9 +31,6 @@ class AgentUpdateRequest(BaseModel):
     default_model_name: Optional[str] = Field(None)
     default_system_prompt: Optional[str] = Field(None)
     default_model_settings: Optional[dict] = Field(None)
-    is_deleted: Optional[bool] = Field(
-        None, description="Soft delete flag (administrative use)"
-    )
 
 
 __all__ = ["AgentCreateRequest", "AgentUpdateRequest"]

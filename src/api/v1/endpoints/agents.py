@@ -59,6 +59,8 @@ async def update_agent(agent_id: str, request: AgentUpdateRequest) -> AgentRespo
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
         return convert_agent_data_to_response(agent)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as exc:  # pragma: no cover - defensive logging

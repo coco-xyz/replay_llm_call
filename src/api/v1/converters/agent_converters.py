@@ -34,7 +34,6 @@ def convert_agent_update_request(request: AgentUpdateRequest) -> AgentUpdateData
         default_model_name=request.default_model_name,
         default_system_prompt=request.default_system_prompt,
         default_model_settings=request.default_model_settings,
-        is_deleted=request.is_deleted,
     )
 
 

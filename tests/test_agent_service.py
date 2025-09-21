@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+import pytest
+
 from src.services.agent_service import AgentService, AgentUpdateData
 
 
@@ -47,7 +49,7 @@ def test_get_agent_summary_handles_missing(monkeypatch):
     assert service.get_agent_summary("missing") is None
 
 
-def test_update_agent_soft_delete_cascade(monkeypatch):
+def test_update_agent_rejects_is_deleted_toggle(monkeypatch):
     service = AgentService()
 
     agent = SimpleNamespace(
@@ -62,23 +64,12 @@ def test_update_agent_soft_delete_cascade(monkeypatch):
         updated_at=datetime.now(timezone.utc),
     )
 
-    monkeypatch.setattr(
-        service.store, "get_by_id", lambda *_args, **_kwargs: agent
-    )
+    monkeypatch.setattr(service.store, "get_by_id", lambda *_args, **_kwargs: agent)
 
-    monkeypatch.setattr(service.store, "update", lambda obj: obj)
+    def fail_update(_obj):  # pragma: no cover - defensive guard
+        raise AssertionError("should not persist when deletion toggle is rejected")
 
-    captured = {}
+    monkeypatch.setattr(service.store, "update", fail_update)
 
-    def fake_soft_delete_by_agent(agent_id: str) -> int:
-        captured["agent_id"] = agent_id
-        return 1
-
-    monkeypatch.setattr(
-        service.test_case_store, "soft_delete_by_agent", fake_soft_delete_by_agent
-    )
-
-    result = service.update_agent("agent-123", AgentUpdateData(is_deleted=True))
-
-    assert result.is_deleted is True
-    assert captured["agent_id"] == "agent-123"
+    with pytest.raises(ValueError):
+        service.update_agent("agent-123", AgentUpdateData(is_deleted=True))

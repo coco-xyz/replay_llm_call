@@ -54,7 +54,8 @@ class AgentUpdateData(BaseModel):
         None, description="Default model settings JSON"
     )
     is_deleted: Optional[bool] = Field(
-        None, description="Soft delete flag (service use only)"
+        None,
+        description="Soft delete flag (must use delete/restore operations instead)",
     )
 
 
@@ -144,6 +145,11 @@ class AgentService:
         if not agent:
             return None
 
+        if data.is_deleted is not None:
+            raise ValueError(
+                "Use delete_agent or restore_agent to change an agent's deleted state"
+            )
+
         if data.name is not None:
             agent.name = data.name
         if data.description is not None:
@@ -154,15 +160,8 @@ class AgentService:
             agent.default_system_prompt = data.default_system_prompt
         if data.default_model_settings is not None:
             agent.default_model_settings = data.default_model_settings
-        original_is_deleted = agent.is_deleted
-
-        if data.is_deleted is not None:
-            agent.is_deleted = data.is_deleted
 
         updated = self.store.update(agent)
-
-        if data.is_deleted is True and original_is_deleted is False:
-            self.test_case_store.soft_delete_by_agent(agent_id)
         return AgentData.model_validate(updated)
 
     def delete_agent(self, agent_id: str) -> bool:

@@ -363,8 +363,14 @@ class TestCaseService:
         """Convert a TestCase ORM instance to TestCaseData."""
 
         agent_summary = None
-        if getattr(test_case, "agent", None):
-            agent_summary = AgentSummary.model_validate(test_case.agent)
+        agent_value = None
+
+        # Avoid triggering lazy loads on detached instances
+        if hasattr(test_case, "__dict__") and "agent" in test_case.__dict__:
+            agent_value = test_case.__dict__["agent"]
+
+        if agent_value is not None:
+            agent_summary = AgentSummary.model_validate(agent_value)
         else:
             agent_summary = self.agent_service.get_agent_summary(test_case.agent_id)
 

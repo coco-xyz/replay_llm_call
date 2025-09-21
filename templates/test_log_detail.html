@@ -815,8 +815,7 @@
 
             function reExecuteTest() {
                 if (currentLog) {
-                    const agentParam = currentLog.agent_id ? `&agentId=${encodeURIComponent(currentLog.agent_id)}` : '';
-                    window.location.href = `/test-execution?testCaseId=${currentLog.test_case_id}${agentParam}`;
+                    window.location.href = `/test-execution?logId=${currentLog.id}`;
                 }
             }
 

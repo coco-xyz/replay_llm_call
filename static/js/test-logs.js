@@ -369,7 +369,7 @@ function displayTestLogs(logs) {
                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewLogInNewPage('${log.id}')" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="reExecuteTest('${log.test_case_id}')" title="Re-execute">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="reExecuteLog('${log.id}')" title="Re-execute">
                         <i class="fas fa-redo"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteLog('${log.id}')" title="Delete">
@@ -537,14 +537,13 @@ function reExecuteTest(testCaseId) {
     window.location.href = `/test-execution?testCaseId=${testCaseId}`;
 }
 
+function reExecuteLog(logId) {
+    window.location.href = `/test-execution?logId=${logId}`;
+}
+
 function reExecuteFromLog() {
-    // Get the current log and redirect to execution page
     if (currentLogId) {
-        // We need to get the test case ID from the current log
-        const log = currentLogs.find(l => l.id === currentLogId);
-        if (log) {
-            reExecuteTest(log.test_case_id);
-        }
+        reExecuteLog(currentLogId);
     }
 }
 

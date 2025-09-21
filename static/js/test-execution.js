@@ -24,18 +24,35 @@ document.addEventListener('DOMContentLoaded', async function () {
     setupEventListeners();
 
     const urlParams = new URLSearchParams(window.location.search);
-    const initialAgentId = urlParams.get('agentId');
-    if (initialAgentId) {
-        selectedAgentId = initialAgentId;
+    const logId = urlParams.get('logId');
+    let logData = null;
+
+    if (logId) {
+        try {
+            logData = await fetchTestLogDetails(logId);
+            selectedAgentId = logData.agent_id || '';
+        } catch (error) {
+            console.error('Unable to load log for re-execution:', error);
+            showAlert('Unable to load log for re-execution: ' + error.message, 'warning');
+        }
+    } else {
+        const initialAgentId = urlParams.get('agentId');
+        if (initialAgentId) {
+            selectedAgentId = initialAgentId;
+        }
     }
 
     await loadAgents();
     await loadTestCases();
 
-    // Check if test case ID is provided in URL
-    const testCaseId = urlParams.get('testCaseId');
-    if (testCaseId) {
-        setTimeout(() => selectTestCase(testCaseId), 1000);
+    if (logData) {
+        await prefillExecutionFromLog(logData);
+    } else {
+        // Check if test case ID is provided in URL
+        const testCaseId = urlParams.get('testCaseId');
+        if (testCaseId) {
+            setTimeout(() => selectTestCase(testCaseId), 1000);
+        }
     }
 });
 
@@ -190,6 +207,62 @@ async function selectTestCase(testCaseId) {
 }
 
 
+
+async function fetchTestLogDetails(logId) {
+    const response = await fetch(`/v1/api/test-logs/${logId}`);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+}
+
+async function prefillExecutionFromLog(log) {
+    try {
+        if (!log.test_case_id) {
+            throw new Error('Log is missing an associated test case');
+        }
+
+        await selectTestCase(log.test_case_id);
+
+        const modelNameInput = document.getElementById('modelName');
+        const systemPromptInput = document.getElementById('systemPrompt');
+        const userMessageInput = document.getElementById('userMessage');
+        const modelSettingsInput = document.getElementById('modelSettings');
+        const modelSettingsCollapse = document.getElementById('modelSettingsCollapse');
+
+        if (modelNameInput) {
+            modelNameInput.value = log.model_name || '';
+        }
+        if (systemPromptInput) {
+            systemPromptInput.value = log.system_prompt || '';
+        }
+        if (userMessageInput) {
+            userMessageInput.value = log.user_message || '';
+        }
+
+        if (modelSettingsInput) {
+            if (log.model_settings && Object.keys(log.model_settings).length > 0) {
+                modelSettingsInput.value = JSON.stringify(log.model_settings, null, 2);
+                if (modelSettingsCollapse && !modelSettingsCollapse.classList.contains('show')) {
+                    new bootstrap.Collapse(modelSettingsCollapse, { show: true });
+                }
+            } else {
+                modelSettingsInput.value = '';
+            }
+        }
+
+        currentTools = Array.isArray(log.tools)
+            ? JSON.parse(JSON.stringify(log.tools))
+            : [];
+        displayTools();
+
+        enableExecuteButton();
+        showAlert('Loaded execution parameters from the selected test log.', 'info');
+    } catch (error) {
+        console.error('Failed to prefill execution from log:', error);
+        showAlert('Failed to prefill execution parameters from log: ' + error.message, 'warning');
+    }
+}
 
 function populateExecutionParameters(testCase) {
     document.getElementById('modelName').value = testCase.model_name;

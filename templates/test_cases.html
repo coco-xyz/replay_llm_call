@@ -372,11 +372,21 @@
 
     <div class="container py-4">
         <!-- Header -->
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="fas fa-list-alt me-3"></i>Test Cases
-            </h1>
-            <p class="page-subtitle">Manage your LLM test cases and raw data</p>
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
+            <div class="mb-3 mb-lg-0">
+                <h1 class="page-title mb-1">
+                    <i class="fas fa-list-alt me-3"></i>Test Cases
+                </h1>
+                <p class="page-subtitle mb-0">Manage your LLM test cases and raw data</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-primary" onclick="loadTestCases()">
+                    <i class="fas fa-refresh me-2"></i>Refresh
+                </button>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTestCaseModal">
+                    <i class="fas fa-plus me-2"></i>Create Test Case
+                </button>
+            </div>
         </div>
 
         <div id="agentWarning" class="alert alert-warning d-none" role="alert">
@@ -386,26 +396,20 @@
         </div>
 
         <!-- Controls -->
-        <div class="row mb-4 gy-3 align-items-center">
-            <div class="col-lg-4 col-md-6">
-                <div class="search-container">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" class="form-control" id="searchInput" placeholder="Search test case by name">
+        <div class="card mb-4">
+            <div class="card-body py-3">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="text-muted fw-medium me-2">
+                        <i class="fas fa-filter me-2"></i>Filters:
+                    </span>
+                    <select class="form-select form-select-sm" id="agentFilter" style="width: 220px;">
+                        <option value="">All agents</option>
+                    </select>
+                    <div class="search-container ms-auto" style="min-width: 260px;">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search test case by name">
+                    </div>
                 </div>
-            </div>
-            <div class="col-lg-4 col-md-6">
-                <label for="agentFilter" class="form-label mb-1 text-muted fw-medium">Filter by Agent</label>
-                <select class="form-select" id="agentFilter">
-                    <option value="">All agents</option>
-                </select>
-            </div>
-            <div class="col-lg-4 text-md-end">
-                <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#createTestCaseModal">
-                    <i class="fas fa-plus me-2"></i>Create Test Case
-                </button>
-                <button class="btn btn-outline-primary" onclick="loadTestCases()">
-                    <i class="fas fa-refresh me-2"></i>Refresh
-                </button>
             </div>
         </div>
 

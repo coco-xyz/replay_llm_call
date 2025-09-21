@@ -259,7 +259,9 @@
                 <span>LLM Replay System</span>
             </a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/test-cases">Test Cases</a>
+                <a class="nav-link" href="/agents">Agents</a>
+                <a class="nav-link active" href="/test-cases">Test Cases</a>
+                <a class="nav-link" href="/regression-tests">Regression Tests</a>
                 <a class="nav-link" href="/test-execution">Execute Tests</a>
                 <a class="nav-link" href="/test-logs">Test Logs</a>
             </div>
@@ -416,6 +418,28 @@
         }
 
         function displayTestCaseDetails(testCase) {
+            const agentName = testCase.agent ? testCase.agent.name : null;
+            const agentId = testCase.agent_id || '';
+            const agentBadge = agentName
+                ? `<span class="badge bg-primary">${escapeHtml(agentName)}</span>`
+                : '<span class="text-muted">Unknown agent</span>';
+            const agentIdHtml = agentId ? `<small class="text-muted ms-2">${escapeHtml(agentId)}</small>` : '';
+            const agentLinks = agentId
+                ? `
+                    <div class="mt-2 small">
+                        <a href="/test-cases?agentId=${encodeURIComponent(agentId)}" class="text-decoration-none" target="_blank">
+                            View test cases for this agent
+                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                        </a>
+                        <span class="text-muted mx-1">•</span>
+                        <a href="/agents" class="text-decoration-none" target="_blank">
+                            Manage agents
+                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                        </a>
+                    </div>
+                `
+                : '';
+
             const detailsHtml = `
                 <div class="row">
                     <!-- Left Column -->
@@ -440,6 +464,18 @@
                                         <td>${escapeHtml(testCase.description || 'No description provided')}</td>
                                     </tr>
                                     <tr>
+                                        <td>Agent:</td>
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <div>
+                                                    ${agentBadge}
+                                                    ${agentIdHtml}
+                                                </div>
+                                                ${agentLinks}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
                                         <td>Created At:</td>
                                         <td>${formatDate(testCase.created_at)}</td>
                                     </tr>
@@ -453,7 +489,7 @@
                                     </tr>
                                     <tr>
                                         <td>Model Settings:</td>
-                                        <td>${testCase.model_settings !== null && testCase.model_settings !== undefined ? `<pre class="bg-light p-2 rounded"><code>${JSON.stringify(testCase.model_settings, null, 2)}</code></pre>` : '<span class="text-muted">Not specified</span>'}</td>
+                                        <td>${testCase.model_settings !== null && testCase.model_settings !== undefined ? `<pre class="bg-light p-2 rounded"><code>${escapeHtml(JSON.stringify(testCase.model_settings, null, 2))}</code></pre>` : '<span class="text-muted">Not specified</span>'}</td>
                                     </tr>
                                 </table>
                             </div>

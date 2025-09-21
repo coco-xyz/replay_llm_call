@@ -6,17 +6,31 @@
 
 let currentTestCases = [];
 let currentTestCaseId = null;
+let agents = [];
+let selectedAgentId = '';
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', function () {
-    loadTestCases();
+document.addEventListener('DOMContentLoaded', async function () {
     setupEventListeners();
 
-    // Check if there's a test case ID in the URL parameters
     const urlParams = new URLSearchParams(window.location.search);
+    const initialAgentId = urlParams.get('agentId');
+    if (initialAgentId) {
+        selectedAgentId = initialAgentId;
+    }
+
+    await loadAgents();
+    loadTestCases();
+
+    if (initialAgentId) {
+        const agentFilter = document.getElementById('agentFilter');
+        if (agentFilter) {
+            agentFilter.value = initialAgentId;
+        }
+    }
+
     const testCaseId = urlParams.get('id');
     if (testCaseId) {
-        // Wait a bit for test cases to load, then show the specific test case
         setTimeout(() => viewTestCaseInNewPage(testCaseId), 1000);
     }
 });
@@ -40,12 +54,25 @@ function setupEventListeners() {
             }, 500); // 500ms debounce
         });
     }
+
+    const agentFilter = document.getElementById('agentFilter');
+    if (agentFilter) {
+        agentFilter.addEventListener('change', function () {
+            selectedAgentId = this.value;
+            loadTestCases();
+        });
+    }
 }
 
 async function loadTestCases() {
     showLoading(true);
     try {
-        const response = await fetch('/v1/api/test-cases/');
+        const url = new URL('/v1/api/test-cases/', window.location.origin);
+        if (selectedAgentId) {
+            url.searchParams.append('agent_id', selectedAgentId);
+        }
+
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -59,6 +86,97 @@ async function loadTestCases() {
         showAlert('Error loading test cases: ' + error.message, 'danger');
     } finally {
         showLoading(false);
+    }
+}
+
+async function loadAgents() {
+    try {
+        const response = await fetch('/v1/api/agents/');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        agents = data.filter((agent) => !agent.is_deleted);
+        populateAgentFilter();
+        populateAgentSelects();
+        updateAgentWarning();
+    } catch (error) {
+        console.error('Error loading agents:', error);
+        showAlert('Error loading agents: ' + error.message, 'danger');
+    }
+}
+
+function populateAgentFilter() {
+    const filter = document.getElementById('agentFilter');
+    if (!filter) {
+        return;
+    }
+
+    const previousValue = filter.value;
+    filter.innerHTML = '<option value="">All agents</option>';
+    agents.forEach((agent) => {
+        const option = document.createElement('option');
+        option.value = agent.id;
+        option.textContent = agent.name;
+        filter.appendChild(option);
+    });
+
+    if (selectedAgentId && !agents.some((agent) => agent.id === selectedAgentId)) {
+        selectedAgentId = '';
+    }
+
+    const desiredValue = selectedAgentId || previousValue || '';
+    filter.value = desiredValue;
+    if (filter.value !== desiredValue) {
+        filter.value = '';
+    }
+    selectedAgentId = filter.value;
+}
+
+function populateAgentSelects() {
+    const createSelect = document.getElementById('createTestCaseAgent');
+    const editSelect = document.getElementById('editTestCaseAgent');
+
+    [createSelect, editSelect].forEach((select) => {
+        if (!select) return;
+        const selectedValue = select.value;
+        select.innerHTML = '<option value="">Select an agent...</option>';
+        agents.forEach((agent) => {
+            const option = document.createElement('option');
+            option.value = agent.id;
+            option.textContent = agent.name;
+            select.appendChild(option);
+        });
+
+        if (selectedValue) {
+            select.value = selectedValue;
+        } else if (select.id === 'createTestCaseAgent' && agents.length === 1) {
+            select.value = agents[0].id;
+        }
+    });
+
+    const hasAgents = agents.length > 0;
+    const modalConfirmButton = document.querySelector('#createTestCaseModal .btn-primary');
+    if (modalConfirmButton) {
+        modalConfirmButton.disabled = !hasAgents;
+    }
+
+    document.querySelectorAll('button[data-bs-target="#createTestCaseModal"]').forEach((button) => {
+        button.disabled = !hasAgents;
+    });
+}
+
+function updateAgentWarning() {
+    const warning = document.getElementById('agentWarning');
+    if (!warning) {
+        return;
+    }
+
+    if (agents.length === 0) {
+        warning.classList.remove('d-none');
+    } else {
+        warning.classList.add('d-none');
     }
 }
 
@@ -77,12 +195,22 @@ function displayTestCases(testCases) {
     emptyState.classList.add('d-none');
     table.style.display = 'table';
 
-    const html = testCases.map(testCase => `
+    const html = testCases.map(testCase => {
+        const agentName = testCase.agent ? testCase.agent.name : 'Unknown agent';
+        const agentDisplay = escapeHtml(agentName);
+
+        return `
         <tr>
             <td>
                 <div class="d-flex flex-column">
                     <strong>${escapeHtml(testCase.name)}</strong>
                     ${testCase.description ? `<small class="text-muted">${escapeHtml(truncateText(testCase.description, 60))}</small>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="d-flex flex-column">
+                    <span>${agentDisplay}</span>
+                    <small class="text-muted">${escapeHtml(testCase.agent_id)}</small>
                 </div>
             </td>
             <td>
@@ -119,7 +247,8 @@ function displayTestCases(testCases) {
                 </div>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 
     container.innerHTML = html;
 }
@@ -128,9 +257,11 @@ async function createTestCase() {
     const name = document.getElementById('testCaseName').value.trim();
     const description = document.getElementById('testCaseDescription').value.trim();
     const rawDataText = document.getElementById('rawData').value.trim();
+    const agentSelect = document.getElementById('createTestCaseAgent');
+    const agentId = agentSelect ? agentSelect.value : '';
 
-    if (!name || !rawDataText) {
-        showAlert('Please fill in all required fields', 'warning');
+    if (!name || !rawDataText || !agentId) {
+        showAlert('Please fill in all required fields including the owning agent', 'warning');
         return;
     }
 
@@ -151,7 +282,8 @@ async function createTestCase() {
             body: JSON.stringify({
                 name: name,
                 description: description || null,
-                raw_data: rawData
+                raw_data: rawData,
+                agent_id: agentId
             })
         });
 
@@ -167,6 +299,7 @@ async function createTestCase() {
         const modal = bootstrap.Modal.getInstance(document.getElementById('createTestCaseModal'));
         modal.hide();
         document.getElementById('createTestCaseForm').reset();
+        populateAgentSelects();
 
         // Reload test cases
         loadTestCases();
@@ -190,6 +323,10 @@ async function editTestCase(testCaseId) {
         document.getElementById('editTestCaseId').value = testCase.id;
         document.getElementById('editTestCaseName').value = testCase.name;
         document.getElementById('editTestCaseDescription').value = testCase.description || '';
+        const editAgentSelect = document.getElementById('editTestCaseAgent');
+        if (editAgentSelect) {
+            editAgentSelect.value = testCase.agent_id || '';
+        }
 
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('editTestCaseModal'));
@@ -205,9 +342,10 @@ async function updateTestCase() {
     const testCaseId = document.getElementById('editTestCaseId').value;
     const name = document.getElementById('editTestCaseName').value.trim();
     const description = document.getElementById('editTestCaseDescription').value.trim();
+    const agentId = document.getElementById('editTestCaseAgent').value;
 
-    if (!name) {
-        showAlert('Please enter a test case name', 'warning');
+    if (!name || !agentId) {
+        showAlert('Please provide a name and agent for the test case', 'warning');
         return;
     }
 
@@ -219,7 +357,8 @@ async function updateTestCase() {
             },
             body: JSON.stringify({
                 name: name,
-                description: description || null
+                description: description || null,
+                agent_id: agentId || null
             })
         });
 
@@ -426,6 +565,7 @@ async function viewTestCase(testCaseId) {
                     <table class="table table-sm">
                         <tr><td><strong>Name:</strong></td><td>${escapeHtml(testCase.name)}</td></tr>
                         <tr><td><strong>Description:</strong></td><td>${escapeHtml(testCase.description || 'N/A')}</td></tr>
+                        <tr><td><strong>Agent:</strong></td><td>${testCase.agent ? `<span class="badge bg-primary">${escapeHtml(testCase.agent.name)}</span>` : 'Unknown'}<br><small class="text-muted">${escapeHtml(testCase.agent_id)}</small></td></tr>
                         <tr><td><strong>Model:</strong></td><td>${escapeHtml(testCase.model_name)}</td></tr>
                         <tr><td><strong>Has Tools:</strong></td><td>${testCase.tools ? 'Yes' : 'No'}</td></tr>
                         <tr><td><strong>Created:</strong></td><td>${formatDate(testCase.created_at)}</td></tr>
@@ -534,7 +674,13 @@ async function searchTestCases() {
 
     showLoading(true);
     try {
-        const response = await fetch(`/v1/api/test-cases/search?q=${encodeURIComponent(query)}`);
+        const url = new URL('/v1/api/test-cases/search', window.location.origin);
+        url.searchParams.append('q', query);
+        if (selectedAgentId) {
+            url.searchParams.append('agent_id', selectedAgentId);
+        }
+
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }

@@ -312,7 +312,9 @@
                 <span>LLM Replay System</span>
             </a>
             <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/agents">Agents</a>
                 <a class="nav-link" href="/test-cases">Test Cases</a>
+                <a class="nav-link" href="/regression-tests">Regression Tests</a>
                 <a class="nav-link active" href="/test-execution">Execute Tests</a>
                 <a class="nav-link" href="/test-logs">Test Logs</a>
             </div>
@@ -328,28 +330,44 @@
             <p class="page-subtitle">Execute and test your LLM configurations</p>
         </div>
 
+        <div id="executionAgentWarning" class="alert alert-warning d-none" role="alert">
+            <i class="fas fa-circle-exclamation me-2"></i>
+            <span>No active agents available. Configure an agent before executing test cases.</span>
+            <a href="/agents" class="alert-link ms-1">Manage Agents</a>
+        </div>
+
         <!-- Test Case Selection - Full Width -->
         <div class="row mb-3">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <div class="row align-items-center">
-                            <div class="col-md-4">
+                        <div class="row align-items-center g-3">
+                            <div class="col-xl-3 col-lg-4">
+                                <label for="agentSelect" class="form-label text-muted small mb-1">Agent</label>
+                                <select class="form-select" id="agentSelect">
+                                    <option value="">All agents</option>
+                                </select>
+                            </div>
+                            <div class="col-xl-5 col-lg-4">
+                                <label for="testCaseSelect" class="form-label text-muted small mb-1">Test Case</label>
                                 <select class="form-select" id="testCaseSelect">
                                     <option value="">Select a test case...</option>
                                 </select>
+                                <div class="form-text" id="selectedTestCaseAgent">Select a test case to preview its agent.</div>
                             </div>
-                            <div class="col-md-8 text-end">
+                            <div class="col-xl-4 col-lg-4 text-lg-end">
                                 <!-- Execute Controls -->
-                                <button class="btn btn-success me-2" id="executeBtn" onclick="executeTest()" disabled>
-                                    <i class="fas fa-play me-1"></i>Execute Test
-                                </button>
-                                <button class="btn btn-outline-primary btn-sm me-2" onclick="resetToOriginal()">
-                                    <i class="fas fa-undo me-1"></i>Reset to Original
-                                </button>
-                                <button class="btn btn-outline-secondary btn-sm" onclick="viewTestLogs()">
-                                    <i class="fas fa-history me-1"></i>View Test Logs
-                                </button>
+                                <div class="d-flex flex-wrap justify-content-lg-end gap-2">
+                                    <button class="btn btn-success" id="executeBtn" onclick="executeTest()" disabled>
+                                        <i class="fas fa-play me-1"></i>Execute Test
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="resetToOriginal()">
+                                        <i class="fas fa-undo me-1"></i>Reset to Original
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="viewTestLogs()">
+                                        <i class="fas fa-history me-1"></i>View Test Logs
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

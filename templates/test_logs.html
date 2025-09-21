@@ -339,7 +339,9 @@
                 <span>LLM Replay System</span>
             </a>
             <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/agents">Agents</a>
                 <a class="nav-link" href="/test-cases">Test Cases</a>
+                <a class="nav-link" href="/regression-tests">Regression Tests</a>
                 <a class="nav-link" href="/test-execution">Execute Tests</a>
                 <a class="nav-link active" href="/test-logs">Test Logs</a>
             </div>
@@ -360,25 +362,29 @@
         <!-- Filters -->
         <div class="card mb-3">
             <div class="card-body py-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center">
-                        <span class="text-muted fw-medium me-5">
-                            <i class="fas fa-filter me-2"></i>Filters:
-                        </span>
-                        <select class="form-select form-select-sm me-5" id="statusFilter" style="width: 160px;">
-                            <option value="">All Statuses</option>
-                            <option value="success">Success</option>
-                            <option value="failed">Failed</option>
-                        </select>
-                        <select class="form-select form-select-sm me-5" id="testCaseFilter" style="width: 220px;">
-                            <option value="">All Test Cases</option>
-                        </select>
-                        <select class="form-select form-select-sm" id="limitSelect" style="width: 120px;">
-                            <option value="50">50 logs</option>
-                            <option value="100" selected>100 logs</option>
-                            <option value="200">200 logs</option>
-                        </select>
-                    </div>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="text-muted fw-medium me-2">
+                        <i class="fas fa-filter me-2"></i>Filters:
+                    </span>
+                    <select class="form-select form-select-sm" id="statusFilter" style="width: 160px;">
+                        <option value="">All Statuses</option>
+                        <option value="success">Success</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                    <select class="form-select form-select-sm" id="agentFilter" style="width: 200px;">
+                        <option value="">All Agents</option>
+                    </select>
+                    <select class="form-select form-select-sm" id="testCaseFilter" style="width: 220px;">
+                        <option value="">All Test Cases</option>
+                    </select>
+                    <select class="form-select form-select-sm" id="regressionFilter" style="width: 200px;">
+                        <option value="">All Regressions</option>
+                    </select>
+                    <select class="form-select form-select-sm ms-auto" id="limitSelect" style="width: 120px;">
+                        <option value="50">50 logs</option>
+                        <option value="100" selected>100 logs</option>
+                        <option value="200">200 logs</option>
+                    </select>
                     <button class="btn btn-primary btn-sm px-4" onclick="applyFilters()">
                         <i class="fas fa-search me-1"></i>Apply
                     </button>
@@ -391,12 +397,14 @@
             <table class="table table-hover mb-0" id="testLogsTable">
                 <thead>
                     <tr>
-                        <th style="width: 20%">Test Case</th>
-                        <th style="width: 15%">Model</th>
+                        <th style="width: 18%">Test Case</th>
+                        <th style="width: 16%">Agent</th>
+                        <th style="width: 14%">Regression</th>
                         <th style="width: 12%">Status</th>
-                        <th style="width: 15%">Response Time</th>
-                        <th style="width: 18%">Executed At</th>
-                        <th style="width: 20%">Actions</th>
+                        <th style="width: 12%">Model</th>
+                        <th style="width: 12%">Response Time</th>
+                        <th style="width: 16%">Executed At</th>
+                        <th style="width: 10%">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="testLogsList">

@@ -61,6 +61,40 @@ async def test_logs_page(request: Request):
     )
 
 
+@router.get("/agents", response_class=HTMLResponse)
+async def agents_page(request: Request):
+    """Agent management page."""
+
+    return templates.TemplateResponse(
+        "agents.html",
+        {"request": request, "static_asset_version": settings.static__asset_version},
+    )
+
+
+@router.get("/regression-tests", response_class=HTMLResponse)
+async def regression_tests_page(request: Request):
+    """Regression tests listing page."""
+
+    return templates.TemplateResponse(
+        "regression_tests.html",
+        {"request": request, "static_asset_version": settings.static__asset_version},
+    )
+
+
+@router.get("/regression-tests/{regression_test_id}", response_class=HTMLResponse)
+async def regression_test_detail_page(request: Request, regression_test_id: str):
+    """Regression test detail page."""
+
+    return templates.TemplateResponse(
+        "regression_test_detail.html",
+        {
+            "request": request,
+            "regression_test_id": regression_test_id,
+            "static_asset_version": settings.static__asset_version,
+        },
+    )
+
+
 @router.get("/test-cases/{case_id}", response_class=HTMLResponse)
 async def test_case_detail_page(request: Request, case_id: str):
     """

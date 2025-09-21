@@ -361,7 +361,9 @@
                 <span>LLM Replay System</span>
             </a>
             <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/agents">Agents</a>
                 <a class="nav-link active" href="/test-cases">Test Cases</a>
+                <a class="nav-link" href="/regression-tests">Regression Tests</a>
                 <a class="nav-link" href="/test-execution">Execute Tests</a>
                 <a class="nav-link" href="/test-logs">Test Logs</a>
             </div>
@@ -377,15 +379,27 @@
             <p class="page-subtitle">Manage your LLM test cases and raw data</p>
         </div>
 
+        <div id="agentWarning" class="alert alert-warning d-none" role="alert">
+            <i class="fas fa-circle-exclamation me-2"></i>
+            <span>No active agents found. Create an agent first so new test cases can be assigned correctly.</span>
+            <a href="/agents" class="alert-link ms-1">Go to Agents</a>
+        </div>
+
         <!-- Controls -->
-        <div class="row mb-4 align-items-center">
-            <div class="col-md-6">
+        <div class="row mb-4 gy-3 align-items-center">
+            <div class="col-lg-4 col-md-6">
                 <div class="search-container">
                     <i class="fas fa-search search-icon"></i>
                     <input type="text" class="form-control" id="searchInput" placeholder="Search test case by name">
                 </div>
             </div>
-            <div class="col-md-6 text-end">
+            <div class="col-lg-4 col-md-6">
+                <label for="agentFilter" class="form-label mb-1 text-muted fw-medium">Filter by Agent</label>
+                <select class="form-select" id="agentFilter">
+                    <option value="">All agents</option>
+                </select>
+            </div>
+            <div class="col-lg-4 text-md-end">
                 <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#createTestCaseModal">
                     <i class="fas fa-plus me-2"></i>Create Test Case
                 </button>
@@ -400,11 +414,12 @@
             <table class="table table-hover mb-0" id="testCasesTable">
                 <thead>
                     <tr>
-                        <th style="width: 25%">Name</th>
-                        <th style="width: 15%">Model</th>
-                        <th style="width: 30%">System Prompt</th>
-                        <th style="width: 15%">Created</th>
-                        <th style="width: 15%" class="text-end">Actions</th>
+                        <th style="width: 24%">Name</th>
+                        <th style="width: 18%">Agent</th>
+                        <th style="width: 16%">Model</th>
+                        <th style="width: 24%">System Prompt</th>
+                        <th style="width: 10%">Created</th>
+                        <th style="width: 8%" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="testCasesList">
@@ -429,10 +444,15 @@
                 <i class="fas fa-robot"></i>
             </div>
             <h3>No test cases found</h3>
-            <p>Create your first test case to get started</p>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTestCaseModal">
-                <i class="fas fa-plus me-2"></i>Create Test Case
-            </button>
+            <p>Create your first test case to get started or import existing conversations.</p>
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTestCaseModal">
+                    <i class="fas fa-plus me-2"></i>Create Test Case
+                </button>
+                <a class="btn btn-outline-primary" href="/agents">
+                    <i class="fas fa-user-astronaut me-2"></i>Manage Agents
+                </a>
+            </div>
         </div>
     </div>
 
@@ -453,6 +473,13 @@
                         <div class="mb-3">
                             <label for="testCaseDescription" class="form-label">Description</label>
                             <textarea class="form-control" id="testCaseDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createTestCaseAgent" class="form-label">Agent *</label>
+                            <select class="form-select" id="createTestCaseAgent" required>
+                                <option value="">Select an agent...</option>
+                            </select>
+                            <div class="form-text">Test cases inherit defaults and ownership from the selected agent.</div>
                         </div>
                         <div class="mb-3">
                             <label for="rawData" class="form-label">Raw Data (JSON) *</label>
@@ -492,10 +519,16 @@
                             <textarea class="form-control" id="editTestCaseDescription" rows="4"
                                 placeholder="Enter a description for this test case..."></textarea>
                         </div>
+                        <div class="mb-3">
+                            <label for="editTestCaseAgent" class="form-label">Agent *</label>
+                            <select class="form-select" id="editTestCaseAgent" required>
+                                <option value="">Select an agent...</option>
+                            </select>
+                        </div>
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>
-                            <strong>Note:</strong> Only the name and description can be modified. Other test case
-                            properties (system prompt, user message, etc.) are read-only.
+                            <strong>Note:</strong> Update the agent to hand off this test case to a different model
+                            configuration. Other test case properties (system prompt, user message, etc.) remain read-only.
                         </div>
                     </form>
                 </div>

@@ -310,9 +310,11 @@
                 <span>LLM Replay System</span>
             </a>
             <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/agents">Agents</a>
                 <a class="nav-link" href="/test-cases">Test Cases</a>
+                <a class="nav-link" href="/regression-tests">Regression Tests</a>
                 <a class="nav-link" href="/test-execution">Execute Tests</a>
-                <a class="nav-link" href="/test-logs">Test Logs</a>
+                <a class="nav-link active" href="/test-logs">Test Logs</a>
             </div>
         </div>
     </nav>
@@ -366,6 +368,10 @@
         const logId = '{{ log_id }}';
         let currentLog = null;
         let testCasesData = [];
+        let agentSummary = null;
+        let regressionSummary = null;
+        const agentCache = new Map();
+        const regressionCache = new Map();
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', async function () {
@@ -394,6 +400,14 @@
                 }
 
                 currentLog = await response.json();
+
+                await loadAgentSummary(currentLog.agent_id);
+                if (currentLog.regression_test_id) {
+                    await loadRegressionSummary(currentLog.regression_test_id);
+                } else {
+                    regressionSummary = null;
+                }
+
                 displayLogDetails(currentLog);
 
             } catch (error) {
@@ -406,6 +420,7 @@
 
         function displayLogDetails(log) {
             const testCase = findTestCaseById(log.test_case_id);
+            const responseTime = formatResponseTime(log.response_time_ms);
 
             const detailsHtml = `
                 <div class="row">
@@ -436,8 +451,16 @@
                                         <td>${escapeHtml(log.model_name)}</td>
                                     </tr>
                                     <tr>
+                                        <td>Agent:</td>
+                                        <td>${formatAgentSummary(log.agent_id)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Regression Test:</td>
+                                        <td>${formatRegressionSummary(log.regression_test_id)}</td>
+                                    </tr>
+                                    <tr>
                                         <td>Response Time:</td>
-                                        <td><strong>${log.response_time_ms}ms</strong></td>
+                                        <td><strong>${responseTime}</strong></td>
                                     </tr>
                                     <tr>
                                         <td>Test Case:</td>
@@ -459,7 +482,7 @@
                                     </tr>
                                     <tr>
                                         <td>Executed At:</td>
-                                        <td>${formatDate(log.created_at)}</td>
+                                        <td>${escapeHtml(formatDate(log.created_at))}</td>
                                     </tr>
                                 </table>
                             </div>
@@ -537,7 +560,7 @@
                             <div class="collapse" id="modelSettingsCollapse">
                                 <div class="card-body">
                                     ${log.model_settings !== null && log.model_settings !== undefined ?
-                    `<pre class="bg-light p-3 rounded mb-0"><code>${JSON.stringify(log.model_settings, null, 2)}</code></pre>` :
+                    `<pre class="bg-light p-3 rounded mb-0"><code>${escapeHtml(JSON.stringify(log.model_settings, null, 2))}</code></pre>` :
                     '<p class="text-muted mb-0">No model settings specified</p>'
                 }
                                 </div>
@@ -612,6 +635,66 @@
             setupModelSettingsCollapse(log);
         }
 
+        async function loadAgentSummary(agentId) {
+            if (!agentId) {
+                agentSummary = null;
+                return;
+            }
+
+            if (agentCache.has(agentId)) {
+                agentSummary = agentCache.get(agentId);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/v1/api/agents/${agentId}`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        agentSummary = null;
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                agentCache.set(agentId, data);
+                agentSummary = data;
+            } catch (error) {
+                console.error('Error loading agent summary:', error);
+                agentSummary = null;
+            }
+        }
+
+        async function loadRegressionSummary(regressionId) {
+            if (!regressionId) {
+                regressionSummary = null;
+                return;
+            }
+
+            if (regressionCache.has(regressionId)) {
+                regressionSummary = regressionCache.get(regressionId);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/v1/api/regression-tests/${regressionId}`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        regressionSummary = null;
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                regressionCache.set(regressionId, data);
+                regressionSummary = data;
+            } catch (error) {
+                console.error('Error loading regression summary:', error);
+                regressionSummary = null;
+            }
+        }
+
         function setupModelSettingsCollapse(log) {
             const modelSettingsCollapse = document.getElementById('modelSettingsCollapse');
             const modelSettingsChevron = document.getElementById('modelSettingsChevron');
@@ -638,6 +721,98 @@
         // Helper functions
         function findTestCaseById(testCaseId) {
             return testCasesData.find(tc => tc.id === testCaseId);
+        }
+
+        function formatAgentSummary(agentId) {
+            if (!agentId) {
+                return '<span class="text-muted">Unknown agent</span>';
+            }
+
+            const summary = agentCache.get(agentId) || agentSummary;
+            if (!summary) {
+                return `<span class="badge bg-secondary">${escapeHtml(agentId)}</span>`;
+            }
+
+            const encodedAgentId = encodeURIComponent(agentId);
+            const agentName = summary.name ? escapeHtml(summary.name) : 'Unnamed agent';
+            const description = summary.description ? `<div class="text-muted small mt-1">${escapeHtml(summary.description)}</div>` : '';
+
+            return `
+                <div class="d-flex flex-column">
+                    <div>
+                        <span class="badge bg-primary">${agentName}</span>
+                        <small class="text-muted ms-2">${escapeHtml(agentId)}</small>
+                    </div>
+                    ${description}
+                    <div class="mt-2 small">
+                        <a href="/test-cases?agentId=${encodedAgentId}" class="text-decoration-none" target="_blank">
+                            View test cases for this agent
+                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                        </a>
+                        <span class="text-muted mx-1">•</span>
+                        <a href="/agents" class="text-decoration-none" target="_blank">
+                            Manage agents
+                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatRegressionSummary(regressionId) {
+            if (!regressionId) {
+                return '<span class="text-muted">Ad-hoc execution</span>';
+            }
+
+            const summary = regressionCache.get(regressionId) || regressionSummary;
+            const encodedRegressionId = encodeURIComponent(regressionId);
+
+            if (!summary) {
+                return `<a href="/regression-tests/${encodedRegressionId}" class="text-decoration-none" target="_blank">${escapeHtml(regressionId)}<i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i></a>`;
+            }
+
+            const labelParts = [];
+            if (summary.agent && summary.agent.name) {
+                labelParts.push(summary.agent.name);
+            }
+            if (summary.status) {
+                labelParts.push(summary.status);
+            }
+
+            const label = labelParts.length > 0 ? labelParts.join(' · ') : regressionId;
+            const successCount = summary.success_count ?? 0;
+            const failedCount = summary.failed_count ?? 0;
+            const totalCount = summary.total_count ?? successCount + failedCount;
+            const counts = `${successCount} passed · ${failedCount} failed (total ${totalCount})`;
+            const timing = summary.completed_at
+                ? `Completed ${escapeHtml(formatDate(summary.completed_at))}`
+                : summary.started_at
+                    ? `Started ${escapeHtml(formatDate(summary.started_at))}`
+                    : '';
+            const errorInfo = summary.error_message
+                ? `<div class="text-danger small mt-1">${escapeHtml(summary.error_message)}</div>`
+                : '';
+
+            return `
+                <div class="d-flex flex-column">
+                    <div>
+                        <a href="/regression-tests/${encodedRegressionId}" class="text-decoration-none" target="_blank">
+                            ${escapeHtml(label)}
+                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                        </a>
+                    </div>
+                    <div class="text-muted small">${escapeHtml(counts)}</div>
+                    ${timing ? `<div class="text-muted small">${timing}</div>` : ''}
+                    ${errorInfo}
+                </div>
+            `;
+        }
+
+        function formatResponseTime(value) {
+            if (value === null || value === undefined) {
+                return '—';
+            }
+            return `${value}ms`;
         }
 
         function hideLoading() {
@@ -720,7 +895,8 @@
 
         function reExecuteTest() {
             if (currentLog) {
-                window.location.href = `/test-execution?testCaseId=${currentLog.test_case_id}`;
+                const agentParam = currentLog.agent_id ? `&agentId=${encodeURIComponent(currentLog.agent_id)}` : '';
+                window.location.href = `/test-execution?testCaseId=${currentLog.test_case_id}${agentParam}`;
             }
         }
 

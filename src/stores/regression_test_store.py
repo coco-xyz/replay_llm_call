@@ -48,14 +48,17 @@ class RegressionTestStore:
                 f"Failed to update regression test: {exc}",
             ) from exc
 
-    def get_by_id(self, regression_test_id: str) -> Optional[RegressionTest]:
+    def get_by_id(
+        self, regression_test_id: str, *, include_deleted: bool = False
+    ) -> Optional[RegressionTest]:
         try:
             with database_session() as db:
-                return (
-                    db.query(RegressionTest)
-                    .filter(RegressionTest.id == regression_test_id)
-                    .first()
+                query = db.query(RegressionTest).filter(
+                    RegressionTest.id == regression_test_id
                 )
+                if not include_deleted:
+                    query = query.filter(RegressionTest.is_deleted.is_(False))
+                return query.first()
         except Exception as exc:  # pragma: no cover
             logger.error(
                 "Failed to fetch regression test %s: %s", regression_test_id, exc
@@ -72,6 +75,7 @@ class RegressionTestStore:
         status: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
+        include_deleted: bool = False,
     ) -> List[RegressionTest]:
         try:
             with database_session() as db:
@@ -80,6 +84,8 @@ class RegressionTestStore:
                     query = query.filter(RegressionTest.agent_id == agent_id)
                 if status:
                     query = query.filter(RegressionTest.status == status)
+                if not include_deleted:
+                    query = query.filter(RegressionTest.is_deleted.is_(False))
                 return (
                     query.order_by(desc(RegressionTest.created_at))
                     .limit(limit)
@@ -91,6 +97,31 @@ class RegressionTestStore:
             raise DatabaseException(
                 DatabaseErrorCode.QUERY_FAILED,
                 f"Failed to list regression tests: {exc}",
+            ) from exc
+
+    def soft_delete_by_agent(self, agent_id: str) -> int:
+        """Soft delete regression tests tied to the given agent."""
+
+        try:
+            with database_session() as db:
+                updated = (
+                    db.query(RegressionTest)
+                    .filter(RegressionTest.agent_id == agent_id)
+                    .filter(RegressionTest.is_deleted.is_(False))
+                    .update({RegressionTest.is_deleted: True}, synchronize_session=False)
+                )
+                db.commit()
+                logger.info(
+                    "Soft deleted %s regression tests for agent %s", updated, agent_id
+                )
+                return updated
+        except Exception as exc:  # pragma: no cover
+            logger.error(
+                "Failed to soft delete regression tests for agent %s: %s", agent_id, exc
+            )
+            raise DatabaseException(
+                DatabaseErrorCode.QUERY_FAILED,
+                f"Failed to delete regression tests for agent: {exc}",
             ) from exc
 
 

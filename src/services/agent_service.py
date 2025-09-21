@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from src.core.logger import get_logger
 from src.models import Agent
 from src.stores.agent_store import AgentStore
+from src.stores.regression_test_store import RegressionTestStore
 from src.stores.test_case_store import TestCaseStore
 
 logger = get_logger(__name__)
@@ -55,7 +56,7 @@ class AgentUpdateData(BaseModel):
     )
     is_deleted: Optional[bool] = Field(
         None,
-        description="Soft delete flag (must use delete/restore operations instead)",
+        description="Soft delete flag (managed via dedicated delete operations)",
     )
 
 
@@ -90,6 +91,7 @@ class AgentService:
     def __init__(self) -> None:
         self.store = AgentStore()
         self.test_case_store = TestCaseStore()
+        self.regression_test_store = RegressionTestStore()
 
     def ensure_default_agent_exists(self) -> Agent:
         """Ensure the default agent exists and return it."""
@@ -146,9 +148,7 @@ class AgentService:
             return None
 
         if data.is_deleted is not None:
-            raise ValueError(
-                "Use delete_agent or restore_agent to change an agent's deleted state"
-            )
+            raise ValueError("Agent delete state cannot be modified via update")
 
         if data.name is not None:
             agent.name = data.name
@@ -165,19 +165,14 @@ class AgentService:
         return AgentData.model_validate(updated)
 
     def delete_agent(self, agent_id: str) -> bool:
-        """Soft delete an agent and cascade to its test cases."""
+        """Soft delete an agent and cascade to dependent records."""
 
         deleted = self.store.soft_delete(agent_id)
         if not deleted:
             return False
         self.test_case_store.soft_delete_by_agent(agent_id)
+        self.regression_test_store.soft_delete_by_agent(agent_id)
         return True
-
-    def restore_agent(self, agent_id: str) -> bool:
-        """Restore a previously soft-deleted agent."""
-
-        restored = self.store.restore(agent_id)
-        return restored
 
     def get_agent_summary(self, agent_id: str) -> Optional[AgentSummary]:
         agent = self.store.get_by_id(agent_id, include_deleted=True)

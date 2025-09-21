@@ -5,7 +5,7 @@ Data access layer for test log operations.
 The list-style queries in this store deliberately exclude logs that belong to
 soft-deleted test cases so that UI listings stay in sync with the visible test
 case catalog. Individual log lookups remain unrestricted and can still access
-records tied to archived test cases.
+records tied to deleted test cases.
 """
 
 from typing import List, Optional

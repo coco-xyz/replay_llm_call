@@ -1,11 +1,10 @@
 /**
  * Agents Management JavaScript
  *
- * Handles fetching, creating, updating, and archiving agents for the replay UI.
+ * Handles fetching, creating, updating, and deleting agents for the replay UI.
  */
 
 let agents = [];
-let includeDeleted = false;
 
 // Initialize page
 window.addEventListener('DOMContentLoaded', () => {
@@ -14,14 +13,6 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-    const toggle = document.getElementById('includeDeletedToggle');
-    if (toggle) {
-        toggle.addEventListener('change', () => {
-            includeDeleted = toggle.checked;
-            loadAgents();
-        });
-    }
-
     const refreshBtn = document.getElementById('refreshAgentsBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => loadAgents());
@@ -56,12 +47,7 @@ function setupEventListeners() {
 async function loadAgents() {
     toggleLoading(true);
     try {
-        const url = new URL('/v1/api/agents/', window.location.origin);
-        if (includeDeleted) {
-            url.searchParams.append('include_deleted', 'true');
-        }
-
-        const response = await fetch(url);
+        const response = await fetch('/v1/api/agents/');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -98,9 +84,6 @@ function displayAgents(agentList) {
 
     const rows = agentList
         .map((agent) => {
-            const statusBadge = agent.is_deleted
-                ? '<span class="badge bg-secondary">Archived</span>'
-                : '<span class="badge bg-success">Active</span>';
             const description = agent.description
                 ? `<small class="text-muted">${escapeHtml(truncateText(agent.description, 80))}</small>`
                 : '';
@@ -119,7 +102,6 @@ function displayAgents(agentList) {
                     <div class="d-flex flex-column">
                         <div class="d-flex align-items-center gap-2">
                             <strong>${escapeHtml(agent.name)}</strong>
-                            ${agent.is_deleted ? '<span class="badge bg-secondary">Archived</span>' : ''}
                         </div>
                         ${description}
                     </div>
@@ -137,7 +119,7 @@ function displayAgents(agentList) {
                         <small class="text-muted">Created ${formatDate(agent.created_at)}</small>
                     </div>
                 </td>
-                <td>${statusBadge}</td>
+                <td><span class="badge bg-success">Active</span></td>
                 <td class="text-end">
                     <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-outline-primary" onclick="openEditAgent('${agent.id}')">
@@ -146,10 +128,9 @@ function displayAgents(agentList) {
                         <button type="button" class="btn btn-outline-secondary" onclick="openAgentTestCases('${agent.id}')" title="View test cases">
                             <i class="fas fa-list"></i>
                         </button>
-                        ${agent.is_deleted
-                            ? `<button type="button" class="btn btn-outline-success" onclick="restoreAgent('${agent.id}')"><i class="fas fa-undo"></i></button>`
-                            : `<button type="button" class="btn btn-outline-danger" onclick="archiveAgent('${agent.id}')"><i class="fas fa-archive"></i></button>`
-                        }
+                        <button type="button" class="btn btn-outline-danger" onclick="deleteAgent('${agent.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>`;
@@ -165,8 +146,7 @@ function updateAgentHints(agentList) {
         return;
     }
 
-    const activeAgents = agentList.filter((agent) => !agent.is_deleted);
-    if (activeAgents.length === 0) {
+    if (!agentList || agentList.length === 0) {
         hint.classList.remove('d-none');
     } else {
         hint.classList.add('d-none');
@@ -302,8 +282,8 @@ async function updateAgent() {
     }
 }
 
-async function archiveAgent(agentId) {
-    if (!confirm('Archive this agent? All associated test cases will be hidden until you restore it.')) {
+async function deleteAgent(agentId) {
+    if (!confirm('Delete this agent? Associated test cases and regression tests will also be deleted.')) {
         return;
     }
 
@@ -318,31 +298,11 @@ async function archiveAgent(agentId) {
             throw new Error(message);
         }
 
-        showAlert('Agent archived successfully.', 'success');
+        showAlert('Agent deleted successfully.', 'success');
         loadAgents();
     } catch (error) {
-        console.error('Error archiving agent:', error);
-        showAlert('Error archiving agent: ' + error.message, 'danger');
-    }
-}
-
-async function restoreAgent(agentId) {
-    try {
-        const response = await fetch(`/v1/api/agents/${agentId}/restore`, {
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            const errorData = await safeJson(response);
-            const message = errorData?.detail || `HTTP error! status: ${response.status}`;
-            throw new Error(message);
-        }
-
-        showAlert('Agent restored successfully.', 'success');
-        loadAgents();
-    } catch (error) {
-        console.error('Error restoring agent:', error);
-        showAlert('Error restoring agent: ' + error.message, 'danger');
+        console.error('Error deleting agent:', error);
+        showAlert('Error deleting agent: ' + error.message, 'danger');
     }
 }
 
@@ -453,6 +413,5 @@ function formatDate(dateString) {
 
 // expose functions used by inline handlers
 window.openEditAgent = openEditAgent;
-window.archiveAgent = archiveAgent;
-window.restoreAgent = restoreAgent;
+window.deleteAgent = deleteAgent;
 window.openAgentTestCases = openAgentTestCases;

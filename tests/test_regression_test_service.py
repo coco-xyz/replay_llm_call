@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -15,6 +16,7 @@ async def test_run_regression_with_no_cases(monkeypatch):
 
     agent = SimpleNamespace(
         id="agent-1",
+        name="Agent 1",
         is_deleted=False,
         default_model_name="model",
         default_system_prompt="prompt",
@@ -37,9 +39,18 @@ async def test_run_regression_with_no_cases(monkeypatch):
         lambda agent_id: [],
     )
 
-    created = {}
-    monkeypatch.setattr(service.store, "create", lambda record: record)
-    monkeypatch.setattr(service.store, "update", lambda record: record)
+    def fake_create(record):
+        now = datetime.now(timezone.utc)
+        record.created_at = now
+        record.updated_at = now
+        return record
+
+    def fake_update(record):
+        record.updated_at = datetime.now(timezone.utc)
+        return record
+
+    monkeypatch.setattr(service.store, "create", fake_create)
+    monkeypatch.setattr(service.store, "update", fake_update)
 
     request = RegressionTestCreateData(
         agent_id="agent-1",
@@ -61,6 +72,7 @@ async def test_run_regression_counts_results(monkeypatch):
 
     agent = SimpleNamespace(
         id="agent-1",
+        name="Agent 1",
         is_deleted=False,
         default_model_name="model",
         default_system_prompt="prompt",
@@ -87,8 +99,18 @@ async def test_run_regression_counts_results(monkeypatch):
         "get_by_agent",
         lambda agent_id: test_cases,
     )
-    monkeypatch.setattr(service.store, "create", lambda record: record)
-    monkeypatch.setattr(service.store, "update", lambda record: record)
+    def fake_create(record):
+        now = datetime.now(timezone.utc)
+        record.created_at = now
+        record.updated_at = now
+        return record
+
+    def fake_update(record):
+        record.updated_at = datetime.now(timezone.utc)
+        return record
+
+    monkeypatch.setattr(service.store, "create", fake_create)
+    monkeypatch.setattr(service.store, "update", fake_update)
 
     async def fake_execute(request):
         if request.test_case_id == "case-1":

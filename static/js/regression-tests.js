@@ -105,6 +105,18 @@ async function loadAgents() {
     }
 }
 
+function createRegressionsUrl() {
+    const url = new URL('/v1/api/regression-tests/', window.location.origin);
+    if (currentFilters.agentId) {
+        url.searchParams.append('agent_id', currentFilters.agentId);
+    }
+    if (currentFilters.status) {
+        url.searchParams.append('status', currentFilters.status);
+    }
+    url.searchParams.append('limit', '100');
+    return url;
+}
+
 async function loadRegressions() {
     toggleLoading(true);
     if (refreshTimeout) {
@@ -113,14 +125,7 @@ async function loadRegressions() {
     }
 
     try {
-        const url = new URL('/v1/api/regression-tests/', window.location.origin);
-        if (currentFilters.agentId) {
-            url.searchParams.append('agent_id', currentFilters.agentId);
-        }
-        if (currentFilters.status) {
-            url.searchParams.append('status', currentFilters.status);
-        }
-        url.searchParams.append('limit', '100');
+        const url = createRegressionsUrl();
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -157,66 +162,65 @@ function displayRegressionTests(regressions) {
     emptyState.classList.add('d-none');
     table.style.display = 'table';
 
-    const rows = regressions
-        .map((regression) => {
-            const statusBadge = buildStatusBadge(regression.status);
-            const agentName = regression.agent ? regression.agent.name : 'Unknown agent';
-            const overrides = `
-                <div class="d-flex flex-column gap-1">
-                    <span class="badge bg-primary">${escapeHtml(regression.model_name_override)}</span>
-                    <small class="text-muted text-truncate" style="max-width: 260px;" title="${escapeHtml(regression.system_prompt_override)}">
-                        ${escapeHtml(truncateText(regression.system_prompt_override, 120))}
-                    </small>
-                </div>
-            `;
-            const settings = `<code class="text-muted">${escapeHtml(truncateText(JSON.stringify(regression.model_settings_override), 120))}</code>`;
-            const results = `
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="badge bg-primary">Total ${regression.total_count}</span>
-                    <span class="badge bg-success">Passed ${regression.success_count}</span>
-                    <span class="badge bg-danger">Failed ${regression.failed_count}</span>
-                </div>
-            `;
+    container.innerHTML = regressions.map(buildRegressionRow).join('');
+}
 
-            const started = formatDate(regression.started_at);
-            const completed = formatDate(regression.completed_at);
-            const timing = `
+function buildRegressionRow(regression) {
+    const statusBadge = buildStatusBadge(regression.status);
+    const agentName = regression.agent ? regression.agent.name : 'Unknown agent';
+    const overrides = `
+        <div class="d-flex flex-column gap-1">
+            <span class="badge bg-primary">${escapeHtml(regression.model_name_override)}</span>
+            <small class="text-muted text-truncate" style="max-width: 260px;" title="${escapeHtml(regression.system_prompt_override)}">
+                ${escapeHtml(truncateText(regression.system_prompt_override, 120))}
+            </small>
+        </div>
+    `;
+    const settings = `<code class="text-muted">${escapeHtml(truncateText(JSON.stringify(regression.model_settings_override), 120))}</code>`;
+    const results = `
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-primary">Total ${regression.total_count}</span>
+            <span class="badge bg-success">Passed ${regression.success_count}</span>
+            <span class="badge bg-danger">Failed ${regression.failed_count}</span>
+        </div>
+    `;
+
+    const started = formatDate(regression.started_at);
+    const completed = formatDate(regression.completed_at);
+    const timing = `
+        <div class="d-flex flex-column">
+            <span><strong>Start:</strong> ${started}</span>
+            <span><strong>End:</strong> ${completed}</span>
+        </div>
+    `;
+
+    return `
+        <tr data-regression-id="${escapeHtml(regression.id)}">
+            <td>
                 <div class="d-flex flex-column">
-                    <span><strong>Start:</strong> ${started}</span>
-                    <span><strong>End:</strong> ${completed}</span>
+                    <strong>${escapeHtml(agentName)}</strong>
+                    <small class="text-muted">${escapeHtml(regression.id)}</small>
                 </div>
-            `;
-
-            return `
-            <tr>
-                <td>
-                    <div class="d-flex flex-column">
-                        <strong>${escapeHtml(agentName)}</strong>
-                        <small class="text-muted">${regression.id}</small>
-                    </div>
-                </td>
-                <td>${statusBadge}</td>
-                <td>
-                    ${overrides}
-                    <div class="small mt-2">${settings}</div>
-                </td>
-                <td>${results}</td>
-                <td>${timing}</td>
-                <td class="text-end">
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-primary" onclick="openRegressionDetail('${regression.id}')">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="loadRegressions()" title="Refresh list">
-                            <i class="fas fa-rotate"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>`;
-        })
-        .join('');
-
-    container.innerHTML = rows;
+            </td>
+            <td>${statusBadge}</td>
+            <td>
+                ${overrides}
+                <div class="small mt-2">${settings}</div>
+            </td>
+            <td>${results}</td>
+            <td>${timing}</td>
+            <td class="text-end">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-primary" onclick="openRegressionDetail('${regression.id}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="loadRegressions()" title="Refresh list">
+                        <i class="fas fa-rotate"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
 }
 
 function buildStatusBadge(status) {
@@ -355,12 +359,89 @@ async function startRegression() {
 }
 
 function scheduleAutoRefresh(regressions) {
+    if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+        refreshTimeout = null;
+    }
+
     const hasRunning = regressions.some((item) => ['pending', 'running'].includes((item.status || '').toLowerCase()));
     if (hasRunning) {
         refreshTimeout = setTimeout(() => {
-            loadRegressions();
-        }, 10000);
+            refreshRunningRegressions();
+        }, 1000);
     }
+}
+
+async function refreshRunningRegressions() {
+    try {
+        const url = createRegressionsUrl();
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const updatedRegressions = await response.json();
+        regressionTests = updatedRegressions;
+        updateRegressionRows(updatedRegressions);
+    } catch (error) {
+        console.error('Error refreshing regression tests:', error);
+    } finally {
+        scheduleAutoRefresh(regressionTests);
+    }
+}
+
+function updateRegressionRows(regressions) {
+    const container = document.getElementById('regressionTestsList');
+    const table = document.getElementById('regressionTestsTable');
+    const emptyState = document.getElementById('emptyState');
+    if (!container || !table || !emptyState) {
+        return;
+    }
+
+    if (!regressions || regressions.length === 0) {
+        displayRegressionTests(regressions);
+        return;
+    }
+
+    emptyState.classList.add('d-none');
+    table.style.display = 'table';
+
+    const activeIds = new Set();
+    const existingRowsMap = new Map();
+    Array.from(container.querySelectorAll('tr[data-regression-id]')).forEach((row) => {
+        const id = row.getAttribute('data-regression-id');
+        if (id) {
+            existingRowsMap.set(id, row);
+        }
+    });
+
+    regressions.forEach((regression, index) => {
+        const wrapper = document.createElement('tbody');
+        wrapper.innerHTML = buildRegressionRow(regression).trim();
+        const newRow = wrapper.firstElementChild;
+        if (!newRow) {
+            return;
+        }
+
+        const existingRow = existingRowsMap.get(regression.id);
+
+        if (existingRow) {
+            existingRow.replaceWith(newRow);
+            existingRowsMap.set(regression.id, newRow);
+        } else if (container.children[index]) {
+            container.insertBefore(newRow, container.children[index]);
+        } else {
+            container.appendChild(newRow);
+        }
+
+        activeIds.add(regression.id);
+    });
+
+    existingRowsMap.forEach((row, regressionId) => {
+        if (!activeIds.has(regressionId) && row.isConnected) {
+            row.remove();
+        }
+    });
 }
 
 function updateRegressionNotice() {

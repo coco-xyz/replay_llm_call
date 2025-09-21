@@ -50,6 +50,24 @@
             font-size: 1.5rem;
         }
 
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--text-muted) !important;
+            line-height: 1.1;
+        }
+
         .navbar-nav .nav-link {
             font-weight: 500;
             color: var(--text-secondary) !important;
@@ -358,7 +376,10 @@
         <div class="container">
             <a class="navbar-brand" href="/">
                 <i class="fas fa-robot"></i>
-                <span>LLM Replay System</span>
+                <div class="brand-text">
+                    <span class="brand-title">LLM Replay System</span>
+                    <span class="brand-subtitle">working with pydantic-ai and logfire</span>
+                </div>
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/agents">Agents</a>

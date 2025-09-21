@@ -44,6 +44,15 @@ document.addEventListener('DOMContentLoaded', async function () {
 });
 
 function setupEventListeners() {
+    // Refresh button
+    const refreshTestLogsBtn = document.getElementById('refreshTestLogsBtn');
+    if (refreshTestLogsBtn) {
+        refreshTestLogsBtn.addEventListener('click', () => {
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
+
     // Clear filters button
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     if (clearFiltersBtn) {

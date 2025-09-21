@@ -50,6 +50,24 @@
             font-size: 1.5rem;
         }
 
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--text-muted) !important;
+            line-height: 1.1;
+        }
+
         .navbar-nav .nav-link {
             font-weight: 500;
             color: var(--text-secondary) !important;
@@ -309,7 +327,10 @@
         <div class="container">
             <a class="navbar-brand" href="/">
                 <i class="fas fa-robot"></i>
-                <span>LLM Replay System</span>
+                <div class="brand-text">
+                    <span class="brand-title">LLM Replay System</span>
+                    <span class="brand-subtitle">working with pydantic-ai and logfire</span>
+                </div>
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/agents">Agents</a>
@@ -323,11 +344,25 @@
 
     <div class="container py-4">
         <!-- Header -->
-        <div class="mb-4">
-            <h1 class="page-title">
-                <i class="fas fa-play me-3"></i>Test Execution
-            </h1>
-            <p class="page-subtitle">Execute and test your LLM configurations</p>
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
+            <div class="mb-3 mb-lg-0">
+                <h1 class="page-title">
+                    <i class="fas fa-play me-3"></i>Test Execution
+                </h1>
+                <p class="page-subtitle mb-0">Execute and test your LLM configurations</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <!-- Execute Controls -->
+                <button class="btn btn-success" id="executeBtn" onclick="executeTest()" disabled>
+                    <i class="fas fa-play me-2"></i>Execute Test
+                </button>
+                <button class="btn btn-outline-primary" onclick="resetToOriginal()">
+                    <i class="fas fa-undo me-2"></i>Reset to Original
+                </button>
+                <button class="btn btn-outline-secondary" onclick="viewTestLogs()">
+                    <i class="fas fa-history me-2"></i>View Test Logs
+                </button>
+            </div>
         </div>
 
         <div id="executionAgentWarning" class="alert alert-warning d-none" role="alert">
@@ -336,40 +371,22 @@
             <a href="/agents" class="alert-link ms-1">Manage Agents</a>
         </div>
 
-        <!-- Test Case Selection - Full Width -->
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="row align-items-center g-3">
-                            <div class="col-xl-3 col-lg-4">
-                                <label for="agentSelect" class="form-label text-muted small mb-1">Agent</label>
-                                <select class="form-select" id="agentSelect">
-                                    <option value="">All agents</option>
-                                </select>
-                            </div>
-                            <div class="col-xl-5 col-lg-4">
-                                <label for="testCaseSelect" class="form-label text-muted small mb-1">Test Case</label>
-                                <select class="form-select" id="testCaseSelect">
-                                    <option value="">Select a test case...</option>
-                                </select>
-                                <div class="form-text" id="selectedTestCaseAgent">Select a test case to preview its agent.</div>
-                            </div>
-                            <div class="col-xl-4 col-lg-4 text-lg-end">
-                                <!-- Execute Controls -->
-                                <div class="d-flex flex-wrap justify-content-lg-end gap-2">
-                                    <button class="btn btn-success" id="executeBtn" onclick="executeTest()" disabled>
-                                        <i class="fas fa-play me-1"></i>Execute Test
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm" onclick="resetToOriginal()">
-                                        <i class="fas fa-undo me-1"></i>Reset to Original
-                                    </button>
-                                    <button class="btn btn-outline-secondary btn-sm" onclick="viewTestLogs()">
-                                        <i class="fas fa-history me-1"></i>View Test Logs
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+        <!-- Test Case Selection -->
+        <div class="card mb-4">
+            <div class="card-body py-3">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="text-muted fw-medium me-2 d-flex align-items-center">
+                        <i class="fas fa-cog me-2"></i>Configuration:
+                    </span>
+                    <select class="form-select form-select-sm" id="agentSelect" style="width: 200px; flex: 0 0 auto;">
+                        <option value="">All agents</option>
+                    </select>
+                    <select class="form-select form-select-sm" id="testCaseSelect"
+                        style="flex: 1 1 300px; max-width: 500px;">
+                        <option value="">Select a test case...</option>
+                    </select>
+                    <div class="form-text ms-auto" id="selectedTestCaseAgent" style="flex: 0 0 auto; margin-bottom: 0;">
+                        Select a test case to preview its agent.
                     </div>
                 </div>
             </div>

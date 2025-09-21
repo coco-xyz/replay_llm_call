@@ -218,7 +218,9 @@ class TestCaseService:
             # Change agent if requested
             if request.agent_id is not None and request.agent_id != test_case.agent_id:
                 try:
-                    agent = self.agent_service.get_active_agent_or_raise(request.agent_id)
+                    agent = self.agent_service.get_active_agent_or_raise(
+                        request.agent_id
+                    )
                 except ValueError as agent_error:
                     logger.error("Invalid agent specified on update: %s", agent_error)
                     raise

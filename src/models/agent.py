@@ -1,11 +1,18 @@
 """Agent SQLAlchemy model."""
 
-from typing import List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import JSON, Boolean, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseDBModel
+
+if TYPE_CHECKING:  # pragma: no cover - imports only needed for type checking
+    from .regression_test import RegressionTest
+    from .test_case import TestCase
+    from .test_log import TestLog
 
 
 class Agent(BaseDBModel):

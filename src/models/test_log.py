@@ -1,11 +1,18 @@
 """Test Log SQLAlchemy model."""
 
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import JSON, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseDBModel
+
+if TYPE_CHECKING:  # pragma: no cover - imports only needed for type checking
+    from .agent import Agent
+    from .regression_test import RegressionTest
+    from .test_case import TestCase
 
 
 class TestLog(BaseDBModel):

@@ -17,9 +17,7 @@ class TestCaseCreateRequest(BaseModel):
     description: Optional[str] = Field(
         None, max_length=1000, description="Test case description"
     )
-    agent_id: str = Field(
-        ..., description="Agent that owns the new test case"
-    )
+    agent_id: str = Field(..., description="Agent that owns the new test case")
 
 
 class TestCaseUpdateRequest(BaseModel):

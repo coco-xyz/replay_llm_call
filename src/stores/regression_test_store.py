@@ -108,7 +108,9 @@ class RegressionTestStore:
                     db.query(RegressionTest)
                     .filter(RegressionTest.agent_id == agent_id)
                     .filter(RegressionTest.is_deleted.is_(False))
-                    .update({RegressionTest.is_deleted: True}, synchronize_session=False)
+                    .update(
+                        {RegressionTest.is_deleted: True}, synchronize_session=False
+                    )
                 )
                 db.commit()
                 logger.info(

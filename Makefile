@@ -21,7 +21,7 @@ ENV_FILE := .env
 ENV_SAMPLE := env.sample
 
 # Directories
-SRC_DIR := $(PACKAGE_NAME)
+SRC_DIR := src
 TESTS_DIR := tests
 LOGS_DIR := logs
 

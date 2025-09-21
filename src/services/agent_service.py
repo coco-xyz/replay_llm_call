@@ -86,34 +86,10 @@ class AgentData(BaseModel):
 class AgentService:
     """Service exposing agent-related operations."""
 
-    DEFAULT_AGENT_ID = "default-agent"
-
     def __init__(self) -> None:
         self.store = AgentStore()
         self.test_case_store = TestCaseStore()
         self.regression_test_store = RegressionTestStore()
-
-    def ensure_default_agent_exists(self) -> Agent:
-        """Ensure the default agent exists and return it."""
-
-        agent = self.store.get_by_id(self.DEFAULT_AGENT_ID, include_deleted=True)
-        if agent:
-            if agent.is_deleted:
-                agent.is_deleted = False
-                agent = self.store.update(agent)
-            return agent
-
-        logger.info("Creating default agent for legacy data")
-        default_agent = Agent(
-            id=self.DEFAULT_AGENT_ID,
-            name="Default Agent",
-            description="System generated default agent",
-            default_model_name=None,
-            default_system_prompt=None,
-            default_model_settings=None,
-            is_deleted=False,
-        )
-        return self.store.create(default_agent)
 
     def create_agent(self, data: AgentCreateData) -> AgentData:
         """Create a new agent."""

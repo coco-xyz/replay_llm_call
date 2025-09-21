@@ -65,7 +65,7 @@ class AgentStore:
                 query = db.query(Agent)
                 if not include_deleted:
                     query = query.filter(Agent.is_deleted.is_(False))
-                return query.order_by(Agent.created_at.asc()).all()
+                return query.order_by(Agent.created_at.desc()).all()
         except Exception as exc:  # pragma: no cover
             logger.error("Failed to list agents: %s", exc)
             raise DatabaseException(

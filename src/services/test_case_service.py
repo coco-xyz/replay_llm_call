@@ -75,8 +75,6 @@ class TestCaseService:
     def __init__(self):
         self.store = TestCaseStore()
         self.agent_service = AgentService()
-        # Ensure there is always a default agent for legacy data paths
-        self.agent_service.ensure_default_agent_exists()
 
     def create_test_case(self, request: TestCaseCreateData) -> TestCaseData:
         """
@@ -104,11 +102,7 @@ class TestCaseService:
 
             # Resolve agent
             try:
-                agent = (
-                    self.agent_service.get_active_agent_or_raise(request.agent_id)
-                    if request.agent_id
-                    else self.agent_service.ensure_default_agent_exists()
-                )
+                agent = self.agent_service.get_active_agent_or_raise(request.agent_id)
             except ValueError as agent_error:
                 logger.error("Invalid agent specified: %s", agent_error)
                 raise
@@ -225,9 +219,7 @@ class TestCaseService:
             # Change agent if requested
             if request.agent_id is not None and request.agent_id != test_case.agent_id:
                 try:
-                    agent = self.agent_service.get_active_agent_or_raise(
-                        request.agent_id
-                    )
+                    agent = self.agent_service.get_active_agent_or_raise(request.agent_id)
                 except ValueError as agent_error:
                     logger.error("Invalid agent specified on update: %s", agent_error)
                     raise

@@ -94,7 +94,7 @@ function displayAgents(agentList) {
                 ? `<code class="text-muted">${escapeHtml(truncateText(JSON.stringify(agent.default_model_settings), 120))}</code>`
                 : '<span class="text-muted">Inherited per case</span>';
 
-            const updatedAt = formatDate(agent.updated_at);
+            const createdAt = formatDate(agent.created_at);
 
             return `
             <tr>
@@ -115,8 +115,7 @@ function displayAgents(agentList) {
                 </td>
                 <td>
                     <div class="d-flex flex-column">
-                        <span>${updatedAt}</span>
-                        <small class="text-muted">Created ${formatDate(agent.created_at)}</small>
+                        <span>${createdAt}</span>
                     </div>
                 </td>
                 <td class="text-end">

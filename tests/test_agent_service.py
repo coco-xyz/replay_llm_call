@@ -36,24 +36,6 @@ def test_delete_agent_soft_deletes_dependencies(monkeypatch):
     assert captured["regression_agent_id"] == "agent-123"
 
 
-def test_ensure_default_agent_creates_when_missing(monkeypatch):
-    service = AgentService()
-
-    monkeypatch.setattr(service.store, "get_by_id", lambda *_args, **_kwargs: None)
-
-    created = {}
-
-    def fake_create(agent):
-        created["agent"] = agent
-        return agent
-
-    monkeypatch.setattr(service.store, "create", fake_create)
-
-    default_agent = service.ensure_default_agent_exists()
-    assert default_agent.id == service.DEFAULT_AGENT_ID
-    assert created["agent"].name == "Default Agent"
-
-
 def test_get_agent_summary_handles_missing(monkeypatch):
     service = AgentService()
     monkeypatch.setattr(service.store, "get_by_id", lambda *_args, **_kwargs: None)

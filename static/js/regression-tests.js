@@ -98,7 +98,6 @@ async function loadAgents() {
         agentOptions = agents.filter((agent) => !agent.is_deleted);
         populateAgentFilter(agentOptions);
         populateRegressionAgentSelect(agentOptions);
-        updateRegressionNotice();
     } catch (error) {
         console.error('Error loading agents:', error);
         showAlert('Error loading agents: ' + error.message, 'danger');
@@ -444,15 +443,6 @@ function updateRegressionRows(regressions) {
     });
 }
 
-function updateRegressionNotice() {
-    const notice = document.getElementById('regressionNotice');
-    if (!notice) return;
-
-    if (agentOptions.length === 0) {
-        notice.classList.add('d-none');
-    } else {
-        notice.classList.remove('d-none');
-    }
 }
 
 function openRegressionDetail(regressionId) {

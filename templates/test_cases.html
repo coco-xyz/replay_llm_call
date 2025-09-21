@@ -399,16 +399,19 @@
         <div class="card mb-4">
             <div class="card-body py-3">
                 <div class="d-flex flex-wrap align-items-center gap-3">
-                    <span class="text-muted fw-medium me-2">
+                    <span class="text-muted fw-medium me-2 d-flex align-items-center">
                         <i class="fas fa-filter me-2"></i>Filters:
                     </span>
-                    <select class="form-select form-select-sm" id="agentFilter" style="width: 220px;">
+                    <select class="form-select form-select-sm" id="agentFilter" style="width: 220px; flex: 0 0 auto;">
                         <option value="">All agents</option>
                     </select>
-                    <div class="search-container ms-auto" style="min-width: 260px;">
+                    <div class="search-container" style="flex: 1 1 260px; max-width: 420px;">
                         <i class="fas fa-search search-icon"></i>
                         <input type="text" class="form-control" id="searchInput" placeholder="Search test case by name">
                     </div>
+                    <button class="btn btn-outline-secondary btn-sm ms-auto" id="clearFiltersBtn">
+                        <i class="fas fa-eraser me-1"></i>Clear
+                    </button>
                 </div>
             </div>
         </div>

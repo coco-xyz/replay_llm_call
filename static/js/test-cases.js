@@ -62,6 +62,22 @@ function setupEventListeners() {
             loadTestCases();
         });
     }
+
+    const clearBtn = document.getElementById('clearFiltersBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            const agentSelect = document.getElementById('agentFilter');
+            const searchField = document.getElementById('searchInput');
+            selectedAgentId = '';
+            if (agentSelect) {
+                agentSelect.value = '';
+            }
+            if (searchField) {
+                searchField.value = '';
+            }
+            loadTestCases();
+        });
+    }
 }
 
 async function loadTestCases() {

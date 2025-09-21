@@ -6,7 +6,7 @@
 
 let currentLogs = [];
 let currentPage = 1;
-let currentLimit = 100;
+let currentLimit = 50;
 let currentFilters = { status: '', testCaseId: '', agentId: '', regressionTestId: '' };
 let currentLogId = null;
 let testCasesData = []; // Store test cases data for lookup
@@ -32,19 +32,78 @@ document.addEventListener('DOMContentLoaded', async function () {
         setTimeout(() => viewLogInNewPage(logId), 1000);
     } else if (testCaseId) {
         setTimeout(() => {
-            document.getElementById('testCaseFilter').value = testCaseId;
-            applyFilters();
+            const testCaseFilter = document.getElementById('testCaseFilter');
+            if (testCaseFilter) {
+                testCaseFilter.value = testCaseId;
+                currentFilters.testCaseId = testCaseId;
+                currentPage = 1;
+                loadTestLogs();
+            }
         }, 1000);
     }
 });
 
 function setupEventListeners() {
-    // Limit selection
-    document.getElementById('limitSelect').addEventListener('change', function () {
-        currentLimit = parseInt(this.value);
-        currentPage = 1;
-        applyFilters();
-    });
+    // Clear filters button
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            const statusFilter = document.getElementById('statusFilter');
+            const testCaseFilter = document.getElementById('testCaseFilter');
+            const agentFilter = document.getElementById('agentFilter');
+            const regressionFilter = document.getElementById('regressionFilter');
+
+            if (statusFilter) statusFilter.value = '';
+            if (testCaseFilter) testCaseFilter.value = '';
+            if (agentFilter) agentFilter.value = '';
+            if (regressionFilter) regressionFilter.value = '';
+
+            currentFilters = { status: '', testCaseId: '', agentId: '', regressionTestId: '' };
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
+
+    // Auto-apply filters on change
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', (event) => {
+            currentFilters.status = event.target.value;
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
+
+    const testCaseFilter = document.getElementById('testCaseFilter');
+    if (testCaseFilter) {
+        testCaseFilter.addEventListener('change', async (event) => {
+            currentFilters.testCaseId = event.target.value;
+            currentPage = 1;
+            // Ensure test cases are loaded before loading logs
+            if (testCasesData.length === 0) {
+                await loadTestCases();
+            }
+            await loadTestLogs();
+        });
+    }
+
+    const agentFilter = document.getElementById('agentFilter');
+    if (agentFilter) {
+        agentFilter.addEventListener('change', (event) => {
+            currentFilters.agentId = event.target.value;
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
+
+    const regressionFilter = document.getElementById('regressionFilter');
+    if (regressionFilter) {
+        regressionFilter.addEventListener('change', (event) => {
+            currentFilters.regressionTestId = event.target.value;
+            currentPage = 1;
+            loadTestLogs();
+        });
+    }
 }
 
 async function loadTestLogs() {
@@ -416,28 +475,7 @@ async function viewLog(logId) {
     }
 }
 
-async function applyFilters() {
-    const status = document.getElementById('statusFilter').value;
-    const testCaseId = document.getElementById('testCaseFilter').value;
-    const agentId = document.getElementById('agentFilter').value;
-    const regressionId = document.getElementById('regressionFilter').value;
 
-    currentFilters = {
-        status: status || '',
-        testCaseId: testCaseId || '',
-        agentId: agentId || '',
-        regressionTestId: regressionId || ''
-    };
-
-    currentPage = 1;
-
-    // Ensure test cases are loaded before loading logs
-    if (testCasesData.length === 0) {
-        await loadTestCases();
-    }
-
-    await loadTestLogs();
-}
 
 async function deleteLog(logId) {
     if (!confirm('Are you sure you want to delete this test log? This action cannot be undone.')) {

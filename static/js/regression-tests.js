@@ -25,17 +25,6 @@ function setupEventListeners() {
         refreshBtn.addEventListener('click', () => loadRegressions());
     }
 
-    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
-    if (applyFiltersBtn) {
-        applyFiltersBtn.addEventListener('click', () => {
-            const agentFilter = document.getElementById('agentFilter');
-            const statusFilter = document.getElementById('statusFilter');
-            currentFilters.agentId = agentFilter ? agentFilter.value : '';
-            currentFilters.status = statusFilter ? statusFilter.value : '';
-            loadRegressions();
-        });
-    }
-
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', () => {
@@ -46,6 +35,24 @@ function setupEventListeners() {
             currentFilters = { agentId: '', status: '' };
             loadRegressions();
         });
+    }
+
+    const agentFilter = document.getElementById('agentFilter');
+    if (agentFilter) {
+        agentFilter.addEventListener('change', (event) => {
+            currentFilters.agentId = event.target.value;
+            loadRegressions();
+        });
+        agentFilter.value = currentFilters.agentId;
+    }
+
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', (event) => {
+            currentFilters.status = event.target.value;
+            loadRegressions();
+        });
+        statusFilter.value = currentFilters.status;
     }
 
     const startRegressionBtn = document.getElementById('confirmStartRegression');

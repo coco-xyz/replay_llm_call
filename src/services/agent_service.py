@@ -154,10 +154,15 @@ class AgentService:
             agent.default_system_prompt = data.default_system_prompt
         if data.default_model_settings is not None:
             agent.default_model_settings = data.default_model_settings
+        original_is_deleted = agent.is_deleted
+
         if data.is_deleted is not None:
             agent.is_deleted = data.is_deleted
 
         updated = self.store.update(agent)
+
+        if data.is_deleted is True and original_is_deleted is False:
+            self.test_case_store.soft_delete_by_agent(agent_id)
         return AgentData.model_validate(updated)
 
     def delete_agent(self, agent_id: str) -> bool:

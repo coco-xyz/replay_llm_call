@@ -1,294 +1,191 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Case Details - LLM Replay System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --secondary-color: #64748b;
-            --success-color: #059669;
-            --warning-color: #d97706;
-            --danger-color: #dc2626;
-            --background-color: #f8fafc;
-            --card-background: #ffffff;
-            --border-color: #e2e8f0;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --text-muted: #94a3b8;
-        }
+{% block page_title %}Test Case Details - LLM Replay System{% endblock %}
 
-        body {
-            background-color: var(--background-color);
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
+{% block extra_css %}
+<style>
+    /* Page Header */
+    .page-header {
+        margin-bottom: 2rem;
+    }
 
-        /* Navigation Styles */
-        .navbar {
-            background: var(--card-background) !important;
-            border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-            padding: 1rem 0;
-        }
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
 
-        .navbar-brand {
-            font-weight: 700;
-            color: var(--text-primary) !important;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
 
-        .navbar-brand i {
-            color: var(--primary-color);
+    /* Action buttons in header */
+    .page-header #actionButtons {
+        margin-top: 0.5rem;
+    }
+
+    /* Card Styles */
+    .card {
+        background: var(--card-background);
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        background-color: #f8fafc;
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 600;
+        color: var(--text-primary);
+        padding: 1rem 1.5rem;
+        border-radius: 0.75rem 0.75rem 0 0 !important;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Button Styles */
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        font-weight: 500;
+        padding: 0.625rem 1.25rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--primary-hover);
+        border-color: var(--primary-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-outline-secondary {
+        color: var(--text-secondary);
+        border-color: var(--border-color);
+        font-weight: 500;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: var(--text-secondary);
+        border-color: var(--text-secondary);
+        transform: translateY(-1px);
+    }
+
+    .btn-success {
+        background-color: var(--success-color);
+        border-color: var(--success-color);
+        font-weight: 500;
+        border-radius: 0.5rem;
+    }
+
+    .btn-outline-danger {
+        color: var(--danger-color);
+        border-color: var(--danger-color);
+        font-weight: 500;
+        border-radius: 0.5rem;
+    }
+
+    /* Table Styles */
+    .info-table {
+        margin-bottom: 0;
+    }
+
+    .info-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    .info-table td:first-child {
+        font-weight: 600;
+        color: var(--text-secondary);
+        width: 150px;
+        background-color: #f8fafc;
+    }
+
+    .info-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Code Block Styles */
+    .code-block {
+        background-color: #f1f5f9;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        max-height: 400px;
+        overflow-y: auto;
+        color: var(--text-primary);
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    /* Loading State */
+    .loading-state {
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+
+    .loading-spinner {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--primary-color);
+    }
+
+    .loading-spinner .spinner-border {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    /* Error Message */
+    .error-message {
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        color: var(--danger-color);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 1rem 0;
+    }
+
+    /* Responsive Improvements */
+    @media (max-width: 768px) {
+        .page-title {
             font-size: 1.5rem;
         }
 
-        .brand-text {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .brand-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            line-height: 1.2;
-        }
-
-        .brand-subtitle {
-            font-size: 0.75rem;
-            font-weight: 400;
-            color: var(--text-muted) !important;
-            line-height: 1.1;
-        }
-
-        .navbar-nav .nav-link {
-            font-weight: 500;
-            color: var(--text-secondary) !important;
-            padding: 0.5rem 1rem !important;
-            border-radius: 0.375rem;
-            transition: all 0.2s ease;
-        }
-
-        .navbar-nav .nav-link:hover {
-            color: var(--primary-color) !important;
-            background-color: rgba(37, 99, 235, 0.1);
-        }
-
-        .navbar-nav .nav-link.active {
-            color: var(--primary-color) !important;
-            background-color: rgba(37, 99, 235, 0.1);
-            font-weight: 600;
-        }
-
-        /* Page Header */
-        .page-header {
-            margin-bottom: 2rem;
-        }
-
-        .page-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .page-subtitle {
-            color: var(--text-secondary);
-            font-size: 1rem;
-        }
-
-        /* Action buttons in header */
-        .page-header #actionButtons {
-            margin-top: 0.5rem;
-        }
-
-        /* Card Styles */
-        .card {
-            background: var(--card-background);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-            transition: all 0.2s ease;
-        }
-
-        .card:hover {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-header {
-            background-color: #f8fafc;
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-            color: var(--text-primary);
-            padding: 1rem 1.5rem;
-            border-radius: 0.75rem 0.75rem 0 0 !important;
-        }
-
         .card-body {
-            padding: 1.5rem;
-        }
-
-        /* Button Styles */
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            font-weight: 500;
-            padding: 0.625rem 1.25rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-            border-color: var(--primary-hover);
-            transform: translateY(-1px);
-        }
-
-        .btn-outline-secondary {
-            color: var(--text-secondary);
-            border-color: var(--border-color);
-            font-weight: 500;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease;
-        }
-
-        .btn-outline-secondary:hover {
-            background-color: var(--text-secondary);
-            border-color: var(--text-secondary);
-            transform: translateY(-1px);
-        }
-
-        .btn-success {
-            background-color: var(--success-color);
-            border-color: var(--success-color);
-            font-weight: 500;
-            border-radius: 0.5rem;
-        }
-
-        .btn-outline-danger {
-            color: var(--danger-color);
-            border-color: var(--danger-color);
-            font-weight: 500;
-            border-radius: 0.5rem;
-        }
-
-        /* Table Styles */
-        .info-table {
-            margin-bottom: 0;
-        }
-
-        .info-table td {
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
+            padding: 1rem;
         }
 
         .info-table td:first-child {
-            font-weight: 600;
-            color: var(--text-secondary);
-            width: 150px;
-            background-color: #f8fafc;
-        }
-
-        .info-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Code Block Styles */
-        .code-block {
-            background-color: #f1f5f9;
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            width: 120px;
             font-size: 0.875rem;
-            line-height: 1.5;
-            max-height: 400px;
-            overflow-y: auto;
-            color: var(--text-primary);
-            white-space: pre-wrap;
-            word-wrap: break-word;
         }
 
-        /* Loading State */
-        .loading-state {
-            text-align: center;
-            padding: 3rem 2rem;
+        .btn-group {
+            flex-direction: column;
+            gap: 0.5rem;
         }
+    }
+</style>
+{% endblock %}
 
-        .loading-spinner {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            color: var(--primary-color);
-        }
-
-        .loading-spinner .spinner-border {
-            width: 1.25rem;
-            height: 1.25rem;
-        }
-
-        /* Error Message */
-        .error-message {
-            background-color: #fef2f2;
-            border: 1px solid #fecaca;
-            color: var(--danger-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        /* Responsive Improvements */
-        @media (max-width: 768px) {
-            .page-title {
-                font-size: 1.5rem;
-            }
-
-            .card-body {
-                padding: 1rem;
-            }
-
-            .info-table td:first-child {
-                width: 120px;
-                font-size: 0.875rem;
-            }
-
-            .btn-group {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-robot"></i>
-                <div class="brand-text">
-                    <span class="brand-title">LLM Replay System</span>
-                    <span class="brand-subtitle">working with pydantic-ai and logfire</span>
-                </div>
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/agents">Agents</a>
-                <a class="nav-link active" href="/test-cases">Test Cases</a>
-                <a class="nav-link" href="/regression-tests">Regression Tests</a>
-                <a class="nav-link" href="/test-execution">Execute Tests</a>
-                <a class="nav-link" href="/test-logs">Test Logs</a>
-            </div>
-        </div>
-    </nav>
-
+{% block content %}
     <div class="container py-4">
         <!-- Header with Action Buttons -->
         <div class="page-header d-flex justify-content-between align-items-start">
@@ -334,340 +231,339 @@
             <!-- Content will be loaded here -->
         </div>
     </div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_scripts %}
     <script>
-        const caseId = '{{ case_id }}';
-        let currentTestCase = null;
+            const caseId = '{{ case_id }}';
+            let currentTestCase = null;
 
-        document.addEventListener('DOMContentLoaded', function () {
-            loadTestCaseDetails();
-        });
+            document.addEventListener('DOMContentLoaded', function () {
+                loadTestCaseDetails();
+            });
 
-        async function loadTestCaseDetails() {
-            try {
-                const response = await fetch(`/v1/api/test-cases/${caseId}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            async function loadTestCaseDetails() {
+                try {
+                    const response = await fetch(`/v1/api/test-cases/${caseId}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    currentTestCase = await response.json();
+                    displayTestCaseDetails(currentTestCase);
+
+                    // Show action buttons and hide loading
+                    document.getElementById('actionButtons').classList.remove('d-none');
+                    document.getElementById('loadingSpinner').classList.add('d-none');
+                    document.getElementById('testCaseDetailsContent').classList.remove('d-none');
+
+                } catch (error) {
+                    console.error('Error loading test case details:', error);
+                    document.getElementById('errorText').textContent = 'Failed to load test case details: ' + error.message;
+                    document.getElementById('errorMessage').classList.remove('d-none');
+                    document.getElementById('loadingSpinner').classList.add('d-none');
+                }
+            }
+
+            // Helper function to format middle messages
+            function formatMiddleMessages(messages) {
+                if (!messages || messages.length === 0) {
+                    return '<div class="text-muted">No middle messages</div>';
                 }
 
-                currentTestCase = await response.json();
-                displayTestCaseDetails(currentTestCase);
+                return messages.map((message, index) => {
+                    const role = message.role || 'unknown';
+                    const content = message.content || '';
+                    const toolCalls = message.tool_calls || [];
+                    const roleColor = {
+                        'user': 'text-primary',
+                        'assistant': 'text-success',
+                        'tool': 'text-warning',
+                        'system': 'text-info'
+                    }[role] || 'text-secondary';
 
-                // Show action buttons and hide loading
-                document.getElementById('actionButtons').classList.remove('d-none');
-                document.getElementById('loadingSpinner').classList.add('d-none');
-                document.getElementById('testCaseDetailsContent').classList.remove('d-none');
+                    // Format tool calls if present
+                    const formatToolCalls = (calls) => {
+                        if (!calls || calls.length === 0) return '';
 
-            } catch (error) {
-                console.error('Error loading test case details:', error);
-                document.getElementById('errorText').textContent = 'Failed to load test case details: ' + error.message;
-                document.getElementById('errorMessage').classList.remove('d-none');
-                document.getElementById('loadingSpinner').classList.add('d-none');
-            }
-        }
+                        return calls.map((call, callIndex) => {
+                            const toolId = call.id || 'unknown';
+                            const toolName = call.function?.name || 'unknown';
+                            const toolArgs = call.function?.arguments || '';
 
-        // Helper function to format middle messages
-        function formatMiddleMessages(messages) {
-            if (!messages || messages.length === 0) {
-                return '<div class="text-muted">No middle messages</div>';
-            }
-
-            return messages.map((message, index) => {
-                const role = message.role || 'unknown';
-                const content = message.content || '';
-                const toolCalls = message.tool_calls || [];
-                const roleColor = {
-                    'user': 'text-primary',
-                    'assistant': 'text-success',
-                    'tool': 'text-warning',
-                    'system': 'text-info'
-                }[role] || 'text-secondary';
-
-                // Format tool calls if present
-                const formatToolCalls = (calls) => {
-                    if (!calls || calls.length === 0) return '';
-
-                    return calls.map((call, callIndex) => {
-                        const toolId = call.id || 'unknown';
-                        const toolName = call.function?.name || 'unknown';
-                        const toolArgs = call.function?.arguments || '';
-
-                        // Try to format arguments as JSON for better readability
-                        let formattedArgs = toolArgs;
-                        try {
-                            if (typeof toolArgs === 'string') {
-                                const parsed = JSON.parse(toolArgs);
-                                formattedArgs = JSON.stringify(parsed, null, 2);
-                            } else if (typeof toolArgs === 'object') {
-                                formattedArgs = JSON.stringify(toolArgs, null, 2);
+                            // Try to format arguments as JSON for better readability
+                            let formattedArgs = toolArgs;
+                            try {
+                                if (typeof toolArgs === 'string') {
+                                    const parsed = JSON.parse(toolArgs);
+                                    formattedArgs = JSON.stringify(parsed, null, 2);
+                                } else if (typeof toolArgs === 'object') {
+                                    formattedArgs = JSON.stringify(toolArgs, null, 2);
+                                }
+                            } catch (e) {
+                                // Keep original format if JSON parsing fails
+                                formattedArgs = String(toolArgs);
                             }
-                        } catch (e) {
-                            // Keep original format if JSON parsing fails
-                            formattedArgs = String(toolArgs);
-                        }
 
-                        return `
-                            <div class="mt-2 p-2 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded">
-                                <div class="d-flex align-items-center mb-1">
-                                    <i class="fas fa-tools text-warning me-2"></i>
-                                    <strong class="text-warning">Tool Call #${callIndex + 1}</strong>
+                            return `
+                                <div class="mt-2 p-2 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="fas fa-tools text-warning me-2"></i>
+                                        <strong class="text-warning">Tool Call #${callIndex + 1}</strong>
+                                    </div>
+                                    <div class="small">
+                                        <div><strong>Name:</strong> <code>${escapeHtml(toolName)}</code></div>
+                                        <div><strong>ID:</strong> <code>${escapeHtml(toolId)}</code></div>
+                                        <div><strong>Arguments:</strong></div>
+                                        <pre class="bg-light p-2 rounded mt-1 mb-0" style="font-size: 0.8em; max-height: 100px; overflow-y: auto;">${escapeHtml(formattedArgs)}</pre>
+                                    </div>
                                 </div>
-                                <div class="small">
-                                    <div><strong>Name:</strong> <code>${escapeHtml(toolName)}</code></div>
-                                    <div><strong>ID:</strong> <code>${escapeHtml(toolId)}</code></div>
-                                    <div><strong>Arguments:</strong></div>
-                                    <pre class="bg-light p-2 rounded mt-1 mb-0" style="font-size: 0.8em; max-height: 100px; overflow-y: auto;">${escapeHtml(formattedArgs)}</pre>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                };
+                            `;
+                        }).join('');
+                    };
 
-                return `
-                    <div class="mb-2 border-start border-3 ps-2" style="border-color: var(--bs-${role === 'user' ? 'primary' : role === 'assistant' ? 'success' : role === 'tool' ? 'warning' : 'secondary'}) !important;">
-                        <div class="d-flex align-items-center mb-1">
-                            <span class="badge bg-secondary me-2">#${index + 1}</span>
-                            <strong class="${roleColor}">${escapeHtml(role.toUpperCase())}</strong>
-                            ${toolCalls.length > 0 ? `<span class="badge bg-warning ms-2">${toolCalls.length} tool call${toolCalls.length > 1 ? 's' : ''}</span>` : ''}
+                    return `
+                        <div class="mb-2 border-start border-3 ps-2" style="border-color: var(--bs-${role === 'user' ? 'primary' : role === 'assistant' ? 'success' : role === 'tool' ? 'warning' : 'secondary'}) !important;">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="badge bg-secondary me-2">#${index + 1}</span>
+                                <strong class="${roleColor}">${escapeHtml(role.toUpperCase())}</strong>
+                                ${toolCalls.length > 0 ? `<span class="badge bg-warning ms-2">${toolCalls.length} tool call${toolCalls.length > 1 ? 's' : ''}</span>` : ''}
+                            </div>
+                            ${content ? `<pre class="bg-light p-2 rounded mb-0" style="font-size: 0.85em; max-height: 150px; overflow-y: auto;">${escapeHtml(content)}</pre>` : ''}
+                            ${formatToolCalls(toolCalls)}
                         </div>
-                        ${content ? `<pre class="bg-light p-2 rounded mb-0" style="font-size: 0.85em; max-height: 150px; overflow-y: auto;">${escapeHtml(content)}</pre>` : ''}
-                        ${formatToolCalls(toolCalls)}
-                    </div>
-                `;
-            }).join('');
-        }
+                    `;
+                }).join('');
+            }
 
-        function displayTestCaseDetails(testCase) {
-            const agentName = testCase.agent ? testCase.agent.name : null;
-            const agentId = testCase.agent_id || '';
-            const agentBadge = agentName
-                ? `<span class="badge bg-primary">${escapeHtml(agentName)}</span>`
-                : '<span class="text-muted">Unknown agent</span>';
-            const agentIdHtml = agentId ? `<small class="text-muted ms-2">${escapeHtml(agentId)}</small>` : '';
-            const agentLinks = agentId
-                ? `
-                    <div class="mt-2 small">
-                        <a href="/test-cases?agentId=${encodeURIComponent(agentId)}" class="text-decoration-none" target="_blank">
-                            View test cases for this agent
-                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                        </a>
-                        <span class="text-muted mx-1">•</span>
-                        <a href="/agents" class="text-decoration-none" target="_blank">
-                            Manage agents
-                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                        </a>
-                    </div>
-                `
-                : '';
-
-            const detailsHtml = `
-                <div class="row">
-                    <!-- Left Column -->
-                    <div class="col-md-6">
-                        <!-- Basic Information -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-info-circle me-2"></i>Basic Information
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table info-table mb-0">
-                                    <tr>
-                                        <td>Test Case ID:</td>
-                                        <td><code>${escapeHtml(testCase.id)}</code></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Name:</td>
-                                        <td><strong>${escapeHtml(testCase.name)}</strong></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Description:</td>
-                                        <td>${escapeHtml(testCase.description || 'No description provided')}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Agent:</td>
-                                        <td>
-                                            <div class="d-flex flex-column">
-                                                <div>
-                                                    ${agentBadge}
-                                                    ${agentIdHtml}
-                                                </div>
-                                                ${agentLinks}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Created At:</td>
-                                        <td>${formatDate(testCase.created_at)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Updated At:</td>
-                                        <td>${formatDate(testCase.updated_at)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Model Name:</td>
-                                        <td><code>${escapeHtml(testCase.model_name)}</code></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Model Settings:</td>
-                                        <td>${testCase.model_settings !== null && testCase.model_settings !== undefined ? `<pre class="bg-light p-2 rounded"><code>${escapeHtml(JSON.stringify(testCase.model_settings, null, 2))}</code></pre>` : '<span class="text-muted">Not specified</span>'}</td>
-                                    </tr>
-                                </table>
-                            </div>
+            function displayTestCaseDetails(testCase) {
+                const agentName = testCase.agent ? testCase.agent.name : null;
+                const agentId = testCase.agent_id || '';
+                const agentBadge = agentName
+                    ? `<span class="badge bg-primary">${escapeHtml(agentName)}</span>`
+                    : '<span class="text-muted">Unknown agent</span>';
+                const agentIdHtml = agentId ? `<small class="text-muted ms-2">${escapeHtml(agentId)}</small>` : '';
+                const agentLinks = agentId
+                    ? `
+                        <div class="mt-2 small">
+                            <a href="/test-cases?agentId=${encodeURIComponent(agentId)}" class="text-decoration-none" target="_blank">
+                                View test cases for this agent
+                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                            </a>
+                            <span class="text-muted mx-1">•</span>
+                            <a href="/agents" class="text-decoration-none" target="_blank">
+                                Manage agents
+                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                            </a>
                         </div>
+                    `
+                    : '';
 
-                        <!-- Middle Messages -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-comments me-2"></i>Middle Messages
-                            </div>
-                            <div class="card-body">
-                                <div style="max-height: 400px; overflow-y: auto;">
-                                    ${formatMiddleMessages(testCase.middle_messages)}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column -->
-                    <div class="col-md-6">
-                        <!-- System Prompt -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-terminal me-2"></i>System Prompt
-                            </div>
-                            <div class="card-body">
-                                <div class="code-block">${escapeHtml(testCase.system_prompt || 'No system prompt provided')}</div>
-                            </div>
-                        </div>
-
-                        <!-- User Message -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-comment me-2"></i>User Message
-                            </div>
-                            <div class="card-body">
-                                <div class="code-block">${escapeHtml(testCase.last_user_message || 'No user message provided')}</div>
-                            </div>
-                        </div>
-
-                        <!-- Tools Configuration -->
-                        ${testCase.tools && testCase.tools.length > 0 ? `
+                const detailsHtml = `
+                    <div class="row">
+                        <!-- Left Column -->
+                        <div class="col-md-6">
+                            <!-- Basic Information -->
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <i class="fas fa-wrench me-2"></i>Tools Configuration
+                                    <i class="fas fa-info-circle me-2"></i>Basic Information
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table info-table mb-0">
+                                        <tr>
+                                            <td>Test Case ID:</td>
+                                            <td><code>${escapeHtml(testCase.id)}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Name:</td>
+                                            <td><strong>${escapeHtml(testCase.name)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Description:</td>
+                                            <td>${escapeHtml(testCase.description || 'No description provided')}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Agent:</td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <div>
+                                                        ${agentBadge}
+                                                        ${agentIdHtml}
+                                                    </div>
+                                                    ${agentLinks}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Created At:</td>
+                                            <td>${formatDate(testCase.created_at)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Updated At:</td>
+                                            <td>${formatDate(testCase.updated_at)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Model Name:</td>
+                                            <td><code>${escapeHtml(testCase.model_name)}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Model Settings:</td>
+                                            <td>${testCase.model_settings !== null && testCase.model_settings !== undefined ? `<pre class="bg-light p-2 rounded"><code>${escapeHtml(JSON.stringify(testCase.model_settings, null, 2))}</code></pre>` : '<span class="text-muted">Not specified</span>'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Middle Messages -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <i class="fas fa-comments me-2"></i>Middle Messages
                                 </div>
                                 <div class="card-body">
-                                    <div class="accordion" id="testCaseToolsAccordion">
-                                        ${testCase.tools.map((tool, index) => `
-                                            <div class="accordion-item">
-                                                <h2 class="accordion-header" id="testCaseHeading${index}">
-                                                    <button class="accordion-button collapsed" type="button"
-                                                            data-bs-toggle="collapse" data-bs-target="#testCaseCollapse${index}"
-                                                            aria-expanded="false" aria-controls="testCaseCollapse${index}">
-                                                        <i class="fas fa-wrench me-2"></i>
-                                                        <strong>${escapeHtml(tool.function?.name || 'Unknown Tool')}</strong>
-                                                    </button>
-                                                </h2>
-                                                <div id="testCaseCollapse${index}" class="accordion-collapse collapse"
-                                                     aria-labelledby="testCaseHeading${index}" data-bs-parent="#testCaseToolsAccordion">
-                                                    <div class="accordion-body">
-                                                        <div class="code-block" style="font-size: 0.85em;">${escapeHtml(JSON.stringify(tool, null, 2))}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `).join('')}
+                                    <div style="max-height: 400px; overflow-y: auto;">
+                                        ${formatMiddleMessages(testCase.middle_messages)}
                                     </div>
                                 </div>
                             </div>
-                        ` : `
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="col-md-6">
+                            <!-- System Prompt -->
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <i class="fas fa-wrench me-2"></i>Tools
+                                    <i class="fas fa-terminal me-2"></i>System Prompt
                                 </div>
                                 <div class="card-body">
-                                    <p class="text-muted mb-0">No tools configured</p>
+                                    <div class="code-block">${escapeHtml(testCase.system_prompt || 'No system prompt provided')}</div>
                                 </div>
                             </div>
-                        `}
+
+                            <!-- User Message -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <i class="fas fa-comment me-2"></i>User Message
+                                </div>
+                                <div class="card-body">
+                                    <div class="code-block">${escapeHtml(testCase.last_user_message || 'No user message provided')}</div>
+                                </div>
+                            </div>
+
+                            <!-- Tools Configuration -->
+                            ${testCase.tools && testCase.tools.length > 0 ? `
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <i class="fas fa-wrench me-2"></i>Tools Configuration
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="accordion" id="testCaseToolsAccordion">
+                                            ${testCase.tools.map((tool, index) => `
+                                                <div class="accordion-item">
+                                                    <h2 class="accordion-header" id="testCaseHeading${index}">
+                                                        <button class="accordion-button collapsed" type="button"
+                                                                data-bs-toggle="collapse" data-bs-target="#testCaseCollapse${index}"
+                                                                aria-expanded="false" aria-controls="testCaseCollapse${index}">
+                                                            <i class="fas fa-wrench me-2"></i>
+                                                            <strong>${escapeHtml(tool.function?.name || 'Unknown Tool')}</strong>
+                                                        </button>
+                                                    </h2>
+                                                    <div id="testCaseCollapse${index}" class="accordion-collapse collapse"
+                                                         aria-labelledby="testCaseHeading${index}" data-bs-parent="#testCaseToolsAccordion">
+                                                        <div class="accordion-body">
+                                                            <div class="code-block" style="font-size: 0.85em;">${escapeHtml(JSON.stringify(tool, null, 2))}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <i class="fas fa-wrench me-2"></i>Tools
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted mb-0">No tools configured</p>
+                                    </div>
+                                </div>
+                            `}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
 
-            document.getElementById('testCaseDetailsContent').innerHTML = detailsHtml;
-        }
-
-        function escapeHtml(text) {
-            if (text === null || text === undefined) return '';
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.toString().replace(/[&<>"']/g, function (m) { return map[m]; });
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            const date = new Date(dateString);
-            return date.toLocaleString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        }
-
-        async function executeTest() {
-            if (!currentTestCase) return;
-
-            try {
-                // Redirect to test execution page with this test case
-                window.open(`/test-execution?testCaseId=${currentTestCase.id}`, '_blank');
-            } catch (error) {
-                console.error('Error executing test:', error);
-                alert('Error executing test: ' + error.message);
-            }
-        }
-
-        function viewTestLogs() {
-            if (currentTestCase) {
-                window.open(`/test-logs?testCaseId=${currentTestCase.id}`, '_blank');
-            } else {
-                window.open('/test-logs', '_blank');
-            }
-        }
-
-        async function deleteTestCase() {
-            if (!currentTestCase) return;
-
-            if (!confirm(`Are you sure you want to delete the test case "${currentTestCase.name}"? This action cannot be undone.`)) {
-                return;
+                document.getElementById('testCaseDetailsContent').innerHTML = detailsHtml;
             }
 
-            try {
-                const response = await fetch(`/v1/api/test-cases/${currentTestCase.id}`, {
-                    method: 'DELETE'
+            function escapeHtml(text) {
+                if (text === null || text === undefined) return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.toString().replace(/[&<>"']/g, function (m) { return map[m]; });
+            }
+
+            function formatDate(dateString) {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                return date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
+            }
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            async function executeTest() {
+                if (!currentTestCase) return;
+
+                try {
+                    // Redirect to test execution page with this test case
+                    window.open(`/test-execution?testCaseId=${currentTestCase.id}`, '_blank');
+                } catch (error) {
+                    console.error('Error executing test:', error);
+                    alert('Error executing test: ' + error.message);
+                }
+            }
+
+            function viewTestLogs() {
+                if (currentTestCase) {
+                    window.open(`/test-logs?testCaseId=${currentTestCase.id}`, '_blank');
+                } else {
+                    window.open('/test-logs', '_blank');
+                }
+            }
+
+            async function deleteTestCase() {
+                if (!currentTestCase) return;
+
+                if (!confirm(`Are you sure you want to delete the test case "${currentTestCase.name}"? This action cannot be undone.`)) {
+                    return;
                 }
 
-                alert('Test case deleted successfully!');
-                // Redirect back to test cases page
-                window.location.href = '/test-cases';
+                try {
+                    const response = await fetch(`/v1/api/test-cases/${currentTestCase.id}`, {
+                        method: 'DELETE'
+                    });
 
-            } catch (error) {
-                console.error('Error deleting test case:', error);
-                alert('Error deleting test case: ' + error.message);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    alert('Test case deleted successfully!');
+                    // Redirect back to test cases page
+                    window.location.href = '/test-cases';
+
+                } catch (error) {
+                    console.error('Error deleting test case:', error);
+                    alert('Error deleting test case: ' + error.message);
+                }
             }
-        }
-    </script>
-</body>
-
-</html>
+        </script>
+{% endblock %}

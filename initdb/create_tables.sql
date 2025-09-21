@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS regression_tests (
     error_message TEXT,
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -83,6 +84,7 @@ CREATE INDEX IF NOT EXISTS idx_test_logs_agent_id ON test_logs(agent_id);
 CREATE INDEX IF NOT EXISTS idx_test_logs_regression_test_id ON test_logs(regression_test_id);
 CREATE INDEX IF NOT EXISTS idx_regression_tests_agent_id ON regression_tests(agent_id);
 CREATE INDEX IF NOT EXISTS idx_regression_tests_status ON regression_tests(status);
+CREATE INDEX IF NOT EXISTS idx_regression_tests_is_deleted ON regression_tests(is_deleted);
 
 -- Comments for documentation
 COMMENT ON TABLE agents IS 'Stores logical agents that own test cases and defaults.';
@@ -93,6 +95,7 @@ COMMENT ON TABLE regression_tests IS 'Stores regression execution metadata for a
 COMMENT ON COLUMN agents.is_deleted IS 'Soft delete flag to hide agents without removing history';
 COMMENT ON COLUMN regression_tests.status IS 'Execution status: pending, running, completed, or failed';
 COMMENT ON COLUMN regression_tests.model_settings_override IS 'Model settings JSON applied to the regression execution';
+COMMENT ON COLUMN regression_tests.is_deleted IS 'Soft delete flag to hide regression tests without hard deleting.';
 COMMENT ON COLUMN test_cases.raw_data IS 'Original logfire raw data for audit purposes';
 COMMENT ON COLUMN test_cases.middle_messages IS 'Messages except system prompt and last user message';
 COMMENT ON COLUMN test_cases.tools IS 'Tools definition from the request';

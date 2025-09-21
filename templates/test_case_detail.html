@@ -506,6 +506,29 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="col-md-6">
+                        <!-- System Prompt -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="fas fa-terminal me-2"></i>System Prompt
+                            </div>
+                            <div class="card-body">
+                                <div class="code-block">${escapeHtml(testCase.system_prompt || 'No system prompt provided')}</div>
+                            </div>
+                        </div>
+
+                        <!-- User Message -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="fas fa-comment me-2"></i>User Message
+                            </div>
+                            <div class="card-body">
+                                <div class="code-block">${escapeHtml(testCase.last_user_message || 'No user message provided')}</div>
+                            </div>
+                        </div>
 
                         <!-- Tools Configuration -->
                         ${testCase.tools && testCase.tools.length > 0 ? `
@@ -546,29 +569,6 @@
                                 </div>
                             </div>
                         `}
-                    </div>
-
-                    <!-- Right Column -->
-                    <div class="col-md-6">
-                        <!-- System Prompt -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-terminal me-2"></i>System Prompt
-                            </div>
-                            <div class="card-body">
-                                <div class="code-block">${escapeHtml(testCase.system_prompt || 'No system prompt provided')}</div>
-                            </div>
-                        </div>
-
-                        <!-- User Message -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-comment me-2"></i>User Message
-                            </div>
-                            <div class="card-body">
-                                <div class="code-block">${escapeHtml(testCase.last_user_message || 'No user message provided')}</div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             `;

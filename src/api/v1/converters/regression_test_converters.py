@@ -17,9 +17,9 @@ def convert_regression_test_create_request(
 
     return RegressionTestCreateData(
         agent_id=request.agent_id,
-        model_name=request.model_name,
-        system_prompt=request.system_prompt,
-        model_settings=request.model_settings,
+        model_name_override=request.model_name_override,
+        system_prompt_override=request.system_prompt_override,
+        model_settings_override=request.model_settings_override,
     )
 
 

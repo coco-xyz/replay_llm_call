@@ -43,9 +43,9 @@ async def test_run_regression_with_no_cases(monkeypatch):
 
     request = RegressionTestCreateData(
         agent_id="agent-1",
-        model_name="model",
-        system_prompt="prompt",
-        model_settings={},
+        model_name_override="model",
+        system_prompt_override="prompt",
+        model_settings_override={},
     )
 
     result = await service.run_regression_test(request)
@@ -103,9 +103,9 @@ async def test_run_regression_counts_results(monkeypatch):
 
     request = RegressionTestCreateData(
         agent_id="agent-1",
-        model_name="override-model",
-        system_prompt="override",
-        model_settings={},
+        model_name_override="override-model",
+        system_prompt_override="override",
+        model_settings_override={},
     )
 
     result = await service.run_regression_test(request)

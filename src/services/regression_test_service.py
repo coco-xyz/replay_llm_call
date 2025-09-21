@@ -25,9 +25,11 @@ class RegressionTestCreateData(BaseModel):
     """Input payload for launching a regression test."""
 
     agent_id: str = Field(..., description="Agent under test")
-    model_name: str = Field(..., description="Model name override for this regression")
-    system_prompt: str = Field(..., description="System prompt override")
-    model_settings: Dict = Field(
+    model_name_override: str = Field(
+        ..., description="Model name override for this regression"
+    )
+    system_prompt_override: str = Field(..., description="System prompt override")
+    model_settings_override: Dict = Field(
         default_factory=dict, description="Model settings override JSON"
     )
 
@@ -79,9 +81,9 @@ class RegressionTestService:
             id=str(uuid.uuid4()),
             agent_id=agent.id,
             status="running",
-            model_name_override=request.model_name,
-            system_prompt_override=request.system_prompt,
-            model_settings_override=request.model_settings,
+            model_name_override=request.model_name_override,
+            system_prompt_override=request.system_prompt_override,
+            model_settings_override=request.model_settings_override,
             total_count=len(test_cases),
             success_count=0,
             failed_count=0,
@@ -114,9 +116,9 @@ class RegressionTestService:
                         test_case_id=case.id,
                         agent_id=agent.id,
                         regression_test_id=regression.id,
-                        modified_model_name=request.model_name,
-                        modified_system_prompt=request.system_prompt,
-                        modified_model_settings=request.model_settings,
+                        modified_model_name=request.model_name_override,
+                        modified_system_prompt=request.system_prompt_override,
+                        modified_model_settings=request.model_settings_override,
                     )
                     result = await self.test_execution_service.execute_test(
                         execution_request

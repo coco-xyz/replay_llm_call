@@ -26,7 +26,7 @@ class TestCaseCreateData(BaseModel):
     name: str = Field(..., description="Test case name")
     raw_data: Dict = Field(..., description="Raw logfire data")
     description: Optional[str] = Field(None, description="Test case description")
-    agent_id: Optional[str] = Field(None, description="Agent that owns this test case")
+    agent_id: str = Field(..., description="Agent that owns this test case")
 
 
 class TestCaseUpdateData(BaseModel):

@@ -339,8 +339,15 @@
     function displayTestCaseDetails(testCase) {
         const agentName = testCase.agent ? testCase.agent.name : null;
         const agentId = testCase.agent_id || '';
+        const agentDescription = testCase.agent && testCase.agent.description ? testCase.agent.description : '';
+        const agentDescriptionHtml = agentDescription
+            ? `<small class="text-muted text-truncate d-block" style="max-width: 320px;" title="${escapeHtml(agentDescription)}">${escapeHtml(agentDescription)}</small>`
+            : '';
         const agentBadge = agentName && agentId
-            ? `<a href="/agents/${escapeHtml(agentId)}" class="badge bg-primary text-decoration-none" target="_blank">${escapeHtml(agentName)}</a>`
+            ? `<div class="d-flex flex-column align-items-start">
+                    <a href="/agents/${escapeHtml(agentId)}" class="badge bg-primary text-decoration-none" target="_blank">${escapeHtml(agentName)}</a>
+                    ${agentDescriptionHtml}
+                </div>`
             : '<span class="text-muted">Unknown agent</span>';
 
         const detailsHtml = `

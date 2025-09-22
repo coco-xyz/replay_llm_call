@@ -141,6 +141,33 @@
         border-bottom: none;
     }
 
+    .log-summary {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .log-summary .meta-line {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .status-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .status-meta .response-time {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+    }
+
     /* Status Styles */
     .status-success {
         color: var(--success-color);
@@ -267,134 +294,134 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container py-4">
-        <!-- Header -->
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
-            <div class="mb-3 mb-lg-0">
-                <h1 class="page-title">
-                    <i class="fas fa-history me-3"></i>Test Logs
-                </h1>
-                <p class="page-subtitle mb-0">View and analyze test execution history</p>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-primary" id="refreshTestLogsBtn">
-                    <i class="fas fa-refresh me-2"></i>Refresh
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
+        <div class="mb-3 mb-lg-0">
+            <h1 class="page-title">
+                <i class="fas fa-history me-3"></i>Test Logs
+            </h1>
+            <p class="page-subtitle mb-0">View and analyze test execution history</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-primary" id="refreshTestLogsBtn">
+                <i class="fas fa-refresh me-2"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+
+
+    <!-- Filters -->
+    <div class="card mb-3">
+        <div class="card-body py-3">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <span class="text-muted fw-medium me-2">
+                    <i class="fas fa-filter me-2"></i>Filters:
+                </span>
+                <select class="form-select form-select-sm" id="statusFilter" style="width: 160px;">
+                    <option value="">All Statuses</option>
+                    <option value="success">Success</option>
+                    <option value="failed">Failed</option>
+                </select>
+                <select class="form-select form-select-sm" id="agentFilter" style="width: 200px;">
+                    <option value="">All Agents</option>
+                </select>
+                <select class="form-select form-select-sm" id="testCaseFilter" style="width: 220px;">
+                    <option value="">All Test Cases</option>
+                </select>
+                <select class="form-select form-select-sm" id="regressionFilter" style="width: 200px;">
+                    <option value="">All Regressions</option>
+                </select>
+                <button class="btn btn-outline-secondary btn-sm ms-auto" id="clearFiltersBtn">
+                    <i class="fas fa-eraser me-1"></i>Clear
                 </button>
             </div>
         </div>
+    </div>
 
+    <!-- Test Logs List -->
+    <div class="table-container">
+        <table class="table table-hover mb-0" id="testLogsTable">
+            <thead>
+                <tr>
+                    <th style="width: 12%">Belongs To</th>
+                    <th style="width: 10%">Model</th>
+                    <th style="width: 12%">Status &amp; Timing</th>
+                    <th style="width: 24%">User Message</th>
+                    <th style="width: 24%">LLM Response</th>
+                    <th style="width: 16%">Executed At</th>
+                    <th style="width: 8%">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="testLogsList">
+                <!-- Test logs will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
 
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="text-center d-none">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
 
-        <!-- Filters -->
-        <div class="card mb-3">
-            <div class="card-body py-3">
-                <div class="d-flex flex-wrap align-items-center gap-3">
-                    <span class="text-muted fw-medium me-2">
-                        <i class="fas fa-filter me-2"></i>Filters:
-                    </span>
-                    <select class="form-select form-select-sm" id="statusFilter" style="width: 160px;">
-                        <option value="">All Statuses</option>
-                        <option value="success">Success</option>
-                        <option value="failed">Failed</option>
-                    </select>
-                    <select class="form-select form-select-sm" id="agentFilter" style="width: 200px;">
-                        <option value="">All Agents</option>
-                    </select>
-                    <select class="form-select form-select-sm" id="testCaseFilter" style="width: 220px;">
-                        <option value="">All Test Cases</option>
-                    </select>
-                    <select class="form-select form-select-sm" id="regressionFilter" style="width: 200px;">
-                        <option value="">All Regressions</option>
-                    </select>
-                    <button class="btn btn-outline-secondary btn-sm ms-auto" id="clearFiltersBtn">
-                        <i class="fas fa-eraser me-1"></i>Clear
-                    </button>
+<!-- Empty State -->
+<div id="emptyState" class="text-center py-5 d-none">
+    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+    <h4 class="text-muted">No test logs found</h4>
+    <p class="text-muted">Execute some tests to see logs here</p>
+    <a href="/test-execution" class="btn btn-primary">
+        <i class="fas fa-play me-2"></i>Execute Tests
+    </a>
+</div>
+
+<!-- Pagination -->
+<div id="pagination" class="d-flex justify-content-center mt-4 d-none">
+    <nav>
+        <ul class="pagination">
+            <li class="page-item" id="prevPage">
+                <a class="page-link" href="#" onclick="loadPreviousPage()">Previous</a>
+            </li>
+            <li class="page-item active">
+                <span class="page-link" id="currentPage">1</span>
+            </li>
+            <li class="page-item" id="nextPage">
+                <a class="page-link" href="#" onclick="loadNextPage()">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+</div>
+
+<!-- View Log Modal -->
+<div class="modal fade" id="viewLogModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Log Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="logDetails">
+                    <!-- Log details will be loaded here -->
                 </div>
             </div>
-        </div>
-
-        <!-- Test Logs List -->
-        <div class="table-container">
-            <table class="table table-hover mb-0" id="testLogsTable">
-                <thead>
-                    <tr>
-                        <th style="width: 18%">Test Case</th>
-                        <th style="width: 16%">Agent</th>
-                        <th style="width: 14%">Regression</th>
-                        <th style="width: 12%">Status</th>
-                        <th style="width: 12%">Model</th>
-                        <th style="width: 12%">Response Time</th>
-                        <th style="width: 16%">Executed At</th>
-                        <th style="width: 10%">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="testLogsList">
-                    <!-- Test logs will be loaded here -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-    </div>
-
-    <!-- Loading Spinner -->
-    <div id="loadingSpinner" class="text-center d-none">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
-
-    <!-- Empty State -->
-    <div id="emptyState" class="text-center py-5 d-none">
-        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-        <h4 class="text-muted">No test logs found</h4>
-        <p class="text-muted">Execute some tests to see logs here</p>
-        <a href="/test-execution" class="btn btn-primary">
-            <i class="fas fa-play me-2"></i>Execute Tests
-        </a>
-    </div>
-
-    <!-- Pagination -->
-    <div id="pagination" class="d-flex justify-content-center mt-4 d-none">
-        <nav>
-            <ul class="pagination">
-                <li class="page-item" id="prevPage">
-                    <a class="page-link" href="#" onclick="loadPreviousPage()">Previous</a>
-                </li>
-                <li class="page-item active">
-                    <span class="page-link" id="currentPage">1</span>
-                </li>
-                <li class="page-item" id="nextPage">
-                    <a class="page-link" href="#" onclick="loadNextPage()">Next</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-    </div>
-
-    <!-- View Log Modal -->
-    <div class="modal fade" id="viewLogModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Test Log Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="logDetails">
-                        <!-- Log details will be loaded here -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" onclick="reExecuteFromLog()">
-                        <i class="fas fa-redo me-2"></i>Re-execute
-                    </button>
-                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" onclick="reExecuteFromLog()">
+                    <i class="fas fa-redo me-2"></i>Re-execute
+                </button>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-    <script src="/static/js/test-logs.js?v={{ static_asset_version }}"></script>
+<script src="/static/js/hover-tooltips.js?v={{ static_asset_version }}"></script>
+<script src="/static/js/test-logs.js?v={{ static_asset_version }}"></script>
 {% endblock %}

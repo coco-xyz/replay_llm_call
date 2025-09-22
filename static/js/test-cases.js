@@ -211,36 +211,39 @@ function displayTestCases(testCases) {
     emptyState.classList.add('d-none');
     table.style.display = 'table';
 
-    const html = testCases.map(testCase => {
+    const html = testCases.map((testCase) => {
         const agentName = testCase.agent ? testCase.agent.name : 'Unknown agent';
         const agentDisplay = escapeHtml(agentName);
+        const agentHref = testCase.agent_id ? `/agents/${encodeURIComponent(testCase.agent_id)}` : '#';
+        const agentTag = testCase.agent
+            ? `<a href="${agentHref}" class="text-decoration-none text-muted" target="_blank">${agentDisplay}</a>`
+            : `<span class="text-muted">${agentDisplay}</span>`;
+        const userMessage = testCase.last_user_message || '';
+        const hasUserMessage = userMessage.trim().length > 0;
+        const userMessageClass = hasUserMessage ? 'log-preview' : 'log-preview placeholder';
+        const userMessageDisplay = hasUserMessage ? truncateText(userMessage, 120) : '—';
+        const userMessageEncoded = encodeTooltipPayload(userMessage);
+        const userMessageFallback = encodeTooltipPayload('No user message provided');
+        const userMessageCell = `
+            <span class="${userMessageClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
+                  data-tooltip-content="${userMessageEncoded}" data-tooltip-fallback="${userMessageFallback}">
+                ${escapeHtml(userMessageDisplay)}
+            </span>
+        `;
 
         return `
         <tr>
             <td>
                 <div class="d-flex flex-column">
-                    <strong>${escapeHtml(testCase.name)}</strong>
-                    ${testCase.description ? `<small class="text-muted">${escapeHtml(truncateText(testCase.description, 60))}</small>` : ''}
+                    <small class="text-muted">${agentTag}</small>
+                    <div class="d-flex align-items-center flex-wrap">
+                        <strong class="mt-1 d-inline-block">${escapeHtml(testCase.name)}</strong>
+                    </div>
+                    ${testCase.description ? `<small class="text-muted mt-1">${escapeHtml(truncateText(testCase.description, 60))}</small>` : ''}
                 </div>
             </td>
             <td>
-                <div class="d-flex flex-column">
-                    ${testCase.agent ?
-                `<a href="/agents/${escapeHtml(testCase.agent_id)}" class="text-decoration-none" target="_blank">${agentDisplay}</a>` :
-                `<span class="text-muted">${agentDisplay}</span>`
-            }
-                </div>
-            </td>
-            <td>
-                <div class="d-flex flex-column">
-                    <span class="badge bg-primary model-badge">${escapeHtml(testCase.model_name)}</span>
-                    ${testCase.tools ? '<span class="badge bg-info model-badge mt-1">Tools</span>' : ''}
-                </div>
-            </td>
-            <td>
-                <div class="text-truncate" style="max-width: 300px;" title="${escapeHtml(testCase.system_prompt)}">
-                    ${escapeHtml(truncateText(testCase.system_prompt, 80))}
-                </div>
+                ${userMessageCell}
             </td>
             <td>
                 <small class="text-muted">${formatDate(testCase.created_at)}</small>
@@ -268,7 +271,21 @@ function displayTestCases(testCases) {
     `;
     }).join('');
 
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        container.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+            const instance = bootstrap.Tooltip.getInstance(el);
+            if (instance) {
+                instance.dispose();
+            }
+        });
+    }
+
     container.innerHTML = html;
+    applyTooltipContent(container);
+    if (window.HoverTooltip) {
+        window.HoverTooltip.attach(container);
+    }
+    initializeTooltips();
 }
 
 async function createTestCase() {
@@ -795,6 +812,65 @@ function truncateText(text, maxLength) {
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+function formatTooltipContent(text, fallback = '—') {
+    if (!text) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const trimmed = text.trim();
+    if (!trimmed) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const htmlContent = escapeHtml(text).replace(/\n/g, '<br>');
+    return `<div class='tooltip-log-content'>${htmlContent}</div>`;
+}
+
+function initializeTooltips() {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+        return;
+    }
+    const tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)')
+    );
+    tooltipTriggerList.forEach((tooltipTriggerEl) => {
+        bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl);
+    });
+}
+
+function applyTooltipContent(container) {
+    if (!container) {
+        return;
+    }
+    const tooltipTargets = container.querySelectorAll('[data-tooltip-content]');
+    tooltipTargets.forEach((element) => {
+        const encodedContent = element.getAttribute('data-tooltip-content') || '';
+        const encodedFallback = element.getAttribute('data-tooltip-fallback') || '';
+        const content = decodeTooltipPayload(encodedContent);
+        const fallback = decodeTooltipPayload(encodedFallback);
+        const tooltipHtml = formatTooltipContent(content, fallback || undefined);
+        element.setAttribute('data-bs-title', tooltipHtml);
+        element.setAttribute('data-hover-html', tooltipHtml);
+    });
+}
+
+function encodeTooltipPayload(text) {
+    if (!text) {
+        return '';
+    }
+    return encodeURIComponent(text);
+}
+
+function decodeTooltipPayload(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        console.error('Failed to decode tooltip payload', error);
+        return value;
+    }
 }
 
 // New function to open test case details in a new page

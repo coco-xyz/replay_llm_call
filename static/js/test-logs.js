@@ -331,6 +331,15 @@ function displayTestLogs(logs) {
     emptyState.classList.add('d-none');
     table.style.display = 'table';
 
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        container.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+            const instance = bootstrap.Tooltip.getInstance(el);
+            if (instance) {
+                instance.dispose();
+            }
+        });
+    }
+
     const html = logs.map((log) => {
         const testCase = findTestCaseById(log.test_case_id);
         const testCaseName = testCase ? testCase.name : 'Unknown Test Case';
@@ -338,28 +347,60 @@ function displayTestLogs(logs) {
         const agentName = agent ? agent.name : 'Unknown agent';
         const regressionLabel = formatRegressionLabel(log.regression_test_id);
         const responseTime = formatResponseTime(log.response_time_ms);
+        const rawUserMessage = log.user_message || '';
+        const hasUserMessage = rawUserMessage.trim().length > 0;
+        const userMessageClass = hasUserMessage ? 'log-preview' : 'log-preview placeholder';
+        const userMessageContent = hasUserMessage ? truncateText(rawUserMessage, 160) : '—';
+        const userMessageEncoded = encodeTooltipPayload(rawUserMessage);
+        const userMessageFallback = encodeTooltipPayload('No user message recorded');
+        const rawLlmResponse = log.llm_response || '';
+        const hasLlmResponse = rawLlmResponse.trim().length > 0;
+        const llmResponseClass = hasLlmResponse ? 'log-preview' : 'log-preview placeholder';
+        const llmResponseContent = hasLlmResponse ? truncateText(rawLlmResponse, 160) : '—';
+        const llmResponseEncoded = encodeTooltipPayload(rawLlmResponse);
+        const llmResponseFallback = encodeTooltipPayload('No LLM response captured');
 
         return `
         <tr>
             <td>
-                ${testCase ? `<a href="/test-cases/${escapeHtml(log.test_case_id)}" class="text-decoration-none" target="_blank"><strong>${escapeHtml(testCaseName)}</strong></a>` : `<span class="text-muted">${escapeHtml(testCaseName)}</span>`}
-            </td>
-            <td>
-                ${agent ? `<a href="/agents/${escapeHtml(log.agent_id)}" class="badge bg-primary text-decoration-none" target="_blank">${escapeHtml(agentName)}</a>` : `<span class="text-muted">${escapeHtml(agentName)}</span>`}
-            </td>
-            <td>${regressionLabel}</td>
-            <td>
-                <span class="badge ${log.status === 'success' ? 'bg-success' : 'bg-danger'}">
-                    <i class="fas fa-${log.status === 'success' ? 'check-circle' : 'times-circle'} me-1"></i>
-                    ${log.status.toUpperCase()}
-                </span>
-                ${log.error_message ? `<br><small class="text-danger">${escapeHtml(truncateText(log.error_message, 50))}</small>` : ''}
+                <div class="log-summary">
+                    <div>
+                        ${testCase ? `<a href="/test-cases/${escapeHtml(log.test_case_id)}" class="text-decoration-none" target="_blank"><strong>${escapeHtml(testCaseName)}</strong></a>` : `<span class="text-muted">${escapeHtml(testCaseName)}</span>`}
+                    </div>
+                    <div class="meta-line">
+                        ${agent ? `<a href="/agents/${escapeHtml(log.agent_id)}" class="badge bg-primary text-decoration-none" target="_blank">${escapeHtml(agentName)}</a>` : `<span class="text-muted">${escapeHtml(agentName)}</span>`}
+                    </div>
+                    <div class="meta-line">
+                        ${regressionLabel}
+                    </div>
+                </div>
             </td>
             <td>
                 <span class="badge bg-secondary">${escapeHtml(log.model_name)}</span>
             </td>
             <td>
-                <strong>${responseTime}</strong>
+                <div class="status-meta">
+                    <span class="badge ${log.status === 'success' ? 'bg-success' : 'bg-danger'}">
+                        <i class="fas fa-${log.status === 'success' ? 'check-circle' : 'times-circle'} me-1"></i>
+                        ${log.status.toUpperCase()}
+                    </span>
+                    <span class="response-time">
+                        <i class="fas fa-stopwatch me-1"></i>${responseTime}
+                    </span>
+                </div>
+                ${log.error_message ? `<div class="text-danger small mt-1">${truncateText(log.error_message, 80)}</div>` : ''}
+            </td>
+            <td>
+                <span class="${userMessageClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
+                      data-tooltip-content="${userMessageEncoded}" data-tooltip-fallback="${userMessageFallback}">
+                    ${userMessageContent}
+                </span>
+            </td>
+            <td>
+                <span class="${llmResponseClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
+                      data-tooltip-content="${llmResponseEncoded}" data-tooltip-fallback="${llmResponseFallback}">
+                    ${llmResponseContent}
+                </span>
             </td>
             <td>
                 <small class="text-muted">${formatDate(log.created_at)}</small>
@@ -382,6 +423,11 @@ function displayTestLogs(logs) {
     }).join('');
 
     container.innerHTML = html;
+    applyTooltipContent(container);
+    if (window.HoverTooltip) {
+        window.HoverTooltip.attach(container);
+    }
+    initializeTooltips();
 }
 
 // Function to open log in new page
@@ -643,7 +689,66 @@ function truncateText(text, maxLength) {
     return escapeHtml(text.substring(0, maxLength)) + '...';
 }
 
+function formatTooltipContent(text, fallback = '—') {
+    if (!text) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const trimmed = text.trim();
+    if (!trimmed) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const htmlContent = escapeHtml(text).replace(/\n/g, '<br>');
+    return `<div class='tooltip-log-content'>${htmlContent}</div>`;
+}
+
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+function initializeTooltips() {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+        return;
+    }
+    const tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)')
+    );
+    tooltipTriggerList.forEach((tooltipTriggerEl) => {
+        bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl);
+    });
+}
+
+function applyTooltipContent(container) {
+    if (!container) {
+        return;
+    }
+    const tooltipTargets = container.querySelectorAll('[data-tooltip-content]');
+    tooltipTargets.forEach((element) => {
+        const encodedContent = element.getAttribute('data-tooltip-content') || '';
+        const encodedFallback = element.getAttribute('data-tooltip-fallback') || '';
+        const content = decodeTooltipPayload(encodedContent);
+        const fallback = decodeTooltipPayload(encodedFallback);
+        const tooltipHtml = formatTooltipContent(content, fallback || undefined);
+        element.setAttribute('data-bs-title', tooltipHtml);
+        element.setAttribute('data-hover-html', tooltipHtml);
+    });
+}
+
+function encodeTooltipPayload(text) {
+    if (!text) {
+        return '';
+    }
+    return encodeURIComponent(text);
+}
+
+function decodeTooltipPayload(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        console.error('Failed to decode tooltip payload', error);
+        return value;
+    }
 }

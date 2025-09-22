@@ -42,6 +42,17 @@ function setupEventListeners() {
             clearModalAlert('editAgentAlert');
         });
     }
+
+    if (window.ModelHistoryManager) {
+        window.ModelHistoryManager.initInput({
+            inputId: 'createAgentModelName',
+            dropdownId: 'createAgentModelNameDropdown',
+        });
+        window.ModelHistoryManager.initInput({
+            inputId: 'editAgentModelName',
+            dropdownId: 'editAgentModelNameDropdown',
+        });
+    }
 }
 
 async function loadAgents() {
@@ -87,12 +98,40 @@ function displayAgents(agentList) {
             const descriptionHtml = agent.description
                 ? `<div class="text-muted small text-break">${escapeHtml(truncateText(agent.description, 160))}</div>`
                 : '<span class="text-muted">—</span>';
-            const systemPrompt = agent.default_system_prompt
-                ? `<div class="text-truncate" style="max-width: 260px;" title="${escapeHtml(agent.default_system_prompt)}">${escapeHtml(truncateText(agent.default_system_prompt, 120))}</div>`
-                : '<span class="text-muted">—</span>';
-            const modelSettings = agent.default_model_settings
-                ? `<code class="text-muted">${escapeHtml(truncateText(JSON.stringify(agent.default_model_settings), 120))}</code>`
-                : '<span class="text-muted">Inherited per case</span>';
+
+            const rawSystemPrompt = agent.default_system_prompt || '';
+            const hasSystemPrompt = rawSystemPrompt.trim().length > 0;
+            const systemPromptClass = hasSystemPrompt ? 'log-preview' : 'log-preview placeholder';
+            const systemPromptDisplay = hasSystemPrompt
+                ? escapeHtml(truncateText(rawSystemPrompt, 160))
+                : '—';
+            const systemPromptEncoded = encodeTooltipPayload(rawSystemPrompt);
+            const systemPromptFallback = encodeTooltipPayload('No default system prompt');
+            const systemPrompt = `
+                <span class="${systemPromptClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
+                      data-tooltip-content="${systemPromptEncoded}" data-tooltip-fallback="${systemPromptFallback}">
+                    ${systemPromptDisplay}
+                </span>
+            `;
+
+            const rawModelSettings = agent.default_model_settings
+                ? JSON.stringify(agent.default_model_settings, null, 2)
+                : '';
+            const hasModelSettings = rawModelSettings.trim().length > 0;
+            const modelSettingsClass = hasModelSettings
+                ? 'log-preview text-muted small'
+                : 'log-preview placeholder text-muted small';
+            const modelSettingsDisplay = hasModelSettings
+                ? escapeHtml(truncateText(rawModelSettings, 160))
+                : 'Inherited per case';
+            const modelSettingsEncoded = encodeTooltipPayload(rawModelSettings);
+            const modelSettingsFallback = encodeTooltipPayload('No default model settings');
+            const modelSettings = `
+                <span class="${modelSettingsClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
+                      data-tooltip-content="${modelSettingsEncoded}" data-tooltip-fallback="${modelSettingsFallback}">
+                    ${modelSettingsDisplay}
+                </span>
+            `;
 
             const createdAt = formatDate(agent.created_at);
 
@@ -110,7 +149,7 @@ function displayAgents(agentList) {
                     <div class="d-flex flex-column gap-1">
                         <span class="badge bg-primary">${escapeHtml(agent.default_model_name || 'Not set')}</span>
                         ${systemPrompt}
-                        <div class="text-muted small">${modelSettings}</div>
+                        ${modelSettings}
                     </div>
                 </td>
                 <td>
@@ -138,7 +177,21 @@ function displayAgents(agentList) {
         })
         .join('');
 
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        container.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+            const instance = bootstrap.Tooltip.getInstance(el);
+            if (instance) {
+                instance.dispose();
+            }
+        });
+    }
+
     container.innerHTML = rows;
+    applyTooltipContent(container);
+    if (window.HoverTooltip) {
+        window.HoverTooltip.attach(container);
+    }
+    initializeTooltips();
 }
 
 function updateAgentHints(agentList) {
@@ -419,6 +472,65 @@ function formatDate(dateString) {
         return escapeHtml(dateString);
     }
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+}
+
+function formatTooltipContent(text, fallback = '—') {
+    if (!text) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const trimmed = text.trim();
+    if (!trimmed) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const htmlContent = escapeHtml(text).replace(/\n/g, '<br>');
+    return `<div class='tooltip-log-content'>${htmlContent}</div>`;
+}
+
+function initializeTooltips() {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+        return;
+    }
+    const tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)')
+    );
+    tooltipTriggerList.forEach((tooltipTriggerEl) => {
+        bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl);
+    });
+}
+
+function applyTooltipContent(container) {
+    if (!container) {
+        return;
+    }
+    const tooltipTargets = container.querySelectorAll('[data-tooltip-content]');
+    tooltipTargets.forEach((element) => {
+        const encodedContent = element.getAttribute('data-tooltip-content') || '';
+        const encodedFallback = element.getAttribute('data-tooltip-fallback') || '';
+        const content = decodeTooltipPayload(encodedContent);
+        const fallback = decodeTooltipPayload(encodedFallback);
+        const tooltipHtml = formatTooltipContent(content, fallback || undefined);
+        element.setAttribute('data-bs-title', tooltipHtml);
+        element.setAttribute('data-hover-html', tooltipHtml);
+    });
+}
+
+function encodeTooltipPayload(text) {
+    if (!text) {
+        return '';
+    }
+    return encodeURIComponent(text);
+}
+
+function decodeTooltipPayload(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        console.error('Failed to decode tooltip payload', error);
+        return value;
+    }
 }
 
 function viewAgentDetails(agentId) {

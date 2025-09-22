@@ -416,6 +416,8 @@ function displayExecutionResult(result) {
 
     // Display results
     const responseTime = result.response_time_ms != null ? `${result.response_time_ms}ms` : '—';
+    const similarityScore = result.similarity_score != null ? Number(result.similarity_score).toFixed(2) : '—';
+    const passedBadge = result.is_passed ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>' : '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
 
     const html = `
         <div class="row mb-3">
@@ -428,8 +430,8 @@ function displayExecutionResult(result) {
                         </span>
                     </td></tr>
                     <tr><td><strong>Response Time:</strong></td><td>${responseTime}</td></tr>
-                    <tr><td><strong>Agent:</strong></td><td>${formatAgentContext(result)}</td></tr>
-                    <tr><td><strong>Regression:</strong></td><td>${formatRegressionContext(result)}</td></tr>
+                    <tr><td><strong>Similarity Score:</strong></td><td>${similarityScore}</td></tr>
+                    <tr><td><strong>Passed:</strong></td><td>${passedBadge}</td></tr>
                     <tr><td><strong>Log ID:</strong></td><td>${result.log_id || '—'}</td></tr>
                 </table>
             </div>

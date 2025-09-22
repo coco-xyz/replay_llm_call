@@ -342,6 +342,8 @@
         const testCase = findTestCaseById(log.test_case_id);
         const responseTime = formatResponseTime(log.response_time_ms);
 
+        const passBadge = log.is_passed ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>' : '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
+
         const detailsHtml = `
                     <div class="row">
                         <!-- Left Column -->
@@ -381,6 +383,14 @@
                                         <tr>
                                             <td>Response Time:</td>
                                             <td><strong>${responseTime}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Similarity Score:</td>
+                                            <td>${escapeHtml(formatSimilarityScore(log.similarity_score))}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Passed:</td>
+                                            <td>${passBadge}</td>
                                         </tr>
                                         <tr>
                                             <td>Test Case:</td>
@@ -478,6 +488,48 @@
                                 </div>
                             `}
 
+                            <!-- Response Example -->
+                            ${log.response_example ? `
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <div class="d-flex align-items-center">
+                                            <button class="btn btn-link text-decoration-none p-0 text-muted" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#responseExampleCollapse"
+                                                aria-expanded="false" aria-controls="responseExampleCollapse">
+                                                <i class="fas fa-chevron-right me-1" id="responseExampleChevron"
+                                                    style="font-size: 0.8em;"></i>
+                                                <span style="font-size: 0.9em;">Response Example</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="collapse" id="responseExampleCollapse">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <small class="text-muted">Expected response example for comparison</small>
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('responseExampleContent', this)" title="Copy Response Example">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                            <div class="code-block" id="responseExampleContent">${escapeHtml(log.response_example)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <div class="d-flex align-items-center">
+                                            <button class="btn btn-link text-decoration-none p-0 text-muted" type="button" disabled>
+                                                <i class="fas fa-chevron-right me-1" style="font-size: 0.8em;"></i>
+                                                <span style="font-size: 0.9em;">Response Example</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted mb-0">No response example available</p>
+                                    </div>
+                                </div>
+                            `}
+
                             <!-- Tools Configuration -->
                             ${log.tools && log.tools.length > 0 ? `
                                 <div class="card mb-4">
@@ -544,6 +596,9 @@
 
         // Setup Model Settings collapse handlers
         setupModelSettingsCollapse(log);
+        
+        // Setup Response Example collapse handlers
+        setupResponseExampleCollapse(log);
     }
 
     async function loadAgentSummary(agentId) {
@@ -629,6 +684,27 @@
         }
     }
 
+    function setupResponseExampleCollapse(log) {
+        const responseExampleCollapse = document.getElementById('responseExampleCollapse');
+        const responseExampleChevron = document.getElementById('responseExampleChevron');
+
+        if (!responseExampleCollapse || !responseExampleChevron) return;
+
+        // Handle chevron icon rotation
+        responseExampleCollapse.addEventListener('show.bs.collapse', function () {
+            responseExampleChevron.classList.remove('fa-chevron-right');
+            responseExampleChevron.classList.add('fa-chevron-down');
+        });
+
+        responseExampleCollapse.addEventListener('hide.bs.collapse', function () {
+            responseExampleChevron.classList.remove('fa-chevron-down');
+            responseExampleChevron.classList.add('fa-chevron-right');
+        });
+
+        // Response example section remains collapsed by default
+        // No auto-expand behavior needed since it should be collapsed by default
+    }
+
     // Helper functions
     function findTestCaseById(testCaseId) {
         return testCasesData.find(tc => tc.id === testCaseId);
@@ -690,6 +766,21 @@
             return '—';
         }
         return `${value}ms`;
+    }
+
+    function formatSimilarityScore(value) {
+        if (value === null || value === undefined) {
+            return '—';
+        }
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '—';
+        }
+        return numeric.toFixed(2);
+    }
+
+    function formatPassStatus(isPassed) {
+        return isPassed ? 'Passed' : 'Failed';
     }
 
     function hideLoading() {

@@ -11,12 +11,12 @@ from fastapi import APIRouter, HTTPException, Query
 from src.api.v1.converters import convert_test_log_data_to_response
 from src.api.v1.schemas.responses.test_log_responses import TestLogResponse
 from src.core.logger import get_logger
-from src.services.test_log_service import TestLogService
+from src.services.test_log_service import LogService
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/test-logs", tags=["test-logs"])
-test_log_service = TestLogService()
+test_log_service = LogService()
 
 
 @router.get("/", response_model=List[TestLogResponse])

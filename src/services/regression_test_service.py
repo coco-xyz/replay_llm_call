@@ -14,7 +14,7 @@ from src.services.test_case_service import TestCaseService
 from src.services.test_execution_service import (
     ExecutionResult,
     TestExecutionData,
-    TestExecutionService,
+    ExecutionService,
 )
 from src.stores.regression_test_store import RegressionTestStore
 
@@ -64,7 +64,7 @@ class RegressionTestService:
     def __init__(self) -> None:
         self.agent_service = AgentService()
         self.test_case_service = TestCaseService()
-        self.test_execution_service = TestExecutionService()
+        self.test_execution_service = ExecutionService()
         self.store = RegressionTestStore()
 
     def create_regression(

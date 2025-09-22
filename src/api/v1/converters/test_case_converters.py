@@ -27,6 +27,7 @@ def convert_test_case_create_request(
         raw_data=request.raw_data,
         description=request.description,
         agent_id=request.agent_id,
+        response_example=request.response_example,
     )
 
 
@@ -41,6 +42,7 @@ def convert_test_case_update_request(
         system_prompt=request.system_prompt,
         last_user_message=request.last_user_message,
         agent_id=request.agent_id,
+        response_example=request.response_example,
     )
 
 
@@ -57,6 +59,7 @@ def convert_test_case_data_to_response(data: TestCaseData) -> TestCaseResponse:
         model_settings=data.model_settings,
         system_prompt=data.system_prompt,
         last_user_message=data.last_user_message,
+        response_example=data.response_example,
         agent_id=data.agent_id,
         agent=(
             TestCaseAgentSummaryResponse.model_validate(data.agent)

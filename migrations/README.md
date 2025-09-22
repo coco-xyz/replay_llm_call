@@ -10,6 +10,8 @@ This directory contains database migration files for the LLM Replay System.
 - `004_add_is_deleted_to_test_cases.sql` - Introduces soft delete flag for test cases
 - `005_add_agents_and_regression_tests.sql` - Adds agent entities and regression test tracking tables
 - `006_add_is_deleted_to_regression_tests.sql` - Adds soft delete flag for regression tests
+- `007_add_response_example_and_similarity.sql` - Adds response example embeddings, log similarity metrics, and pass/fail tracking
+- `008_add_response_example_to_test_logs.sql` - Captures response examples and embeddings on test logs
 
 ## How to Apply Migrations
 
@@ -48,4 +50,4 @@ Migration files should follow the pattern: `{version}_{description}.sql`
 
 ## Current Schema Version
 
-After applying all migrations, your database should be at version: **006**
+After applying all migrations, your database should be at version: **008**

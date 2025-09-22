@@ -15,7 +15,7 @@ from src.stores.test_log_store import TestLogStore
 logger = get_logger(__name__)
 
 
-class TestLogData(BaseModel):
+class LogData(BaseModel):
     """Service layer representation of a test log."""
 
     id: str = Field(..., description="Test log ID")
@@ -32,8 +32,20 @@ class TestLogData(BaseModel):
     user_message: str = Field(..., description="User message used")
     tools: Optional[List[Dict]] = Field(None, description="Tools configuration used")
     llm_response: Optional[str] = Field(None, description="LLM response text")
+    response_example: Optional[str] = Field(
+        None, description="Response example captured with the log"
+    )
+    response_example_vector: Optional[List[float]] = Field(
+        None, description="Embedding captured from the response example"
+    )
     response_time_ms: Optional[int] = Field(
         None, description="Response time in milliseconds"
+    )
+    similarity_score: float = Field(
+        0.0, description="Cosine similarity vs. the test case example"
+    )
+    is_passed: bool = Field(
+        False, description="Indicates whether the similarity met the threshold"
     )
     status: str = Field(..., description="Execution status")
     error_message: Optional[str] = Field(None, description="Error message if failed")
@@ -48,13 +60,13 @@ class TestLogData(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TestLogService:
+class LogService:
     """Service class for test log business logic."""
 
     def __init__(self):
         self.store = TestLogStore()
 
-    def get_test_log(self, log_id: str) -> Optional[TestLogData]:
+    def get_test_log(self, log_id: str) -> Optional[LogData]:
         """
         Get a test log by ID.
 
@@ -70,7 +82,7 @@ class TestLogService:
                 logger.debug(f"Test log not found: {log_id}")
                 return None
 
-            return TestLogData(
+            return LogData(
                 id=test_log.id,
                 test_case_id=test_log.test_case_id,
                 agent_id=test_log.agent_id,
@@ -81,7 +93,11 @@ class TestLogService:
                 user_message=test_log.user_message,
                 tools=test_log.tools,
                 llm_response=test_log.llm_response,
+                response_example=test_log.response_example,
+                response_example_vector=test_log.response_example_vector,
                 response_time_ms=test_log.response_time_ms,
+                similarity_score=test_log.similarity_score,
+                is_passed=test_log.is_passed,
                 status=test_log.status,
                 error_message=test_log.error_message,
                 created_at=test_log.created_at,
@@ -93,7 +109,7 @@ class TestLogService:
 
     def get_logs_by_test_case(
         self, test_case_id: str, limit: int = 100, offset: int = 0
-    ) -> List[TestLogData]:
+    ) -> List[LogData]:
         """
         Get test logs for a specific test case.
 
@@ -111,7 +127,7 @@ class TestLogService:
             )
 
             return [
-                TestLogData(
+                LogData(
                     id=log.id,
                     test_case_id=log.test_case_id,
                     agent_id=log.agent_id,
@@ -122,7 +138,11 @@ class TestLogService:
                     user_message=log.user_message,
                     tools=log.tools,
                     llm_response=log.llm_response,
+                    response_example=log.response_example,
+                    response_example_vector=log.response_example_vector,
                     response_time_ms=log.response_time_ms,
+                    similarity_score=log.similarity_score,
+                    is_passed=log.is_passed,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -139,7 +159,7 @@ class TestLogService:
         regression_test_id: str,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[TestLogData]:
+    ) -> List[LogData]:
         """Return logs produced by a specific regression test."""
 
         try:
@@ -150,7 +170,7 @@ class TestLogService:
             )
 
             return [
-                TestLogData(
+                LogData(
                     id=log.id,
                     test_case_id=log.test_case_id,
                     agent_id=log.agent_id,
@@ -161,7 +181,11 @@ class TestLogService:
                     user_message=log.user_message,
                     tools=log.tools,
                     llm_response=log.llm_response,
+                    response_example=log.response_example,
+                    response_example_vector=log.response_example_vector,
                     response_time_ms=log.response_time_ms,
+                    similarity_score=log.similarity_score,
+                    is_passed=log.is_passed,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -175,7 +199,7 @@ class TestLogService:
             )
             raise
 
-    def get_all_logs(self, limit: int = 100, offset: int = 0) -> List[TestLogData]:
+    def get_all_logs(self, limit: int = 100, offset: int = 0) -> List[LogData]:
         """
         Get all test logs with pagination.
 
@@ -190,7 +214,7 @@ class TestLogService:
             test_logs = self.store.get_all(limit=limit, offset=offset)
 
             return [
-                TestLogData(
+                LogData(
                     id=log.id,
                     test_case_id=log.test_case_id,
                     agent_id=log.agent_id,
@@ -201,7 +225,11 @@ class TestLogService:
                     user_message=log.user_message,
                     tools=log.tools,
                     llm_response=log.llm_response,
+                    response_example=log.response_example,
+                    response_example_vector=log.response_example_vector,
                     response_time_ms=log.response_time_ms,
+                    similarity_score=log.similarity_score,
+                    is_passed=log.is_passed,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -220,7 +248,7 @@ class TestLogService:
         offset: int = 0,
         agent_id: Optional[str] = None,
         regression_test_id: Optional[str] = None,
-    ) -> List[TestLogData]:
+    ) -> List[LogData]:
         """
         Get test logs filtered by status.
 
@@ -242,7 +270,7 @@ class TestLogService:
             )
 
             return [
-                TestLogData(
+                LogData(
                     id=log.id,
                     test_case_id=log.test_case_id,
                     agent_id=log.agent_id,
@@ -253,7 +281,11 @@ class TestLogService:
                     user_message=log.user_message,
                     tools=log.tools,
                     llm_response=log.llm_response,
+                    response_example=log.response_example,
+                    response_example_vector=log.response_example_vector,
                     response_time_ms=log.response_time_ms,
+                    similarity_score=log.similarity_score,
+                    is_passed=log.is_passed,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -265,7 +297,7 @@ class TestLogService:
             logger.error(f"Failed to get logs by status {status}: {e}")
             raise
 
-    def get_success_logs(self, limit: int = 100, offset: int = 0) -> List[TestLogData]:
+    def get_success_logs(self, limit: int = 100, offset: int = 0) -> List[LogData]:
         """
         Get successful test logs.
 
@@ -278,7 +310,7 @@ class TestLogService:
         """
         return self.get_logs_by_status("success", limit=limit, offset=offset)
 
-    def get_failed_logs(self, limit: int = 100, offset: int = 0) -> List[TestLogData]:
+    def get_failed_logs(self, limit: int = 100, offset: int = 0) -> List[LogData]:
         """
         Get failed test logs.
 
@@ -299,7 +331,7 @@ class TestLogService:
         regression_test_id: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[TestLogData]:
+    ) -> List[LogData]:
         """
         Get test logs with combined filters.
 
@@ -323,7 +355,7 @@ class TestLogService:
             )
 
             return [
-                TestLogData(
+                LogData(
                     id=log.id,
                     test_case_id=log.test_case_id,
                     agent_id=log.agent_id,
@@ -334,7 +366,11 @@ class TestLogService:
                     user_message=log.user_message,
                     tools=log.tools,
                     llm_response=log.llm_response,
+                    response_example=log.response_example,
+                    response_example_vector=log.response_example_vector,
                     response_time_ms=log.response_time_ms,
+                    similarity_score=log.similarity_score,
+                    is_passed=log.is_passed,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -419,4 +455,4 @@ class TestLogService:
             }
 
 
-__all__ = ["TestLogService"]
+__all__ = ["LogService"]

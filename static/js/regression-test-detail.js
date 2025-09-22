@@ -315,6 +315,12 @@ async function renderRegressionLogs(logs) {
             const llmResponseEncoded = encodeTooltipPayload(rawLlmResponse);
             const llmResponseFallback = encodeTooltipPayload('No LLM response captured');
 
+            const similarityValue = formatSimilarityScore(log.similarity_score);
+            const similarityBadge = similarityValue === '—'
+                ? ''
+                : `<span class=\"badge bg-info ms-2\" title=\"Similarity score\">${escapeHtml(similarityValue)}</span>`;
+            const passBadge = formatPassBadge(log.is_passed);
+
             const executedAt = formatDate(log.created_at);
 
             return `
@@ -332,6 +338,12 @@ async function renderRegressionLogs(logs) {
                         <span class="${llmResponseClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true" data-tooltip-content="${llmResponseEncoded}" data-tooltip-fallback="${llmResponseFallback}">
                             ${llmResponseContent}
                         </span>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column align-items-start gap-1">
+                            ${passBadge}
+                            ${similarityBadge}
+                        </div>
                     </td>
                     <td>
                         <div class="status-meta mb-1">
@@ -419,6 +431,24 @@ function formatResponseTime(value) {
         return '—';
     }
     return `${value}ms`;
+}
+
+function formatSimilarityScore(value) {
+    if (value === null || value === undefined) {
+        return '—';
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return '—';
+    }
+    return numeric.toFixed(2);
+}
+
+function formatPassBadge(isPassed) {
+    if (isPassed) {
+        return '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>';
+    }
+    return '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
 }
 
 async function loadTestCaseDetails(testCaseId) {

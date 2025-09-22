@@ -14,13 +14,13 @@ from src.api.v1.schemas.responses import RegressionTestResponse, TestLogResponse
 from src.core.logger import get_logger
 from src.services.regression_test_service import RegressionTestService
 from src.services.task_dispatcher import BackgroundTaskRegressionDispatcher
-from src.services.test_log_service import TestLogService
+from src.services.test_log_service import LogService
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/regression-tests", tags=["regression-tests"])
 regression_service = RegressionTestService()
-test_log_service = TestLogService()
+test_log_service = LogService()
 
 
 @router.post("/", response_model=RegressionTestResponse)

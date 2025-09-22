@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import JSON, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseDBModel
@@ -48,7 +49,18 @@ class TestLog(BaseDBModel):
 
     # Output data
     llm_response: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    response_example: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    response_example_vector: Mapped[Optional[List[float]]] = mapped_column(
+        ARRAY(DOUBLE_PRECISION), nullable=True
+    )
     response_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    llm_response_vector: Mapped[Optional[List[float]]] = mapped_column(
+        ARRAY(DOUBLE_PRECISION), nullable=True
+    )
+    similarity_score: Mapped[float] = mapped_column(
+        DOUBLE_PRECISION, nullable=False, default=0
+    )
+    is_passed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Execution status (synchronous execution: success or failed)
     status: Mapped[str] = mapped_column(String(20), default="success", nullable=False)

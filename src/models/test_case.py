@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import JSON, Boolean, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseDBModel
@@ -44,6 +45,10 @@ class TestCase(BaseDBModel):
     # Parsed key components for display and replay
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     last_user_message: Mapped[str] = mapped_column(Text, nullable=False)
+    response_example: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    response_example_vector: Mapped[Optional[List[float]]] = mapped_column(
+        ARRAY(DOUBLE_PRECISION), nullable=True
+    )
 
     # Soft delete flag
     is_deleted: Mapped[bool] = mapped_column(

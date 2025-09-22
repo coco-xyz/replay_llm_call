@@ -9,7 +9,7 @@ from typing import List, Literal, Optional
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-STATIC_ASSET_VERSION = "202509221245"
+STATIC_ASSET_VERSION = "202509222151"
 
 
 class Settings(BaseSettings):
@@ -132,6 +132,9 @@ class Settings(BaseSettings):
     ai__openrouter_api_key: Optional[SecretStr] = Field(
         default=None, description="OpenRouter API key"
     )
+    ai__jina_api_key: Optional[SecretStr] = Field(
+        default=None, description="Jina AI embeddings API key"
+    )
 
     # Model configurations
     ai__default_model__provider: str = Field(
@@ -147,6 +150,24 @@ class Settings(BaseSettings):
     )
     ai__demo_agent__model_name: str = Field(
         default="openai/gpt-4o-mini", description="Model name for demo agent"
+    )
+
+    ai__jina_embeddings__base_url: str = Field(
+        default="https://api.jina.ai/v1",
+        description="Base URL for Jina embeddings API",
+    )
+    ai__jina_embeddings__model: str = Field(
+        default="jina-embeddings-v3", description="Embedding model to request from Jina"
+    )
+    ai__jina_embeddings__task: str = Field(
+        default="text-matching", description="Embedding task parameter for Jina API"
+    )
+
+    test_logs__similarity_threshold: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Similarity score threshold to mark test logs as passed",
     )
 
     # Add more business-specific agents as needed:

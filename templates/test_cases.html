@@ -341,7 +341,8 @@
             <thead>
                 <tr>
                     <th style="width: 20%">Name</th>
-                    <th style="width: 56%">User Message</th>
+                    <th style="width: 28%">User Message</th>
+                    <th style="width: 28%">Response Example</th>
                     <th style="width: 14%">Created</th>
                     <th style="width: 10%" class="text-end">Actions</th>
                 </tr>
@@ -411,6 +412,12 @@
                             placeholder='Paste your logfire raw data JSON here...'></textarea>
                         <div class="form-text">Paste the complete logfire raw data JSON</div>
                     </div>
+                    <div class="mb-3">
+                        <label for="responseExample" class="form-label">Response Example</label>
+                        <textarea class="form-control" id="responseExample" rows="4"
+                            placeholder="Enter an example LLM response for similarity checks..."></textarea>
+                        <div class="form-text">Stored for semantic comparisons; leave blank if unavailable.</div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -449,10 +456,17 @@
                             <option value="">Select an agent...</option>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label for="editResponseExample" class="form-label">Response Example</label>
+                        <textarea class="form-control" id="editResponseExample" rows="4"
+                            placeholder="Update the example LLM response..."></textarea>
+                        <div class="form-text">Used for similarity scoring when future logs are generated.</div>
+                    </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>Note:</strong> Update the agent to hand off this test case to a different model
-                        configuration. Other test case properties (system prompt, user message, etc.) remain read-only.
+                        configuration and adjust the response example as needed. Other parsed properties (system prompt,
+                        user message, etc.) remain read-only here.
                     </div>
                 </form>
             </div>

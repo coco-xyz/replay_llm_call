@@ -21,6 +21,7 @@ def _build_test_case(**overrides):
         "model_settings": {"temperature": 0.2},
         "system_prompt": "system",
         "last_user_message": "user",
+        "response_example": None,
         "is_deleted": False,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),

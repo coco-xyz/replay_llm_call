@@ -82,6 +82,21 @@
         transform: translateY(-1px);
     }
 
+    .btn-outline-primary {
+        color: var(--primary-color);
+        border-color: var(--primary-color);
+        font-weight: 500;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+    }
+
     .btn-success {
         background-color: var(--success-color);
         border-color: var(--success-color);
@@ -197,6 +212,9 @@
         </div>
         <div id="actionButtons" class="d-none">
             <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" onclick="editTestCase()">
+                    <i class="fas fa-edit me-2"></i>Edit Test Case
+                </button>
                 <button type="button" class="btn btn-outline-secondary" onclick="viewTestLogs()">
                     <i class="fas fa-history me-2"></i>View Test Logs
                 </button>
@@ -231,6 +249,56 @@
         <!-- Content will be loaded here -->
     </div>
 </div>
+
+<!-- Edit Test Case Modal -->
+<div class="modal fade" id="editTestCaseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Test Case</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTestCaseForm">
+                    <input type="hidden" id="editTestCaseId">
+                    <div class="mb-3">
+                        <label for="editTestCaseName" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="editTestCaseName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTestCaseDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editTestCaseDescription" rows="4"
+                            placeholder="Enter a description for this test case..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTestCaseAgent" class="form-label">Agent *</label>
+                        <select class="form-select" id="editTestCaseAgent" required>
+                            <option value="">Select an agent...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editResponseExample" class="form-label">Response Example</label>
+                        <textarea class="form-control" id="editResponseExample" rows="4"
+                            placeholder="Update the example LLM response..."></textarea>
+                        <div class="form-text">Used for similarity scoring when future logs are generated.</div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Update the agent to hand off this test case to a different model
+                        configuration and adjust the response example as needed. Other parsed properties (system prompt,
+                        user message, etc.) remain read-only here.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateTestCase()">
+                    <i class="fas fa-save me-2"></i>Update Test Case
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -240,6 +308,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         loadTestCaseDetails();
+        loadAgents(); // Load agents for edit functionality
     });
 
     async function loadTestCaseDetails() {
@@ -391,28 +460,13 @@
                                         </tr>
                                         <tr>
                                             <td>Model Settings:</td>
-                                            <td>${testCase.model_settings !== null && testCase.model_settings !== undefined ? `<pre class="bg-light p-2 rounded"><code>${escapeHtml(JSON.stringify(testCase.model_settings, null, 2))}</code></pre>` : '<span class="text-muted">Not specified</span>'}</td>
+                                            <td>${testCase.model_settings !== null && testCase.model_settings !== undefined ? `<pre class=\"bg-light p-2 rounded\"><code>${escapeHtml(JSON.stringify(testCase.model_settings, null, 2))}</code></pre>` : '<span class=\"text-muted\">Not specified</span>'}</td>
                                         </tr>
                                     </table>
                                 </div>
                             </div>
 
-                            <!-- Middle Messages -->
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <i class="fas fa-comments me-2"></i>Middle Messages
-                                </div>
-                                <div class="card-body">
-                                    <div style="max-height: 400px; overflow-y: auto;">
-                                        ${formatMiddleMessages(testCase.middle_messages)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Column -->
-                        <div class="col-md-6">
-                            <!-- System Prompt -->
+                            <!-- System Prompt (moved under Basic Information) -->
                             <div class="card mb-4">
                                 <div class="card-header">
                                     <i class="fas fa-terminal me-2"></i>System Prompt
@@ -422,17 +476,7 @@
                                 </div>
                             </div>
 
-                            <!-- User Message -->
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <i class="fas fa-comment me-2"></i>User Message
-                                </div>
-                                <div class="card-body">
-                                    <div class="code-block">${escapeHtml(testCase.last_user_message || 'No user message provided')}</div>
-                                </div>
-                            </div>
-
-                            <!-- Tools Configuration -->
+                            <!-- Tools Configuration (moved under System Prompt) -->
                             ${testCase.tools && testCase.tools.length > 0 ? `
                                 <div class="card mb-4">
                                     <div class="card-header">
@@ -471,6 +515,43 @@
                                     </div>
                                 </div>
                             `}
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="col-md-6">
+                            <!-- User Message -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <i class="fas fa-comment me-2"></i>User Message
+                                </div>
+                                <div class="card-body">
+                                    <div class="code-block">${escapeHtml(testCase.last_user_message || 'No user message provided')}</div>
+                                </div>
+                            </div>
+
+                            <!-- Response Example -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <i class="fas fa-reply me-2"></i>Response Example
+                                </div>
+                                <div class="card-body">
+                                    ${testCase.response_example
+                ? `<div class=\"code-block\">${escapeHtml(testCase.response_example)}</div>`
+                : '<p class=\"text-muted mb-0\">No response example recorded</p>'}
+                                </div>
+                            </div>
+
+                            <!-- Middle Messages (moved below Response Example) -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <i class="fas fa-comments me-2"></i>Middle Messages
+                                </div>
+                                <div class="card-body">
+                                    <div style="max-height: 400px; overflow-y: auto;">
+                                        ${formatMiddleMessages(testCase.middle_messages)}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -523,6 +604,44 @@
         }
     }
 
+    async function editTestCase() {
+        if (!currentTestCase) return;
+
+        try {
+            // Load agents if not already loaded
+            if (!window.agents || window.agents.length === 0) {
+                await loadAgents();
+            }
+
+            // Populate edit form
+            document.getElementById('editTestCaseId').value = currentTestCase.id;
+            document.getElementById('editTestCaseName').value = currentTestCase.name;
+            document.getElementById('editTestCaseDescription').value = currentTestCase.description || '';
+            document.getElementById('editResponseExample').value = currentTestCase.response_example || '';
+
+            // Populate agent select
+            const editAgentSelect = document.getElementById('editTestCaseAgent');
+            editAgentSelect.innerHTML = '<option value="">Select an agent...</option>';
+            window.agents.forEach(agent => {
+                const option = document.createElement('option');
+                option.value = agent.id;
+                option.textContent = agent.name;
+                if (agent.id === currentTestCase.agent_id) {
+                    option.selected = true;
+                }
+                editAgentSelect.appendChild(option);
+            });
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('editTestCaseModal'));
+            modal.show();
+
+        } catch (error) {
+            console.error('Error loading edit form:', error);
+            alert('Error loading edit form: ' + error.message);
+        }
+    }
+
     async function deleteTestCase() {
         if (!currentTestCase) return;
 
@@ -547,6 +666,89 @@
             console.error('Error deleting test case:', error);
             alert('Error deleting test case: ' + error.message);
         }
+    }
+
+    // Global variable to store agents
+    window.agents = [];
+
+    async function loadAgents() {
+        try {
+            const response = await fetch('/v1/api/agents');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            window.agents = await response.json();
+        } catch (error) {
+            console.error('Error loading agents:', error);
+            window.agents = [];
+        }
+    }
+
+    async function updateTestCase() {
+        const testCaseId = document.getElementById('editTestCaseId').value;
+        const name = document.getElementById('editTestCaseName').value.trim();
+        const description = document.getElementById('editTestCaseDescription').value.trim();
+        const agentId = document.getElementById('editTestCaseAgent').value;
+        const responseExample = document.getElementById('editResponseExample').value.trim();
+
+        if (!name || !agentId) {
+            showAlert('Please provide a name and agent for the test case', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/v1/api/test-cases/${testCaseId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description || null,
+                    agent_id: agentId || null,
+                    response_example: responseExample || null
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+            }
+
+            showAlert('Test case updated successfully!', 'success');
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editTestCaseModal'));
+            modal.hide();
+
+            // Reload test case details
+            loadTestCaseDetails();
+
+        } catch (error) {
+            console.error('Error updating test case:', error);
+            showAlert('Error updating test case: ' + error.message, 'danger');
+        }
+    }
+
+    function showAlert(message, type = 'info') {
+        // Create alert element
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        // Insert at the top of the container
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
     }
 </script>
 {% endblock %}

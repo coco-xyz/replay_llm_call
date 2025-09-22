@@ -197,170 +197,173 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container py-4">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
-            <div class="mb-3 mb-lg-0">
-                <h1 class="page-title">
-                    <i class="fas fa-vial-circle-check me-3"></i>Regression Test Details
-                </h1>
-                <p class="page-subtitle mb-0">Inspect overrides, execution stats, and generated logs</p>
-            </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-outline-primary" id="refreshDetailBtn">
-                    <i class="fas fa-rotate me-2"></i>Refresh
-                </button>
-                <a class="btn btn-primary" id="openLogsBtn" target="_blank">
-                    <i class="fas fa-scroll me-2"></i>Open Logs
-                </a>
-            </div>
+<div class="container py-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
+        <div class="mb-3 mb-lg-0">
+            <h1 class="page-title">
+                <i class="fas fa-vial-circle-check me-3"></i>Regression Test Details
+            </h1>
+            <p class="page-subtitle mb-0">Inspect overrides, execution stats, and generated logs</p>
         </div>
-
-        <div id="loadingSpinner" class="loading-state">
-            <div class="loading-spinner">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <span>Loading regression test details...</span>
-            </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" id="refreshDetailBtn">
+                <i class="fas fa-rotate me-2"></i>Refresh
+            </button>
+            <a class="btn btn-primary" id="openLogsBtn" target="_blank">
+                <i class="fas fa-scroll me-2"></i>Open Logs
+            </a>
         </div>
+    </div>
 
-        <div id="errorMessage" class="alert alert-danger d-none" role="alert">
-            <i class="fas fa-circle-exclamation me-2"></i>
-            <span id="errorText"></span>
+    <div id="loadingSpinner" class="loading-state">
+        <div class="loading-spinner">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span>Loading regression test details...</span>
         </div>
+    </div>
 
-        <div id="regressionContent" class="d-none">
-            <div class="row g-4 mb-4">
-                <div class="col-lg-6">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>Execution Summary</span>
-                            <span id="statusBadge"></span>
-                        </div>
-                        <div class="card-body p-0">
-                            <table class="table mb-0 info-table">
-                                <tbody>
-                                    <tr>
-                                        <td>Regression ID</td>
-                                        <td><code id="regressionId"></code></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Agent</td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <i class="fas fa-user-astronaut text-primary"></i>
-                                                <span id="agentName"></span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Started</td>
-                                        <td id="startedAt"></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Completed</td>
-                                        <td id="completedAt"></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Totals</td>
-                                        <td>
-                                            <span class="badge bg-primary me-2">Total: <span id="totalCount"></span></span>
-                                            <span class="badge bg-success me-2">Passed: <span id="successCount"></span></span>
-                                            <span class="badge bg-danger">Failed: <span id="failedCount"></span></span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="card h-100">
-                        <div class="card-header">Override Parameters</div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <h6 class="text-uppercase text-muted small mb-1">Model Name</h6>
-                                <div class="fw-semibold" id="overrideModel"></div>
-                            </div>
-                            <div class="mb-3">
-                                <h6 class="text-uppercase text-muted small mb-1">System Prompt</h6>
-                                <div class="llm-response" id="overridePrompt"></div>
-                            </div>
-                            <div>
-                                <h6 class="text-uppercase text-muted small mb-1">Model Settings JSON</h6>
-                                <div class="llm-response" id="overrideSettings"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div id="errorMessage" class="alert alert-danger d-none" role="alert">
+        <i class="fas fa-circle-exclamation me-2"></i>
+        <span id="errorText"></span>
+    </div>
 
-            <div id="errorSection" class="alert alert-danger d-none" role="alert">
-                <i class="fas fa-triangle-exclamation me-2"></i>
-                <span id="errorMessageText"></span>
-            </div>
-
-            <div class="card logs-card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Associated Test Logs</span>
-                    <button class="btn btn-sm btn-outline-primary" id="refreshLogsBtn">
-                        <i class="fas fa-rotate me-2"></i>Refresh Logs
-                    </button>
-                </div>
-                <div class="card-body p-0">
-                    <div id="logsLoadingSpinner" class="loading-state py-4 d-none">
-                        <div class="loading-spinner">
-                            <div class="spinner-border" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <span>Loading associated test logs...</span>
-                        </div>
+    <div id="regressionContent" class="d-none">
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Execution Summary</span>
+                        <span id="statusBadge"></span>
                     </div>
-                    <div id="logsEmptyState" class="logs-empty-state d-none">
-                        <i class="fas fa-inbox fa-2x mb-2"></i>
-                        <div>No associated test logs yet</div>
-                        <div class="text-muted small">Run this regression again to capture fresh logs.</div>
-                    </div>
-                    <div id="logsTableWrapper" class="table-responsive d-none">
-                        <table class="table mb-0">
-                            <thead>
+                    <div class="card-body p-0">
+                        <table class="table mb-0 info-table">
+                            <tbody>
                                 <tr>
-                                    <th style="width: 10%">Test Case</th>
-                                    <th style="width: 30%">User Message</th>
-                                    <th style="width: 30%">LLM Response</th>
-                                    <th style="width: 14%">Executed At</th>
-                                    <th style="width: 10%" class="text-end">Actions</th>
+                                    <td>Regression ID</td>
+                                    <td><code id="regressionId"></code></td>
                                 </tr>
-                            </thead>
-                            <tbody id="regressionLogsTable"></tbody>
+                                <tr>
+                                    <td>Agent</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-user-astronaut text-primary"></i>
+                                            <span id="agentName"></span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Started</td>
+                                    <td id="startedAt"></td>
+                                </tr>
+                                <tr>
+                                    <td>Completed</td>
+                                    <td id="completedAt"></td>
+                                </tr>
+                                <tr>
+                                    <td>Totals</td>
+                                    <td>
+                                        <span class="badge bg-primary me-2">Total: <span id="totalCount"></span></span>
+                                        <span class="badge bg-success me-2">Passed: <span
+                                                id="successCount"></span></span>
+                                        <span class="badge bg-danger">Failed: <span id="failedCount"></span></span>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
-                <div id="logsPagination" class="card-footer logs-pagination d-flex justify-content-between align-items-center d-none">
-                    <div class="text-muted small" id="logsPageStatus"></div>
-                    <nav aria-label="Associated log pagination">
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item" id="logsPrevPage">
-                                <a class="page-link" href="#" id="logsPrevPageBtn">Previous</a>
-                            </li>
-                            <li class="page-item active">
-                                <span class="page-link" id="logsCurrentPage">1</span>
-                            </li>
-                            <li class="page-item" id="logsNextPage">
-                                <a class="page-link" href="#" id="logsNextPageBtn">Next</a>
-                            </li>
-                        </ul>
-                    </nav>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">Override Parameters</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="text-uppercase text-muted small mb-1">Model Name</h6>
+                            <div class="fw-semibold" id="overrideModel"></div>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-uppercase text-muted small mb-1">System Prompt</h6>
+                            <div class="llm-response" id="overridePrompt"></div>
+                        </div>
+                        <div>
+                            <h6 class="text-uppercase text-muted small mb-1">Model Settings JSON</h6>
+                            <div class="llm-response" id="overrideSettings"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div id="errorSection" class="alert alert-danger d-none" role="alert">
+            <i class="fas fa-triangle-exclamation me-2"></i>
+            <span id="errorMessageText"></span>
+        </div>
+
+        <div class="card logs-card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Associated Test Logs</span>
+                <button class="btn btn-sm btn-outline-primary" id="refreshLogsBtn">
+                    <i class="fas fa-rotate me-2"></i>Refresh Logs
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div id="logsLoadingSpinner" class="loading-state py-4 d-none">
+                    <div class="loading-spinner">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span>Loading associated test logs...</span>
+                    </div>
+                </div>
+                <div id="logsEmptyState" class="logs-empty-state d-none">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <div>No associated test logs yet</div>
+                    <div class="text-muted small">Run this regression again to capture fresh logs.</div>
+                </div>
+                <div id="logsTableWrapper" class="table-responsive d-none">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 10%">Test Case</th>
+                                <th style="width: 23%">User Message</th>
+                                <th style="width: 23%">LLM Response</th>
+                                <th style="width: 20%">Passed</th>
+                                <th style="width: 12%">Executed At</th>
+                                <th style="width: 12%" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="regressionLogsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="logsPagination"
+                class="card-footer logs-pagination d-flex justify-content-between align-items-center d-none">
+                <div class="text-muted small" id="logsPageStatus"></div>
+                <nav aria-label="Associated log pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" id="logsPrevPage">
+                            <a class="page-link" href="#" id="logsPrevPageBtn">Previous</a>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link" id="logsCurrentPage">1</span>
+                        </li>
+                        <li class="page-item" id="logsNextPage">
+                            <a class="page-link" href="#" id="logsNextPageBtn">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-    <script>
-            const regressionId = '{{ regression_test_id }}';
-        </script>
-        <script src="/static/js/hover-tooltips.js?v={{ static_asset_version }}"></script>
-        <script src="/static/js/regression-test-detail.js?v={{ static_asset_version }}"></script>
+<script>
+    const regressionId = '{{ regression_test_id }}';
+</script>
+<script src="/static/js/hover-tooltips.js?v={{ static_asset_version }}"></script>
+<script src="/static/js/regression-test-detail.js?v={{ static_asset_version }}"></script>
 {% endblock %}

@@ -27,6 +27,9 @@ class TestCaseResponse(BaseModel):
     )
     system_prompt: str = Field(..., description="System prompt")
     last_user_message: str = Field(..., description="Last user message")
+    response_example: Optional[str] = Field(
+        None, description="Example LLM response for similarity comparisons"
+    )
     agent_id: str = Field(..., description="Owning agent ID")
     agent: Optional[AgentSummaryResponse] = Field(
         None, description="Owning agent summary"

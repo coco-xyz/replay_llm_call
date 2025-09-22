@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.logger import get_logger
+from src.core.embedding import JinaEmbeddingClient
 from src.models import TestCase
 from src.services.agent_service import AgentService, AgentSummary
 from src.services.llm_parser_service import parse_llm_raw_data, validate_raw_data_format
@@ -27,6 +28,9 @@ class TestCaseCreateData(BaseModel):
     raw_data: Dict = Field(..., description="Raw logfire data")
     description: Optional[str] = Field(None, description="Test case description")
     agent_id: str = Field(..., description="Agent that owns this test case")
+    response_example: Optional[str] = Field(
+        None, description="Example LLM response for similarity comparisons"
+    )
 
 
 class TestCaseUpdateData(BaseModel):
@@ -40,6 +44,9 @@ class TestCaseUpdateData(BaseModel):
     system_prompt: Optional[str] = Field(None, description="Updated system prompt")
     last_user_message: Optional[str] = Field(None, description="Updated user message")
     agent_id: Optional[str] = Field(None, description="Updated owning agent")
+    response_example: Optional[str] = Field(
+        None, description="Updated example LLM response"
+    )
 
 
 class TestCaseData(BaseModel):
@@ -55,6 +62,9 @@ class TestCaseData(BaseModel):
     model_settings: Optional[Dict] = Field(None, description="Model settings JSON")
     system_prompt: str = Field(..., description="System prompt")
     last_user_message: str = Field(..., description="Last user message")
+    response_example: Optional[str] = Field(
+        None, description="Example LLM response for similarity comparisons"
+    )
     agent_id: str = Field(..., description="Owning agent identifier")
     agent: Optional[AgentSummary] = Field(
         None, description="Summary information about the owning agent"
@@ -74,6 +84,7 @@ class TestCaseService:
     def __init__(self):
         self.store = TestCaseStore()
         self.agent_service = AgentService()
+        self.embedding_client = JinaEmbeddingClient()
 
     def create_test_case(self, request: TestCaseCreateData) -> TestCaseData:
         """
@@ -106,6 +117,13 @@ class TestCaseService:
                 logger.error("Invalid agent specified: %s", agent_error)
                 raise
 
+            response_example = self._normalize_optional_text(request.response_example)
+            response_example_vector = None
+            if response_example:
+                response_example_vector = self.embedding_client.embed_text(
+                    response_example
+                )
+
             # Create test case model
             test_case = TestCase(
                 id=str(uuid.uuid4()),
@@ -119,6 +137,8 @@ class TestCaseService:
                 model_settings=parsed_data.model_settings,
                 system_prompt=parsed_data.system_prompt,
                 last_user_message=parsed_data.last_user_message,
+                response_example=response_example,
+                response_example_vector=response_example_vector,
                 is_deleted=False,
             )
 
@@ -263,6 +283,19 @@ class TestCaseService:
                 if request.last_user_message is not None:
                     test_case.last_user_message = request.last_user_message
 
+            if request.response_example is not None:
+                normalized_example = self._normalize_optional_text(
+                    request.response_example
+                )
+                if normalized_example:
+                    test_case.response_example = normalized_example
+                    test_case.response_example_vector = (
+                        self.embedding_client.embed_text(normalized_example)
+                    )
+                else:
+                    test_case.response_example = None
+                    test_case.response_example_vector = None
+
             # Save changes
             updated_test_case = self.store.update(test_case)
 
@@ -378,12 +411,20 @@ class TestCaseService:
             model_settings=test_case.model_settings,
             system_prompt=test_case.system_prompt,
             last_user_message=test_case.last_user_message,
+            response_example=test_case.response_example,
             agent_id=test_case.agent_id,
             agent=agent_summary,
             is_deleted=test_case.is_deleted,
             created_at=test_case.created_at,
             updated_at=test_case.updated_at,
         )
+
+    @staticmethod
+    def _normalize_optional_text(value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned if cleaned else None
 
 
 __all__ = ["TestCaseService"]

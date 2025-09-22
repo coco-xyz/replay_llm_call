@@ -15,12 +15,12 @@ from src.api.v1.converters import (
 from src.api.v1.schemas.requests import TestExecutionRequest
 from src.api.v1.schemas.responses import TestExecutionResponse
 from src.core.logger import get_logger
-from src.services.test_execution_service import TestExecutionService
+from src.services.test_execution_service import ExecutionService
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/test-execution", tags=["test-execution"])
-test_execution_service = TestExecutionService()
+test_execution_service = ExecutionService()
 
 
 @router.post("/execute", response_model=TestExecutionResponse)

@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS test_cases (
     model_settings JSONB,
     system_prompt TEXT NOT NULL,
     last_user_message TEXT NOT NULL,
+    response_example TEXT,
+    response_example_vector DOUBLE PRECISION[],
     is_deleted BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -65,7 +67,12 @@ CREATE TABLE IF NOT EXISTS test_logs (
     user_message TEXT NOT NULL,
     tools JSONB,
     llm_response TEXT,
+    response_example TEXT,
+    response_example_vector DOUBLE PRECISION[],
     response_time_ms INTEGER,
+    llm_response_vector DOUBLE PRECISION[],
+    similarity_score DOUBLE PRECISION NOT NULL DEFAULT 0,
+    is_passed BOOLEAN NOT NULL DEFAULT FALSE,
     status VARCHAR(20) DEFAULT 'success' NOT NULL,
     error_message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -103,6 +110,8 @@ COMMENT ON COLUMN test_cases.model_name IS 'Model name used in original request'
 COMMENT ON COLUMN test_cases.model_settings IS 'Model settings JSON (temperature, max_tokens, top_p, etc.) from original LLM request';
 COMMENT ON COLUMN test_cases.system_prompt IS 'Extracted system prompt for display and replay';
 COMMENT ON COLUMN test_cases.last_user_message IS 'Extracted last user message for display and replay';
+COMMENT ON COLUMN test_cases.response_example IS 'Sample LLM response saved with the test case';
+COMMENT ON COLUMN test_cases.response_example_vector IS 'Embedding vector generated from the response example';
 COMMENT ON COLUMN test_cases.is_deleted IS 'Soft delete flag to hide test cases from listings without removing history';
 COMMENT ON COLUMN test_cases.agent_id IS 'Owning agent for this test case';
 
@@ -110,7 +119,12 @@ COMMENT ON COLUMN test_logs.system_prompt IS 'Actual system prompt used in execu
 COMMENT ON COLUMN test_logs.user_message IS 'Actual user message used in execution (may be modified)';
 COMMENT ON COLUMN test_logs.model_settings IS 'Model settings JSON (temperature, max_tokens, top_p, etc.) used during execution (may be modified)';
 COMMENT ON COLUMN test_logs.tools IS 'Actual tools used in execution (may be modified)';
+COMMENT ON COLUMN test_logs.response_example IS 'Response example captured from the test case when the log was created';
+COMMENT ON COLUMN test_logs.response_example_vector IS 'Embedding vector captured from the test case response example when the log was created';
 COMMENT ON COLUMN test_logs.status IS 'Execution status: success or failed';
 COMMENT ON COLUMN test_logs.response_time_ms IS 'Response time in milliseconds';
+COMMENT ON COLUMN test_logs.llm_response_vector IS 'Embedding vector generated from the recorded LLM response';
+COMMENT ON COLUMN test_logs.similarity_score IS 'Cosine similarity between LLM response and the test case response example';
+COMMENT ON COLUMN test_logs.is_passed IS 'Flag indicating whether the similarity met the acceptance threshold';
 COMMENT ON COLUMN test_logs.agent_id IS 'Agent associated with the executed test case';
 COMMENT ON COLUMN test_logs.regression_test_id IS 'Regression test run that generated this log';

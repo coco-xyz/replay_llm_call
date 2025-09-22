@@ -288,6 +288,28 @@ function formatResponseTime(value) {
     return `${value}ms`;
 }
 
+function formatSimilarityScore(value) {
+    if (value === null || value === undefined) {
+        return '—';
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return '—';
+    }
+    return numeric.toFixed(2);
+}
+
+function formatPassBadge(isPassed) {
+    if (isPassed) {
+        return '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>';
+    }
+    return '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
+}
+
+function formatPassStatus(isPassed) {
+    return isPassed ? 'Passed' : 'Failed';
+}
+
 function formatRegressionLabel(regressionId) {
     if (!regressionId) {
         return '<span class="text-muted">—</span>';
@@ -359,6 +381,11 @@ function displayTestLogs(logs) {
         const llmResponseContent = hasLlmResponse ? truncateText(rawLlmResponse, 160) : '—';
         const llmResponseEncoded = encodeTooltipPayload(rawLlmResponse);
         const llmResponseFallback = encodeTooltipPayload('No LLM response captured');
+        const similarityValue = formatSimilarityScore(log.similarity_score);
+        const similarityBadge = similarityValue === '—'
+            ? ''
+            : `<span class=\"badge bg-info\">${escapeHtml(similarityValue)}</span>`;
+        const passBadge = formatPassBadge(log.is_passed);
 
         return `
         <tr>
@@ -401,6 +428,10 @@ function displayTestLogs(logs) {
                       data-tooltip-content="${llmResponseEncoded}" data-tooltip-fallback="${llmResponseFallback}">
                     ${llmResponseContent}
                 </span>
+            </td>
+            <td>
+                <div class=\"d-flex flex-column align-items-start gap-1\">${passBadge}${similarityBadge ? `\n                    ${similarityBadge}` : ''}
+                </div>
             </td>
             <td>
                 <small class="text-muted">${formatDate(log.created_at)}</small>
@@ -465,6 +496,8 @@ async function viewLog(logId) {
                         <tr><td><strong>Agent:</strong></td><td>${formatAgentLabel(log.agent_id)}</td></tr>
                         <tr><td><strong>Regression:</strong></td><td>${formatRegressionLabel(log.regression_test_id)}</td></tr>
                         <tr><td><strong>Response Time:</strong></td><td>${formatResponseTime(log.response_time_ms)}</td></tr>
+                        <tr><td><strong>Similarity Score:</strong></td><td>${formatSimilarityScore(log.similarity_score)}</td></tr>
+                        <tr><td><strong>Passed:</strong></td><td>${formatPassStatus(log.is_passed)}</td></tr>
                         <tr><td><strong>Test Case:</strong></td><td>
                             <div>
                                 <a href="/test-cases/${log.test_case_id}" class="text-decoration-none" target="_blank">

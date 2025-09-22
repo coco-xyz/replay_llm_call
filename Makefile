@@ -339,6 +339,18 @@ version: ## Show project version
 	@echo "$(BLUE)Project version:$(RESET)"
 	@$(PYTHON_CMD) -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
 
+
+# Database Migration Commands
+.PHONY: check-migrations
+check-migrations: ## Check database migration status
+	@echo "$(BLUE)Checking database migrations...$(RESET)"
+	$(PYTHON_CMD) scripts/check_migrations.py
+
+.PHONY: run-migrations
+run-migrations: ## Apply database migrations
+	@echo "$(BLUE)Running database migrations...$(RESET)"
+	$(PYTHON_CMD) scripts/run_migrations.py
+
 # =============================================================================
 # Composite Commands
 # =============================================================================

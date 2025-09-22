@@ -34,6 +34,8 @@ def convert_test_execution_result_to_response(
         executed_at=result.executed_at,
         error_message=result.error_message,
         llm_response=result.llm_response,
+        similarity_score=result.similarity_score,
+        is_passed=result.is_passed,
         # Legacy fields for backward compatibility
         test_log=None,  # Can be populated if needed
         error=result.error_message,  # Legacy field mapping

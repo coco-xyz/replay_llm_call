@@ -10,7 +10,10 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
+from sklearn.metrics.pairwise import cosine_similarity
 
+from src.core.config import settings
+from src.core.embedding import JinaEmbeddingClient
 from src.core.logger import get_logger
 from src.models import TestLog
 from src.services.agent_service import AgentService
@@ -66,6 +69,8 @@ class ExecutionResult(BaseModel):
         None, description="Error message if execution failed"
     )
     llm_response: Optional[str] = Field(None, description="LLM response text")
+    similarity_score: Optional[float] = Field(None, description="Similarity score between response and example")
+    is_passed: Optional[bool] = Field(None, description="Whether the test passed based on similarity threshold")
 
     # Additional service-layer specific fields
     execution_context: Optional[Dict] = Field(
@@ -74,13 +79,15 @@ class ExecutionResult(BaseModel):
     performance_metrics: Optional[Dict] = Field(None, description="Performance metrics")
 
 
-class TestExecutionService:
+class ExecutionService:
     """Service class for test execution business logic."""
 
     def __init__(self):
         self.test_case_service = TestCaseService()
         self.test_log_store = TestLogStore()
         self.agent_service = AgentService()
+        self.embedding_client = JinaEmbeddingClient()
+        self.similarity_threshold = settings.test_logs__similarity_threshold
 
     async def execute_test(self, request: TestExecutionData) -> ExecutionResult:
         """
@@ -159,6 +166,35 @@ class TestExecutionService:
                 # Calculate response time
                 response_time_ms = int((time.time() - start_time) * 1000)
 
+                llm_response_vector: Optional[List[float]] = None
+                similarity_score: float = 0.0
+
+                if llm_response:
+                    try:
+                        llm_response_vector = await self.embedding_client.aembed_text(
+                            llm_response
+                        )
+                        example_vector = test_case.response_example_vector
+                        if example_vector and len(example_vector) == len(
+                            llm_response_vector
+                        ):
+                            similarity_score = self._compute_similarity(
+                                example_vector,
+                                llm_response_vector,
+                            )
+                        elif example_vector:
+                            logger.warning(
+                                "Embedding dimension mismatch for test case %s",
+                                request.test_case_id,
+                            )
+                    except Exception as embed_error:  # pragma: no cover - defensive
+                        logger.error(
+                            "Failed to compute embeddings for test log generation: %s",
+                            embed_error,
+                        )
+
+                is_passed = similarity_score >= self.similarity_threshold
+
                 # Create success log
                 test_log = TestLog(
                     id=str(uuid.uuid4()),
@@ -171,7 +207,12 @@ class TestExecutionService:
                     user_message=user_message,
                     tools=tools,
                     llm_response=llm_response,
+                    response_example=test_case.response_example,
+                    response_example_vector=test_case.response_example_vector,
                     response_time_ms=response_time_ms,
+                    llm_response_vector=llm_response_vector,
+                    similarity_score=similarity_score,
+                    is_passed=is_passed,
                     status="success",
                     error_message=None,
                 )
@@ -190,6 +231,8 @@ class TestExecutionService:
                     response_time_ms=response_time_ms,
                     error_message=None,
                     executed_at=saved_log.created_at,
+                    similarity_score=similarity_score,
+                    is_passed=is_passed,
                 )
 
             except Exception as llm_error:
@@ -209,7 +252,12 @@ class TestExecutionService:
                     user_message=user_message,
                     tools=tools,
                     llm_response=None,
+                    response_example=test_case.response_example,
+                    response_example_vector=test_case.response_example_vector,
                     response_time_ms=response_time_ms,
+                    llm_response_vector=None,
+                    similarity_score=0.0,
+                    is_passed=False,
                     status="failed",
                     error_message=error_message,
                 )
@@ -228,6 +276,8 @@ class TestExecutionService:
                     response_time_ms=response_time_ms,
                     error_message=error_message,
                     executed_at=saved_log.created_at,
+                    similarity_score=0.0,
+                    is_passed=False,
                 )
 
         except ValueError as e:
@@ -236,6 +286,13 @@ class TestExecutionService:
         except Exception as e:
             logger.error(f"Test execution service error: {e}")
             raise
+
+    @staticmethod
+    def _compute_similarity(
+        example_vector: List[float], response_vector: List[float]
+    ) -> float:
+        score = cosine_similarity([example_vector], [response_vector])[0][0]
+        return float(score)
 
     def execute_test_with_modifications(
         self,
@@ -330,4 +387,4 @@ class TestExecutionService:
             return {"error": str(e)}
 
 
-__all__ = ["TestExecutionService"]
+__all__ = ["ExecutionService"]

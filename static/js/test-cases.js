@@ -224,10 +224,22 @@ function displayTestCases(testCases) {
         const userMessageDisplay = hasUserMessage ? truncateText(userMessage, 120) : '—';
         const userMessageEncoded = encodeTooltipPayload(userMessage);
         const userMessageFallback = encodeTooltipPayload('No user message provided');
+        const responseExample = testCase.response_example || '';
+        const hasResponseExample = responseExample.trim().length > 0;
+        const responseExampleClass = hasResponseExample ? 'log-preview' : 'log-preview placeholder';
+        const responseExampleDisplay = hasResponseExample ? truncateText(responseExample, 120) : '—';
+        const responseExampleEncoded = encodeTooltipPayload(responseExample);
+        const responseExampleFallback = encodeTooltipPayload('No response example provided');
         const userMessageCell = `
             <span class="${userMessageClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
                   data-tooltip-content="${userMessageEncoded}" data-tooltip-fallback="${userMessageFallback}">
                 ${escapeHtml(userMessageDisplay)}
+            </span>
+        `;
+        const responseExampleCell = `
+            <span class="${responseExampleClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
+                  data-tooltip-content="${responseExampleEncoded}" data-tooltip-fallback="${responseExampleFallback}">
+                ${escapeHtml(responseExampleDisplay)}
             </span>
         `;
 
@@ -244,6 +256,9 @@ function displayTestCases(testCases) {
             </td>
             <td>
                 ${userMessageCell}
+            </td>
+            <td>
+                ${responseExampleCell}
             </td>
             <td>
                 <small class="text-muted">${formatDate(testCase.created_at)}</small>
@@ -291,6 +306,8 @@ function displayTestCases(testCases) {
 async function createTestCase() {
     const name = document.getElementById('testCaseName').value.trim();
     const description = document.getElementById('testCaseDescription').value.trim();
+    const responseExampleElement = document.getElementById('responseExample');
+    const responseExample = responseExampleElement ? responseExampleElement.value.trim() : '';
     const rawDataText = document.getElementById('rawData').value.trim();
     const agentSelect = document.getElementById('createTestCaseAgent');
     const agentId = agentSelect ? agentSelect.value : '';
@@ -318,7 +335,8 @@ async function createTestCase() {
                 name: name,
                 description: description || null,
                 raw_data: rawData,
-                agent_id: agentId
+                agent_id: agentId,
+                response_example: responseExample || null
             })
         });
 
@@ -358,6 +376,10 @@ async function editTestCase(testCaseId) {
         document.getElementById('editTestCaseId').value = testCase.id;
         document.getElementById('editTestCaseName').value = testCase.name;
         document.getElementById('editTestCaseDescription').value = testCase.description || '';
+        const editResponseExample = document.getElementById('editResponseExample');
+        if (editResponseExample) {
+            editResponseExample.value = testCase.response_example || '';
+        }
         const editAgentSelect = document.getElementById('editTestCaseAgent');
         if (editAgentSelect) {
             editAgentSelect.value = testCase.agent_id || '';
@@ -378,6 +400,7 @@ async function updateTestCase() {
     const name = document.getElementById('editTestCaseName').value.trim();
     const description = document.getElementById('editTestCaseDescription').value.trim();
     const agentId = document.getElementById('editTestCaseAgent').value;
+    const responseExample = document.getElementById('editResponseExample').value.trim();
 
     if (!name || !agentId) {
         showAlert('Please provide a name and agent for the test case', 'warning');
@@ -393,7 +416,8 @@ async function updateTestCase() {
             body: JSON.stringify({
                 name: name,
                 description: description || null,
-                agent_id: agentId || null
+                agent_id: agentId || null,
+                response_example: responseExample || null
             })
         });
 
@@ -618,15 +642,25 @@ async function viewTestCase(testCaseId) {
                     <div style="max-height: 300px; overflow-y: auto;">
                         ${formatMiddleMessages(testCase.middle_messages)}
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <h6>Last User Message</h6>
-                    <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">${escapeHtml(testCase.last_user_message)}</pre>
-                </div>
             </div>
-            ${testCase.tools && testCase.tools.length > 0 ? `
-            <div class="row mt-3">
-                <div class="col-12">
+            <div class="col-md-6">
+                <h6>Last User Message</h6>
+                <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">${escapeHtml(testCase.last_user_message)}</pre>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <h6>Response Example</h6>
+                ${testCase.response_example ? `
+                    <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">${escapeHtml(testCase.response_example)}</pre>
+                ` : `
+                    <p class="text-muted fst-italic mb-0">No response example recorded.</p>
+                `}
+            </div>
+        </div>
+        ${testCase.tools && testCase.tools.length > 0 ? `
+        <div class="row mt-3">
+            <div class="col-12">
                     <h6>Tools Configuration</h6>
                     <div class="accordion" id="toolsAccordion">
                         ${testCase.tools.map((tool, index) => `

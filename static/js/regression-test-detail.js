@@ -7,6 +7,8 @@
 const LOGS_PAGE_SIZE = 10;
 let logsPage = 1;
 let currentLogs = [];
+const testCaseCache = new Map();
+const pendingTestCaseRequests = new Map();
 
 window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
@@ -235,7 +237,7 @@ async function loadRegressionLogs() {
         }
 
         currentLogs = logs;
-        renderRegressionLogs(currentLogs);
+        await renderRegressionLogs(currentLogs);
         updateLogsPagination();
     } catch (error) {
         console.error('Error loading regression test logs:', error);
@@ -245,7 +247,7 @@ async function loadRegressionLogs() {
     }
 }
 
-function renderRegressionLogs(logs) {
+async function renderRegressionLogs(logs) {
     const tableWrapper = document.getElementById('logsTableWrapper');
     const tableBody = document.getElementById('regressionLogsTable');
     const emptyState = document.getElementById('logsEmptyState');
@@ -263,6 +265,13 @@ function renderRegressionLogs(logs) {
     emptyState.classList.add('d-none');
     tableWrapper.classList.remove('d-none');
 
+    const uniqueTestCaseIds = Array.from(
+        new Set(logs.map((log) => log.test_case_id).filter((id) => Boolean(id))),
+    );
+    if (uniqueTestCaseIds.length > 0) {
+        await Promise.all(uniqueTestCaseIds.map((id) => loadTestCaseDetails(id)));
+    }
+
     const rows = logs
         .map((log) => {
             const statusMeta = formatLogStatusMeta(log.status);
@@ -270,6 +279,19 @@ function renderRegressionLogs(logs) {
             const errorMessage = log.error_message
                 ? `<div class="text-danger small mt-1">${truncateText(log.error_message, 100)}</div>`
                 : '';
+
+            const testCase = log.test_case_id ? testCaseCache.get(log.test_case_id) : null;
+            const testCaseName = testCase?.name || log.test_case_id || 'Unknown Test Case';
+            const testCaseDescription = testCase?.description;
+            const testCaseLink = log.test_case_id
+                ? `/test-cases/${encodeURIComponent(log.test_case_id)}`
+                : null;
+            const testCaseNameMarkup = testCaseLink
+                ? `<a href="${testCaseLink}" class="text-decoration-none" target="_blank"><strong>${escapeHtml(testCaseName)}</strong></a>`
+                : `<strong>${escapeHtml(testCaseName)}</strong>`;
+            const descriptionMarkup = testCaseDescription
+                ? `<div class="text-muted small mt-1" title="${escapeHtml(testCaseDescription)}">${truncateText(testCaseDescription, 160)}</div>`
+                : '<div class="text-muted small mt-1">—</div>';
 
             const rawUserMessage = log.user_message || '';
             const hasUserMessage = rawUserMessage.trim().length > 0;
@@ -298,15 +320,8 @@ function renderRegressionLogs(logs) {
             return `
                 <tr>
                     <td>
-                        <div class="status-meta">
-                            <span class="badge ${statusMeta.badgeClass}">
-                                <i class="fas ${statusMeta.icon} me-1"></i>${statusMeta.label}
-                            </span>
-                            <span class="response-time">
-                                <i class="fas fa-stopwatch"></i>${responseTime}
-                            </span>
-                        </div>
-                        ${errorMessage}
+                        ${testCaseNameMarkup}
+                        ${descriptionMarkup}
                     </td>
                     <td>
                         <span class="${userMessageClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true" data-tooltip-content="${userMessageEncoded}" data-tooltip-fallback="${userMessageFallback}">
@@ -319,7 +334,16 @@ function renderRegressionLogs(logs) {
                         </span>
                     </td>
                     <td>
-                        <small class="text-muted">${executedAt}</small>
+                        <div class="status-meta mb-1">
+                            <span class="badge ${statusMeta.badgeClass}">
+                                <i class="fas ${statusMeta.icon} me-1"></i>${statusMeta.label}
+                            </span>
+                        </div>
+                        <div class="text-muted small">${executedAt}</div>
+                        <div class="text-muted small">
+                            <i class="fas fa-stopwatch me-1"></i>${responseTime}
+                        </div>
+                        ${errorMessage}
                     </td>
                     <td class="text-end">
                         <div class="btn-group" role="group">
@@ -395,6 +419,46 @@ function formatResponseTime(value) {
         return '—';
     }
     return `${value}ms`;
+}
+
+async function loadTestCaseDetails(testCaseId) {
+    if (!testCaseId) {
+        return null;
+    }
+
+    if (testCaseCache.has(testCaseId)) {
+        return testCaseCache.get(testCaseId);
+    }
+
+    if (pendingTestCaseRequests.has(testCaseId)) {
+        return pendingTestCaseRequests.get(testCaseId);
+    }
+
+    const fetchPromise = (async () => {
+        try {
+            const response = await fetch(`/v1/api/test-cases/${encodeURIComponent(testCaseId)}`);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    testCaseCache.set(testCaseId, null);
+                    return null;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            testCaseCache.set(testCaseId, data);
+            return data;
+        } catch (error) {
+            console.error(`Failed to load test case ${testCaseId}:`, error);
+            testCaseCache.set(testCaseId, null);
+            return null;
+        } finally {
+            pendingTestCaseRequests.delete(testCaseId);
+        }
+    })();
+
+    pendingTestCaseRequests.set(testCaseId, fetchPromise);
+    return fetchPromise;
 }
 
 function truncateText(text, maxLength) {

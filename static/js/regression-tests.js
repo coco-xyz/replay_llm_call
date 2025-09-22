@@ -85,6 +85,13 @@ function setupEventListeners() {
         });
     }
 
+    if (window.ModelHistoryManager) {
+        window.ModelHistoryManager.initInput({
+            inputId: 'regressionModelName',
+            dropdownId: 'regressionModelNameDropdown',
+        });
+    }
+
 }
 
 async function loadAgents() {
@@ -167,7 +174,21 @@ function displayRegressionTests(regressions) {
         return timeB - timeA;
     });
 
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        container.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+            const instance = bootstrap.Tooltip.getInstance(el);
+            if (instance) {
+                instance.dispose();
+            }
+        });
+    }
+
     container.innerHTML = sorted.map(buildRegressionRow).join('');
+    applyTooltipContent(container);
+    if (window.HoverTooltip) {
+        window.HoverTooltip.attach(container);
+    }
+    initializeTooltips();
 }
 
 function buildRegressionRow(regression) {
@@ -177,15 +198,48 @@ function buildRegressionRow(regression) {
     const agentPrimaryLine = agentId
         ? `<a href="/agents/${encodeURIComponent(agentId)}" class="text-decoration-none fw-semibold" target="_blank" rel="noopener noreferrer">${escapeHtml(agentName)}</a>`
         : `<span class="fw-semibold">${escapeHtml(agentName)}</span>`;
+    
+    // Model column with model_settings below
     const modelName = regression.model_name_override
         ? `<span class="badge bg-primary">${escapeHtml(regression.model_name_override)}</span>`
         : '<span class="text-muted">—</span>';
-    const results = `
-        <div class="d-flex flex-wrap gap-2">
-            <span class="badge bg-primary">Total ${regression.total_count}</span>
-            <span class="badge bg-success">Passed ${regression.success_count}</span>
-            <span class="badge bg-danger">Failed ${regression.failed_count}</span>
+    const modelSettings = regression.model_settings_override
+        ? `<div class="text-muted small mt-1">${escapeHtml(JSON.stringify(regression.model_settings_override))}</div>`
+        : '<div class="text-muted small mt-1">No settings</div>';
+    const modelColumn = `
+        <div class="d-flex flex-column">
+            ${modelName}
+            ${modelSettings}
         </div>
+    `;
+
+    // Status column with results below
+    const results = `
+        <div class="d-flex flex-wrap gap-1 mt-1">
+            <span class="badge bg-primary small">Total ${regression.total_count}</span>
+            <span class="badge bg-success small">Passed ${regression.success_count}</span>
+            <span class="badge bg-danger small">Failed ${regression.failed_count}</span>
+        </div>
+    `;
+    const statusColumn = `
+        <div class="d-flex flex-column">
+            ${statusBadge}
+            ${results}
+        </div>
+    `;
+
+    // System prompt column with hover tooltip
+    const systemPrompt = regression.system_prompt_override || '';
+    const hasSystemPrompt = systemPrompt.trim().length > 0;
+    const systemPromptDisplay = hasSystemPrompt ? truncateText(systemPrompt, 90) : '—';
+    const systemPromptClass = hasSystemPrompt ? 'log-preview' : 'log-preview placeholder';
+    const systemPromptEncoded = encodeTooltipPayload(systemPrompt);
+    const systemPromptFallback = encodeTooltipPayload('No system prompt override');
+    const systemPromptColumn = `
+        <span class="${systemPromptClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
+              data-tooltip-content="${systemPromptEncoded}" data-tooltip-fallback="${systemPromptFallback}">
+            ${escapeHtml(systemPromptDisplay)}
+        </span>
     `;
 
     const created = formatDate(regression.created_at);
@@ -197,9 +251,9 @@ function buildRegressionRow(regression) {
                     ${agentPrimaryLine}
                 </div>
             </td>
-            <td>${statusBadge}</td>
-            <td>${modelName}</td>
-            <td>${results}</td>
+            <td>${statusColumn}</td>
+            <td>${modelColumn}</td>
+            <td>${systemPromptColumn}</td>
             <td>${created}</td>
             <td class="text-end">
                 <div class="btn-group btn-group-sm" role="group">
@@ -404,6 +458,15 @@ function updateRegressionRows(regressions) {
     emptyState.classList.add('d-none');
     table.style.display = 'table';
 
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        container.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+            const instance = bootstrap.Tooltip.getInstance(el);
+            if (instance) {
+                instance.dispose();
+            }
+        });
+    }
+
     const activeIds = new Set();
     const existingRowsMap = new Map();
     Array.from(container.querySelectorAll('tr[data-regression-id]')).forEach((row) => {
@@ -440,6 +503,12 @@ function updateRegressionRows(regressions) {
             row.remove();
         }
     });
+
+    applyTooltipContent(container);
+    if (window.HoverTooltip) {
+        window.HoverTooltip.attach(container);
+    }
+    initializeTooltips();
 }
 
 function openRegressionDetail(regressionId) {
@@ -548,6 +617,65 @@ function formatDate(dateString) {
         return escapeHtml(dateString);
     }
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+}
+
+function formatTooltipContent(text, fallback = '—') {
+    if (!text) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const trimmed = text.trim();
+    if (!trimmed) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const htmlContent = escapeHtml(text).replace(/\n/g, '<br>');
+    return `<div class='tooltip-log-content'>${htmlContent}</div>`;
+}
+
+function initializeTooltips() {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+        return;
+    }
+    const tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)')
+    );
+    tooltipTriggerList.forEach((tooltipTriggerEl) => {
+        bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl);
+    });
+}
+
+function applyTooltipContent(container) {
+    if (!container) {
+        return;
+    }
+    const tooltipTargets = container.querySelectorAll('[data-tooltip-content]');
+    tooltipTargets.forEach((element) => {
+        const encodedContent = element.getAttribute('data-tooltip-content') || '';
+        const encodedFallback = element.getAttribute('data-tooltip-fallback') || '';
+        const content = decodeTooltipPayload(encodedContent);
+        const fallback = decodeTooltipPayload(encodedFallback);
+        const tooltipHtml = formatTooltipContent(content, fallback || undefined);
+        element.setAttribute('data-bs-title', tooltipHtml);
+        element.setAttribute('data-hover-html', tooltipHtml);
+    });
+}
+
+function encodeTooltipPayload(text) {
+    if (!text) {
+        return '';
+    }
+    return encodeURIComponent(text);
+}
+
+function decodeTooltipPayload(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        console.error('Failed to decode tooltip payload', error);
+        return value;
+    }
 }
 
 window.openRegressionDetail = openRegressionDetail;

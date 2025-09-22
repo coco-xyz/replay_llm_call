@@ -190,52 +190,6 @@
     }
 
     /* Model Name History Dropdown */
-    .model-history-dropdown {
-        position: absolute;
-        top: calc(100% + 2px);
-        left: 0;
-        width: 100%;
-        max-height: 200px;
-        overflow-y: auto;
-        z-index: 1000;
-        border: 1px solid #dee2e6;
-        border-radius: 0.375rem;
-        background-color: white;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        display: none;
-    }
-
-    .model-history-dropdown.show {
-        display: block;
-    }
-
-    .model-history-dropdown .dropdown-item {
-        padding: 0.5rem 0.75rem;
-        border-bottom: 1px solid #f8f9fa;
-        transition: background-color 0.15s ease-in-out;
-        cursor: pointer;
-    }
-
-    .model-history-dropdown .dropdown-item:last-child {
-        border-bottom: none;
-    }
-
-    .model-history-dropdown .dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-
-    .model-history-dropdown .btn-outline-danger {
-        border-color: #dc3545;
-        color: #dc3545;
-        opacity: 0.7;
-        transition: all 0.15s ease-in-out;
-    }
-
-    .model-history-dropdown .btn-outline-danger:hover {
-        background-color: #dc3545;
-        color: white;
-        opacity: 1;
-    }
 </style>
 {% endblock %}
 
@@ -446,6 +400,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+    <script src="/static/js/model-history.js?v={{ static_asset_version }}"></script>
     <script src="/static/js/test-execution.js?v={{ static_asset_version }}"></script>
 
         <script>

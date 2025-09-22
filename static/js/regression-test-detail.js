@@ -4,9 +4,14 @@
  * Displays regression metadata and associated logs.
  */
 
+const LOGS_PAGE_SIZE = 10;
+let logsPage = 1;
+let currentLogs = [];
+
 window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     loadRegressionDetail();
+    loadRegressionLogs();
 });
 
 function setupEventListeners() {
@@ -14,6 +19,32 @@ function setupEventListeners() {
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
             loadRegressionDetail();
+            logsPage = 1;
+            loadRegressionLogs();
+        });
+    }
+
+    const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+    if (refreshLogsBtn) {
+        refreshLogsBtn.addEventListener('click', () => {
+            logsPage = 1;
+            loadRegressionLogs();
+        });
+    }
+
+    const prevPageBtn = document.getElementById('logsPrevPageBtn');
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            loadPreviousLogsPage();
+        });
+    }
+
+    const nextPageBtn = document.getElementById('logsNextPageBtn');
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            loadNextLogsPage();
         });
     }
 }
@@ -180,4 +211,386 @@ function formatDate(dateString) {
         return escapeHtml(dateString);
     }
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+}
+
+async function loadRegressionLogs() {
+    toggleLogsLoading(true);
+    try {
+        const params = new URLSearchParams({
+            limit: LOGS_PAGE_SIZE,
+            offset: (logsPage - 1) * LOGS_PAGE_SIZE,
+            regression_test_id: regressionId,
+        });
+
+        const response = await fetch(`/v1/api/test-logs/filter/combined?${params}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const logs = await response.json();
+        if (logsPage > 1 && logs.length === 0) {
+            logsPage = Math.max(1, logsPage - 1);
+            await loadRegressionLogs();
+            return;
+        }
+
+        currentLogs = logs;
+        renderRegressionLogs(currentLogs);
+        updateLogsPagination();
+    } catch (error) {
+        console.error('Error loading regression test logs:', error);
+        showAlert('Failed to load associated test logs: ' + error.message, 'danger');
+    } finally {
+        toggleLogsLoading(false);
+    }
+}
+
+function renderRegressionLogs(logs) {
+    const tableWrapper = document.getElementById('logsTableWrapper');
+    const tableBody = document.getElementById('regressionLogsTable');
+    const emptyState = document.getElementById('logsEmptyState');
+    if (!tableWrapper || !tableBody || !emptyState) {
+        return;
+    }
+
+    if (!logs || logs.length === 0) {
+        tableBody.innerHTML = '';
+        tableWrapper.classList.add('d-none');
+        emptyState.classList.remove('d-none');
+        return;
+    }
+
+    emptyState.classList.add('d-none');
+    tableWrapper.classList.remove('d-none');
+
+    const rows = logs
+        .map((log) => {
+            const statusMeta = formatLogStatusMeta(log.status);
+            const responseTime = formatResponseTime(log.response_time_ms);
+            const errorMessage = log.error_message
+                ? `<div class="text-danger small mt-1">${truncateText(log.error_message, 100)}</div>`
+                : '';
+
+            const rawUserMessage = log.user_message || '';
+            const hasUserMessage = rawUserMessage.trim().length > 0;
+            const userMessageClass = hasUserMessage
+                ? 'log-preview'
+                : 'log-preview placeholder';
+            const userMessageContent = hasUserMessage
+                ? truncateText(rawUserMessage, 140)
+                : '—';
+            const userMessageEncoded = encodeTooltipPayload(rawUserMessage);
+            const userMessageFallback = encodeTooltipPayload('No user message recorded');
+
+            const rawLlmResponse = log.llm_response || '';
+            const hasLlmResponse = rawLlmResponse.trim().length > 0;
+            const llmResponseClass = hasLlmResponse
+                ? 'log-preview'
+                : 'log-preview placeholder';
+            const llmResponseContent = hasLlmResponse
+                ? truncateText(rawLlmResponse, 140)
+                : '—';
+            const llmResponseEncoded = encodeTooltipPayload(rawLlmResponse);
+            const llmResponseFallback = encodeTooltipPayload('No LLM response captured');
+
+            const executedAt = formatDate(log.created_at);
+
+            return `
+                <tr>
+                    <td>
+                        <div class="status-meta">
+                            <span class="badge ${statusMeta.badgeClass}">
+                                <i class="fas ${statusMeta.icon} me-1"></i>${statusMeta.label}
+                            </span>
+                            <span class="response-time">
+                                <i class="fas fa-stopwatch"></i>${responseTime}
+                            </span>
+                        </div>
+                        ${errorMessage}
+                    </td>
+                    <td>
+                        <span class="${userMessageClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true" data-tooltip-content="${userMessageEncoded}" data-tooltip-fallback="${userMessageFallback}">
+                            ${userMessageContent}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="${llmResponseClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true" data-tooltip-content="${llmResponseEncoded}" data-tooltip-fallback="${llmResponseFallback}">
+                            ${llmResponseContent}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">${executedAt}</small>
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewLogInNewPage('${log.id}')" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="reExecuteLog('${log.id}')" title="Re-execute">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteLog('${log.id}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        })
+        .join('');
+
+    tableBody.innerHTML = rows;
+    applyTooltipContent(tableBody);
+    if (window.HoverTooltip) {
+        window.HoverTooltip.attach(tableBody);
+    }
+    initializeTooltips(tableBody);
+}
+
+function formatLogStatusMeta(status) {
+    const normalized = (status || '').toLowerCase();
+    switch (normalized) {
+        case 'success':
+            return {
+                label: 'SUCCESS',
+                badgeClass: 'bg-success',
+                icon: 'fa-check-circle',
+            };
+        case 'failed':
+        case 'failure':
+            return {
+                label: 'FAILED',
+                badgeClass: 'bg-danger',
+                icon: 'fa-times-circle',
+            };
+        case 'error':
+            return {
+                label: 'ERROR',
+                badgeClass: 'bg-danger',
+                icon: 'fa-triangle-exclamation',
+            };
+        case 'pending':
+            return {
+                label: 'PENDING',
+                badgeClass: 'bg-warning text-dark',
+                icon: 'fa-clock',
+            };
+        case 'running':
+            return {
+                label: 'RUNNING',
+                badgeClass: 'bg-warning text-dark',
+                icon: 'fa-spinner',
+            };
+        default:
+            return {
+                label: (status || 'UNKNOWN').toString().toUpperCase(),
+                badgeClass: 'bg-secondary',
+                icon: 'fa-circle',
+            };
+    }
+}
+
+function formatResponseTime(value) {
+    if (value === null || value === undefined) {
+        return '—';
+    }
+    return `${value}ms`;
+}
+
+function truncateText(text, maxLength) {
+    if (!text) {
+        return '';
+    }
+    const trimmed = text.trim();
+    if (trimmed.length <= maxLength) {
+        return escapeHtml(trimmed);
+    }
+    return `${escapeHtml(trimmed.substring(0, maxLength))}...`;
+}
+
+function encodeTooltipPayload(text) {
+    if (!text) {
+        return '';
+    }
+    return encodeURIComponent(text);
+}
+
+function decodeTooltipPayload(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        console.error('Failed to decode tooltip payload', error);
+        return value;
+    }
+}
+
+function formatTooltipContent(text, fallback = '—') {
+    if (!text) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const normalized = text.trim();
+    if (!normalized) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const htmlContent = escapeHtml(text).replace(/\n/g, '<br>');
+    return `<div class='tooltip-log-content'>${htmlContent}</div>`;
+}
+
+function applyTooltipContent(container) {
+    if (!container) {
+        return;
+    }
+    const tooltipTargets = container.querySelectorAll('[data-tooltip-content]');
+    tooltipTargets.forEach((element) => {
+        const encodedContent = element.getAttribute('data-tooltip-content') || '';
+        const encodedFallback = element.getAttribute('data-tooltip-fallback') || '';
+        const content = decodeTooltipPayload(encodedContent);
+        const fallback = decodeTooltipPayload(encodedFallback);
+        const tooltipHtml = formatTooltipContent(content, fallback || undefined);
+        element.setAttribute('data-bs-title', tooltipHtml);
+        element.setAttribute('data-hover-html', tooltipHtml);
+    });
+}
+
+function initializeTooltips(container) {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+        return;
+    }
+    const scope = container || document;
+    const elements = scope.querySelectorAll
+        ? scope.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)')
+        : document.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)');
+    elements.forEach((element) => {
+        bootstrap.Tooltip.getOrCreateInstance(element);
+    });
+}
+
+function toggleLogsLoading(show) {
+    const spinner = document.getElementById('logsLoadingSpinner');
+    const tableWrapper = document.getElementById('logsTableWrapper');
+    const emptyState = document.getElementById('logsEmptyState');
+    if (!spinner || !tableWrapper || !emptyState) {
+        return;
+    }
+
+    if (show) {
+        spinner.classList.remove('d-none');
+        tableWrapper.classList.add('d-none');
+        emptyState.classList.add('d-none');
+    } else {
+        spinner.classList.add('d-none');
+    }
+}
+
+function updateLogsPagination() {
+    const pagination = document.getElementById('logsPagination');
+    const prevPage = document.getElementById('logsPrevPage');
+    const nextPage = document.getElementById('logsNextPage');
+    const currentPageSpan = document.getElementById('logsCurrentPage');
+    const pageStatus = document.getElementById('logsPageStatus');
+
+    if (!pagination || !prevPage || !nextPage || !currentPageSpan) {
+        return;
+    }
+
+    if (currentLogs.length === 0 && logsPage === 1) {
+        pagination.classList.add('d-none');
+        if (pageStatus) {
+            pageStatus.textContent = '';
+        }
+        return;
+    }
+
+    pagination.classList.remove('d-none');
+    currentPageSpan.textContent = logsPage.toString();
+
+    if (logsPage <= 1) {
+        prevPage.classList.add('disabled');
+    } else {
+        prevPage.classList.remove('disabled');
+    }
+
+    if (currentLogs.length < LOGS_PAGE_SIZE) {
+        nextPage.classList.add('disabled');
+    } else {
+        nextPage.classList.remove('disabled');
+    }
+
+    if (pageStatus) {
+        const start = (logsPage - 1) * LOGS_PAGE_SIZE + 1;
+        const end = start + currentLogs.length - 1;
+        pageStatus.textContent = `Showing ${start}-${end}`;
+    }
+}
+
+function loadPreviousLogsPage() {
+    if (logsPage > 1) {
+        logsPage -= 1;
+        loadRegressionLogs();
+    }
+}
+
+function loadNextLogsPage() {
+    if (currentLogs.length < LOGS_PAGE_SIZE) {
+        return;
+    }
+    logsPage += 1;
+    loadRegressionLogs();
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${escapeHtml(message)}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    const toastRoot = document.getElementById('toast-root');
+    const container = document.querySelector('.container');
+
+    if (toastRoot) {
+        toastRoot.appendChild(alertDiv);
+    } else if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+    }
+
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function viewLogInNewPage(logId) {
+    window.open(`/test-logs/${logId}`, '_blank');
+}
+
+function reExecuteLog(logId) {
+    window.location.href = `/test-execution?logId=${logId}`;
+}
+
+async function deleteLog(logId) {
+    if (!confirm('Are you sure you want to delete this test log? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/v1/api/test-logs/${logId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        showAlert('Test log deleted successfully!', 'success');
+        loadRegressionLogs();
+    } catch (error) {
+        console.error('Error deleting test log:', error);
+        showAlert('Failed to delete test log: ' + error.message, 'danger');
+    }
 }

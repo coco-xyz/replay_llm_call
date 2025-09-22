@@ -162,7 +162,7 @@ function populateTestCaseSelect(testCases) {
     if (!testCases || testCases.length === 0) {
         select.disabled = true;
         disableExecuteButton();
-        updateSelectedAgentSummary(null);
+        updateSelectedTestCaseInfo(null);
         return;
     }
 
@@ -175,7 +175,7 @@ function populateTestCaseSelect(testCases) {
         select.appendChild(option);
     });
 
-    updateSelectedAgentSummary(null);
+    updateSelectedTestCaseInfo(null);
 }
 
 async function selectTestCase(testCaseId) {
@@ -281,7 +281,7 @@ function populateExecutionParameters(testCase) {
     currentTools = testCase.tools ? JSON.parse(JSON.stringify(testCase.tools)) : [];
     displayTools();
 
-    updateSelectedAgentSummary(testCase);
+    updateSelectedTestCaseInfo(testCase);
 }
 
 function clearSelection() {
@@ -298,7 +298,7 @@ function clearSelection() {
 
     disableExecuteButton();
     clearResults();
-    updateSelectedAgentSummary(null);
+    updateSelectedTestCaseInfo(null);
 }
 
 function enableExecuteButton() {
@@ -503,8 +503,8 @@ function clearResults() {
     `;
 }
 
-function updateSelectedAgentSummary(testCase) {
-    const summary = document.getElementById('selectedTestCaseAgent');
+function updateSelectedTestCaseInfo(testCase) {
+    const summary = document.getElementById('selectedTestCaseInfo');
     if (!summary) return;
 
     if (!testCase) {
@@ -518,23 +518,20 @@ function updateSelectedAgentSummary(testCase) {
         return;
     }
 
-    const resolvedAgent = testCase.agent
-        || availableAgents.find((agent) => agent.id === testCase.agent_id)
-        || null;
-    const agentName = resolvedAgent ? resolvedAgent.name : 'Unknown agent';
-    const agentId = testCase.agent_id ? escapeHtml(testCase.agent_id) : '';
-    const encodedAgentId = testCase.agent_id ? encodeURIComponent(testCase.agent_id) : '';
+    const testCaseName = testCase.name ? escapeHtml(testCase.name) : 'Unknown test case';
+    const testCaseId = testCase.id ? escapeHtml(testCase.id) : '';
+    const encodedTestCaseId = testCase.id ? encodeURIComponent(testCase.id) : '';
 
     summary.innerHTML = `
         <div class="d-flex flex-column">
             <div>
-                <span class="badge bg-primary">${escapeHtml(agentName)}</span>
-                ${agentId ? `<small class="text-muted ms-2">${agentId}</small>` : ''}
+                <span class="badge bg-success">${testCaseName}</span>
+                ${testCaseId ? `<small class="text-muted ms-2">${testCaseId}</small>` : ''}
             </div>
-            ${encodedAgentId ? `
+            ${encodedTestCaseId ? `
                 <div class="mt-1 small">
-                    <a href="/test-cases?agentId=${encodedAgentId}" class="text-decoration-none" target="_blank">
-                        View all test cases for this agent
+                    <a href="/test-cases/${encodedTestCaseId}" class="text-decoration-none" target="_blank">
+                        View test case details
                         <i class="fas fa-external-link-alt ms-1" style="font-size: 0.75em;"></i>
                     </a>
                 </div>

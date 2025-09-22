@@ -5,6 +5,7 @@ Service for parsing logfire raw data and extracting LLM request components.
 """
 
 from typing import Dict, List, Optional
+import json
 
 from pydantic import BaseModel, Field
 
@@ -112,8 +113,11 @@ def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
         last_user_message = ""
         last_user_message_index = -1
         for i in range(len(all_messages) - 1, -1, -1):
-            if all_messages[i].get("role") == "user":
-                last_user_message = all_messages[i].get("content", "")
+            if all_messages[i].get("role") != "assistant":
+                if all_messages[i].get("role") == "tool":
+                    last_user_message = json.dumps(all_messages[i], ensure_ascii=False)
+                else:
+                    last_user_message = all_messages[i].get("content", "")
                 last_user_message_index = i
                 logger.debug(f"Found last user message at index {i}")
                 break

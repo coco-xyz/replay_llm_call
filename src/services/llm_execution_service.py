@@ -122,7 +122,15 @@ async def execute_llm_test(
 
         # 3. Add user message (if provided)
         if user_message:
-            replay_messages.append({"role": "user", "content": user_message})
+            try:
+                msg_obj = json.loads(user_message)
+                if "role" in msg_obj and msg_obj.get("role") == "tool":
+                    replay_messages.append(msg_obj)
+                else:
+                    replay_messages.append({"role": "user", "content": user_message})
+            except json.JSONDecodeError:
+                replay_messages.append({"role": "user", "content": user_message})
+
             logger.debug("Added user message to replay messages")
 
         if not replay_messages:

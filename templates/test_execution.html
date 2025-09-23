@@ -205,6 +205,56 @@
         color: var(--danger-color);
         font-weight: bold;
     }
+
+    /* Filter Search Styles */
+    .filter-search-group {
+        position: relative;
+        width: 220px;
+    }
+
+    .filter-search-results {
+        position: absolute;
+        top: calc(100% + 0.25rem);
+        left: 0;
+        right: 0;
+        z-index: 20;
+        background: var(--card-background);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 20px -12px rgba(15, 23, 42, 0.45);
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .filter-search-results button {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        color: var(--text-primary);
+    }
+
+    .filter-search-results button:hover,
+    .filter-search-results button:focus {
+        background: #f8fafc;
+        outline: none;
+    }
+
+    .filter-search-results .result-secondary {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+
+    .filter-search-empty {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
 </style>
 {% endblock %}
 
@@ -245,13 +295,12 @@
                 <span class="text-muted fw-medium me-2 d-flex align-items-center">
                     <i class="fas fa-cog me-2"></i>Configuration:
                 </span>
-                <select class="form-select form-select-sm" id="agentSelect" style="width: 200px; flex: 0 0 auto;">
-                    <option value="">All agents</option>
-                </select>
-                <select class="form-select form-select-sm" id="testCaseSelect"
-                    style="flex: 1 1 300px; max-width: 500px;">
-                    <option value="">Select a test case...</option>
-                </select>
+                <div class="filter-search-group" data-filter="test-case" style="flex: 1 1 400px; max-width: 600px;">
+                    <input type="hidden" id="testCaseSelect" value="">
+                    <input type="text" class="form-control form-control-sm" id="testCaseSelectInput"
+                        placeholder="Search test cases..." autocomplete="off">
+                    <div class="filter-search-results d-none" id="testCaseSelectResults"></div>
+                </div>
                 <div class="form-text ms-auto" id="selectedTestCaseInfo" style="flex: 0 0 auto; margin-bottom: 0;">
                     Select a test case to preview its details.
                 </div>

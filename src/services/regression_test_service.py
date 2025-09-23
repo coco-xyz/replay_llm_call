@@ -46,6 +46,9 @@ class RegressionTestData(BaseModel):
     total_count: int
     success_count: int
     failed_count: int
+    passed_count: int
+    declined_count: int
+    unknown_count: int
     error_message: Optional[str]
     started_at: Optional[datetime]
     completed_at: Optional[datetime]
@@ -86,6 +89,9 @@ class RegressionTestService:
         completed_at: Optional[datetime] = None
         success_count = 0
         failed_count = 0
+        passed_count = 0
+        declined_count = 0
+        unknown_count = 0
         error_message: Optional[str] = None
 
         if total_count == 0:
@@ -103,6 +109,9 @@ class RegressionTestService:
             total_count=total_count,
             success_count=success_count,
             failed_count=failed_count,
+            passed_count=passed_count,
+            declined_count=declined_count,
+            unknown_count=unknown_count,
             error_message=error_message,
             started_at=started_at,
             completed_at=completed_at,
@@ -152,6 +161,9 @@ class RegressionTestService:
         regression.started_at = datetime.now(timezone.utc)
         regression.success_count = 0
         regression.failed_count = 0
+        regression.passed_count = 0
+        regression.declined_count = 0
+        regression.unknown_count = 0
         regression.error_message = None
         regression = self.store.update(regression)
 
@@ -197,12 +209,22 @@ class RegressionTestService:
 
         success_count = sum(1 for result in results if result.status == "success")
         failed_count = len(test_cases) - success_count
-
         if execution_errors:
             failed_count = max(failed_count, len(execution_errors))
 
+        passed_count = sum(1 for result in results if result.is_passed is True)
+        declined_count = sum(1 for result in results if result.is_passed is False)
+        unknown_from_results = sum(
+            1 for result in results if result.is_passed is None
+        )
+        missing_results = max(0, len(test_cases) - len(results))
+        unknown_count = unknown_from_results + missing_results
+
         regression.success_count = success_count
         regression.failed_count = failed_count
+        regression.passed_count = passed_count
+        regression.declined_count = declined_count
+        regression.unknown_count = unknown_count
         regression.status = (
             "failed" if (execution_errors or failed_count > 0) else "completed"
         )
@@ -262,6 +284,9 @@ class RegressionTestService:
             total_count=regression.total_count,
             success_count=regression.success_count,
             failed_count=regression.failed_count,
+            passed_count=regression.passed_count,
+            declined_count=regression.declined_count,
+            unknown_count=regression.unknown_count,
             error_message=regression.error_message,
             started_at=regression.started_at,
             completed_at=regression.completed_at,

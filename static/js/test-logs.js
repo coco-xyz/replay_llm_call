@@ -311,7 +311,7 @@ function resolveEvaluationDisplay(target) {
         return { label: 'Passed', badgeClass: 'bg-success', icon: 'check' };
     }
     if (status === false) {
-        return { label: 'Failed', badgeClass: 'bg-danger', icon: 'times' };
+        return { label: 'Declined', badgeClass: 'bg-danger', icon: 'times' };
     }
     return { label: 'Unknown', badgeClass: 'bg-secondary', icon: 'question' };
 }
@@ -347,8 +347,8 @@ function buildEvaluationTooltip(log) {
         const display = resolveEvaluationDisplay(log);
         if (display.label === 'Passed') {
             lines.push('Marked as passed.');
-        } else if (display.label === 'Failed') {
-            lines.push('Marked as failed.');
+        } else if (display.label === 'Declined') {
+            lines.push('Marked as declined.');
         } else {
             lines.push('Evaluation skipped or not applicable.');
         }

@@ -21,7 +21,8 @@ INSERT INTO schema_migrations (version) VALUES
     ('008'),
     ('009'),
     ('010'),
-    ('011')
+    ('011'),
+    ('012')
 ON CONFLICT (version) DO NOTHING;
 
 -- Agents table
@@ -48,6 +49,9 @@ CREATE TABLE IF NOT EXISTS regression_tests (
     total_count INTEGER DEFAULT 0 NOT NULL,
     success_count INTEGER DEFAULT 0 NOT NULL,
     failed_count INTEGER DEFAULT 0 NOT NULL,
+    passed_count INTEGER DEFAULT 0 NOT NULL,
+    declined_count INTEGER DEFAULT 0 NOT NULL,
+    unknown_count INTEGER DEFAULT 0 NOT NULL,
     error_message TEXT,
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
@@ -132,6 +136,9 @@ COMMENT ON TABLE regression_tests IS 'Stores regression execution metadata for a
 COMMENT ON COLUMN agents.is_deleted IS 'Soft delete flag to hide agents without removing history';
 COMMENT ON COLUMN regression_tests.status IS 'Execution status: pending, running, completed, or failed';
 COMMENT ON COLUMN regression_tests.model_settings_override IS 'Model settings JSON applied to the regression execution';
+COMMENT ON COLUMN regression_tests.passed_count IS 'Number of regression test logs with is_passed=true';
+COMMENT ON COLUMN regression_tests.declined_count IS 'Number of regression test logs with is_passed=false';
+COMMENT ON COLUMN regression_tests.unknown_count IS 'Number of regression test logs with is_passed=null';
 COMMENT ON COLUMN regression_tests.is_deleted IS 'Soft delete flag to hide regression tests without hard deleting.';
 COMMENT ON COLUMN test_cases.raw_data IS 'Original logfire raw data for audit purposes';
 COMMENT ON COLUMN test_cases.middle_messages IS 'Messages except system prompt and last user message';

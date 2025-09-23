@@ -77,8 +77,14 @@ def test_create_regression_with_no_cases(monkeypatch):
     assert result.total_count == 0
     assert result.success_count == 0
     assert result.failed_count == 0
+    assert result.passed_count == 0
+    assert result.declined_count == 0
+    assert result.unknown_count == 0
     stored = state[result.id]
     assert stored.status == "completed"
+    assert stored.passed_count == 0
+    assert stored.declined_count == 0
+    assert stored.unknown_count == 0
 
 
 @pytest.mark.asyncio
@@ -118,8 +124,8 @@ async def test_run_regression_counts_results(monkeypatch):
 
     async def fake_execute(request):
         if request.test_case_id == "case-1":
-            return ExecutionResult(status="success")
-        return ExecutionResult(status="failed", error_message="boom")
+            return ExecutionResult(status="success", is_passed=True)
+        return ExecutionResult(status="failed", error_message="boom", is_passed=False)
 
     monkeypatch.setattr(
         service.test_execution_service,
@@ -144,4 +150,7 @@ async def test_run_regression_counts_results(monkeypatch):
     assert stored.total_count == 2
     assert stored.success_count == 1
     assert stored.failed_count == 1
+    assert stored.passed_count == 1
+    assert stored.declined_count == 1
+    assert stored.unknown_count == 0
     assert stored.status == "failed"

@@ -91,6 +91,60 @@
         pointer-events: none;
     }
 
+    .filter-search-group {
+        position: relative;
+        width: 220px;
+        flex: 0 0 auto;
+    }
+
+    .filter-search-group.w-100 {
+        width: 100% !important;
+    }
+
+    .filter-search-results {
+        position: absolute;
+        top: calc(100% + 0.25rem);
+        left: 0;
+        right: 0;
+        z-index: 30;
+        background: var(--card-background);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 20px -12px rgba(15, 23, 42, 0.45);
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .filter-search-results button {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        color: var(--text-primary);
+    }
+
+    .filter-search-results button:hover,
+    .filter-search-results button:focus {
+        background: #f8fafc;
+        outline: none;
+    }
+
+    .filter-search-results .result-secondary {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+
+    .filter-search-empty {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
     /* Table Styles */
     .table-container {
         background: var(--card-background);
@@ -321,9 +375,12 @@
                 <span class="text-muted fw-medium me-2 d-flex align-items-center">
                     <i class="fas fa-filter me-2"></i>Filters:
                 </span>
-                <select class="form-select form-select-sm" id="agentFilter" style="width: 220px; flex: 0 0 auto;">
-                    <option value="">All agents</option>
-                </select>
+                <div class="filter-search-group" data-filter="agent">
+                    <input type="hidden" id="agentFilter" value="">
+                    <input type="text" class="form-control form-control-sm" id="agentFilterInput"
+                        placeholder="Search agents" autocomplete="off">
+                    <div class="filter-search-results d-none" id="agentFilterResults"></div>
+                </div>
                 <div class="search-container" style="flex: 1 1 260px; max-width: 420px;">
                     <i class="fas fa-search search-icon"></i>
                     <input type="text" class="form-control" id="searchInput" placeholder="Search test case by name">
@@ -417,10 +474,13 @@
                         <textarea class="form-control" id="testCaseDescription" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="createTestCaseAgent" class="form-label">Agent *</label>
-                        <select class="form-select" id="createTestCaseAgent" required>
-                            <option value="">Select an agent...</option>
-                        </select>
+                        <label for="createTestCaseAgentInput" class="form-label">Agent *</label>
+                        <div class="filter-search-group w-100" data-filter="create-agent">
+                            <input type="hidden" id="createTestCaseAgent" required>
+                            <input type="text" class="form-control" id="createTestCaseAgentInput"
+                                placeholder="Search agents" autocomplete="off">
+                            <div class="filter-search-results d-none" id="createTestCaseAgentResults"></div>
+                        </div>
                         <div class="form-text">Test cases inherit defaults and ownership from the selected agent.</div>
                     </div>
                     <div class="mb-3">
@@ -474,10 +534,13 @@
                             placeholder="Enter a description for this test case..."></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="editTestCaseAgent" class="form-label">Agent *</label>
-                        <select class="form-select" id="editTestCaseAgent" required>
-                            <option value="">Select an agent...</option>
-                        </select>
+                        <label for="editTestCaseAgentInput" class="form-label">Agent *</label>
+                        <div class="filter-search-group w-100" data-filter="edit-agent">
+                            <input type="hidden" id="editTestCaseAgent" required>
+                            <input type="text" class="form-control" id="editTestCaseAgentInput"
+                                placeholder="Search agents" autocomplete="off">
+                            <div class="filter-search-results d-none" id="editTestCaseAgentResults"></div>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="editResponseExample" class="form-label">Response Example</label>

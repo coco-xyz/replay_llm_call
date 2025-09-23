@@ -65,12 +65,16 @@ class AgentStore:
         *,
         limit: int = 20,
         offset: int = 0,
+        search: Optional[str] = None,
     ) -> List[Agent]:
         try:
             with database_session() as db:
                 query = db.query(Agent)
                 if not include_deleted:
                     query = query.filter(Agent.is_deleted.is_(False))
+                if search:
+                    like_pattern = f"%{search.strip()}%"
+                    query = query.filter(Agent.name.ilike(like_pattern))
                 return (
                     query.order_by(Agent.created_at.desc())
                     .limit(limit)

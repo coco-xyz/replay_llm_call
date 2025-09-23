@@ -9,15 +9,69 @@ const FETCH_LIMIT = PAGE_SIZE + 1;
 
 let currentTestCases = [];
 let currentTestCaseId = null;
-let agents = [];
 let selectedAgentId = '';
 let currentPage = 1;
 let hasNextPage = false;
 let currentSearchTerm = '';
+let hasAgentsAvailable = true;
+
+const agentCache = new Map();
+const pendingAgentRequests = new Map();
+
+const agentAutocompleteConfigs = {
+    filter: {
+        inputId: 'agentFilterInput',
+        hiddenId: 'agentFilter',
+        resultsId: 'agentFilterResults',
+        onSelect(agent) {
+            if (selectedAgentId !== agent.id) {
+                selectedAgentId = agent.id;
+                currentPage = 1;
+                loadTestCases(1);
+            }
+        },
+        onClear() {
+            if (selectedAgentId) {
+                selectedAgentId = '';
+                currentPage = 1;
+                loadTestCases(1);
+            }
+        },
+    },
+    create: {
+        inputId: 'createTestCaseAgentInput',
+        hiddenId: 'createTestCaseAgent',
+        resultsId: 'createTestCaseAgentResults',
+        onSelect(agent) {
+            updateCreateModalState(agent.id);
+        },
+        onClear() {
+            updateCreateModalState('');
+        },
+    },
+    edit: {
+        inputId: 'editTestCaseAgentInput',
+        hiddenId: 'editTestCaseAgent',
+        resultsId: 'editTestCaseAgentResults',
+        onSelect(agent) {
+            const hidden = document.getElementById('editTestCaseAgent');
+            if (hidden) {
+                hidden.value = agent.id;
+            }
+        },
+        onClear() {
+            const hidden = document.getElementById('editTestCaseAgent');
+            if (hidden) {
+                hidden.value = '';
+            }
+        },
+    },
+};
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', async function () {
     setupEventListeners();
+    setupAgentAutocompleteControls();
 
     const urlParams = new URLSearchParams(window.location.search);
     const initialAgentId = urlParams.get('agentId');
@@ -25,21 +79,273 @@ document.addEventListener('DOMContentLoaded', async function () {
         selectedAgentId = initialAgentId;
     }
 
-    await loadAgents();
+    await hydrateAgentFilterInput();
+    await checkAgentAvailability();
     loadTestCases(1);
-
-    if (initialAgentId) {
-        const agentFilter = document.getElementById('agentFilter');
-        if (agentFilter) {
-            agentFilter.value = initialAgentId;
-        }
-    }
 
     const testCaseId = urlParams.get('id');
     if (testCaseId) {
         setTimeout(() => viewTestCaseInNewPage(testCaseId), 1000);
     }
 });
+
+function setupAgentAutocompleteControls() {
+    Object.entries(agentAutocompleteConfigs).forEach(([key, config]) => {
+        setupAgentAutocomplete(key, config);
+    });
+}
+
+function setupAgentAutocomplete(key, config) {
+    const input = document.getElementById(config.inputId);
+    const hidden = document.getElementById(config.hiddenId);
+    const results = document.getElementById(config.resultsId);
+    if (!input || !hidden || !results) {
+        return;
+    }
+
+    let debounceTimer = null;
+    let activeController = null;
+
+    const closeResults = () => {
+        results.classList.add('d-none');
+        results.innerHTML = '';
+    };
+
+    const selectResult = (agent) => {
+        hidden.value = agent.id;
+        input.value = agent.name;
+        agentCache.set(agent.id, agent);
+        closeResults();
+        if (typeof config.onSelect === 'function') {
+            config.onSelect(agent);
+        }
+    };
+
+    const renderResults = (items) => {
+        if (!items || items.length === 0) {
+            results.innerHTML = '<div class="filter-search-empty">No matches</div>';
+            results.classList.remove('d-none');
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        items.forEach((agent) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            const primary = document.createElement('span');
+            primary.textContent = agent.name || agent.id;
+            button.appendChild(primary);
+            if (agent.description) {
+                const secondary = document.createElement('span');
+                secondary.className = 'result-secondary';
+                secondary.textContent = agent.description;
+                button.appendChild(secondary);
+            }
+            button.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+                selectResult(agent);
+            });
+            fragment.appendChild(button);
+        });
+        results.innerHTML = '';
+        results.appendChild(fragment);
+        results.classList.remove('d-none');
+    };
+
+    const performSearch = (query) => {
+        if (!query) {
+            closeResults();
+            return;
+        }
+
+        if (activeController) {
+            activeController.abort();
+        }
+
+        activeController = new AbortController();
+        searchAgents(query, { signal: activeController.signal })
+            .then(renderResults)
+            .catch((error) => {
+                if (isAbortError(error)) {
+                    return;
+                }
+                console.error('Agent search failed:', error);
+                results.innerHTML = '<div class="filter-search-empty text-danger">Search failed</div>';
+                results.classList.remove('d-none');
+            });
+    };
+
+    input.addEventListener('input', (event) => {
+        const query = event.target.value.trim();
+        if (hidden.value) {
+            hidden.value = '';
+            if (typeof config.onClear === 'function') {
+                config.onClear();
+            }
+        }
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+        }
+        if (!query) {
+            closeResults();
+            return;
+        }
+        debounceTimer = window.setTimeout(() => performSearch(query), 250);
+    });
+
+    input.addEventListener('focus', () => {
+        const query = input.value.trim();
+        if (query) {
+            performSearch(query);
+        }
+    });
+
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeResults();
+            input.blur();
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        window.setTimeout(closeResults, 150);
+    });
+}
+
+function resetAgentAutocomplete(key) {
+    const config = agentAutocompleteConfigs[key];
+    if (!config) {
+        return;
+    }
+    const input = document.getElementById(config.inputId);
+    const hidden = document.getElementById(config.hiddenId);
+    const results = document.getElementById(config.resultsId);
+    if (input) {
+        input.value = '';
+    }
+    if (hidden && hidden.value) {
+        hidden.value = '';
+        if (typeof config.onClear === 'function') {
+            config.onClear();
+        }
+    } else if (hidden) {
+        hidden.value = '';
+    }
+    if (results) {
+        results.classList.add('d-none');
+        results.innerHTML = '';
+    }
+}
+
+async function hydrateAgentFilterInput() {
+    if (selectedAgentId) {
+        const hidden = document.getElementById('agentFilter');
+        if (hidden) {
+            hidden.value = selectedAgentId;
+        }
+        const agent = await ensureAgentLoaded(selectedAgentId);
+        const input = document.getElementById('agentFilterInput');
+        if (input) {
+            input.value = agent?.name || selectedAgentId;
+        }
+    } else {
+        resetAgentAutocomplete('filter');
+    }
+}
+
+async function checkAgentAvailability() {
+    try {
+        const results = await fetchJson('/v1/api/agents/?limit=1');
+        hasAgentsAvailable = Array.isArray(results)
+            ? results.some((agent) => !agent.is_deleted)
+            : false;
+    } catch (error) {
+        console.error('Error checking agent availability:', error);
+        hasAgentsAvailable = false;
+    }
+    updateAgentAvailabilityIndicators();
+}
+
+function updateAgentAvailabilityIndicators() {
+    const warning = document.getElementById('agentWarning');
+    if (warning) {
+        warning.classList.toggle('d-none', hasAgentsAvailable);
+    }
+
+    document.querySelectorAll('button[data-bs-target="#createTestCaseModal"]').forEach((button) => {
+        button.disabled = !hasAgentsAvailable;
+    });
+
+    updateCreateModalState(document.getElementById('createTestCaseAgent')?.value || '');
+}
+
+function updateCreateModalState(agentId) {
+    const confirmButton = document.querySelector('#createTestCaseModal .btn-primary');
+    if (confirmButton) {
+        confirmButton.disabled = !hasAgentsAvailable || !agentId;
+    }
+}
+
+function isAbortError(error) {
+    return error && (error.name === 'AbortError' || error.code === 20);
+}
+
+async function fetchJson(url, options = {}) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+}
+
+async function searchAgents(query, options = {}) {
+    if (!query) {
+        return [];
+    }
+    const params = new URLSearchParams({ search: query, limit: '5' });
+    try {
+        const results = await fetchJson(`/v1/api/agents/?${params}`, options);
+        results.forEach((agent) => {
+            agentCache.set(agent.id, agent);
+        });
+        return results;
+    } catch (error) {
+        if (isAbortError(error)) {
+            return [];
+        }
+        console.error('Error searching agents:', error);
+        return [];
+    }
+}
+
+async function ensureAgentLoaded(agentId) {
+    if (!agentId) {
+        return null;
+    }
+    if (agentCache.has(agentId)) {
+        return agentCache.get(agentId);
+    }
+    if (pendingAgentRequests.has(agentId)) {
+        return pendingAgentRequests.get(agentId);
+    }
+
+    const promise = (async () => {
+        try {
+            const agent = await fetchJson(`/v1/api/agents/${agentId}`);
+            agentCache.set(agentId, agent);
+            return agent;
+        } catch (error) {
+            console.error(`Failed to fetch agent ${agentId}:`, error);
+            agentCache.set(agentId, null);
+            return null;
+        } finally {
+            pendingAgentRequests.delete(agentId);
+        }
+    })();
+
+    pendingAgentRequests.set(agentId, promise);
+    return promise;
+}
 
 function setupEventListeners() {
     // Search functionality
@@ -62,25 +368,14 @@ function setupEventListeners() {
         });
     }
 
-    const agentFilter = document.getElementById('agentFilter');
-    if (agentFilter) {
-        agentFilter.addEventListener('change', function () {
-            selectedAgentId = this.value;
-            loadTestCases(1);
-        });
-    }
-
     const clearBtn = document.getElementById('clearFiltersBtn');
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
-            const agentSelect = document.getElementById('agentFilter');
             const searchField = document.getElementById('searchInput');
             selectedAgentId = '';
             currentSearchTerm = '';
             currentPage = 1;
-            if (agentSelect) {
-                agentSelect.value = '';
-            }
+            resetAgentAutocomplete('filter');
             if (searchField) {
                 searchField.value = '';
             }
@@ -105,6 +400,36 @@ function setupEventListeners() {
             if (hasNextPage) {
                 loadTestCases(currentPage + 1);
             }
+        });
+    }
+
+    const createModal = document.getElementById('createTestCaseModal');
+    if (createModal) {
+        createModal.addEventListener('shown.bs.modal', () => {
+            const agentInput = document.getElementById('createTestCaseAgentInput');
+            if (agentInput) {
+                agentInput.focus();
+            }
+            updateCreateModalState(document.getElementById('createTestCaseAgent')?.value || '');
+        });
+        createModal.addEventListener('hidden.bs.modal', () => {
+            const form = document.getElementById('createTestCaseForm');
+            if (form) {
+                form.reset();
+            }
+            resetAgentAutocomplete('create');
+            updateCreateModalState('');
+        });
+    }
+
+    const editModal = document.getElementById('editTestCaseModal');
+    if (editModal) {
+        editModal.addEventListener('hidden.bs.modal', () => {
+            const form = document.getElementById('editTestCaseForm');
+            if (form) {
+                form.reset();
+            }
+            resetAgentAutocomplete('edit');
         });
     }
 }
@@ -152,99 +477,6 @@ async function loadTestCases(page = currentPage) {
         showAlert('Error loading test cases: ' + error.message, 'danger');
     } finally {
         showLoading(false);
-    }
-}
-
-async function loadAgents() {
-    try {
-        const url = new URL('/v1/api/agents/', window.location.origin);
-        url.searchParams.set('limit', '1000');
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        agents = data.filter((agent) => !agent.is_deleted);
-        populateAgentFilter();
-        populateAgentSelects();
-        updateAgentWarning();
-    } catch (error) {
-        console.error('Error loading agents:', error);
-        showAlert('Error loading agents: ' + error.message, 'danger');
-    }
-}
-
-function populateAgentFilter() {
-    const filter = document.getElementById('agentFilter');
-    if (!filter) {
-        return;
-    }
-
-    const previousValue = filter.value;
-    filter.innerHTML = '<option value="">All agents</option>';
-    agents.forEach((agent) => {
-        const option = document.createElement('option');
-        option.value = agent.id;
-        option.textContent = agent.name;
-        filter.appendChild(option);
-    });
-
-    if (selectedAgentId && !agents.some((agent) => agent.id === selectedAgentId)) {
-        selectedAgentId = '';
-    }
-
-    const desiredValue = selectedAgentId || previousValue || '';
-    filter.value = desiredValue;
-    if (filter.value !== desiredValue) {
-        filter.value = '';
-    }
-    selectedAgentId = filter.value;
-}
-
-function populateAgentSelects() {
-    const createSelect = document.getElementById('createTestCaseAgent');
-    const editSelect = document.getElementById('editTestCaseAgent');
-
-    [createSelect, editSelect].forEach((select) => {
-        if (!select) return;
-        const selectedValue = select.value;
-        select.innerHTML = '<option value="">Select an agent...</option>';
-        agents.forEach((agent) => {
-            const option = document.createElement('option');
-            option.value = agent.id;
-            option.textContent = agent.name;
-            select.appendChild(option);
-        });
-
-        if (selectedValue) {
-            select.value = selectedValue;
-        } else if (select.id === 'createTestCaseAgent' && agents.length === 1) {
-            select.value = agents[0].id;
-        }
-    });
-
-    const hasAgents = agents.length > 0;
-    const modalConfirmButton = document.querySelector('#createTestCaseModal .btn-primary');
-    if (modalConfirmButton) {
-        modalConfirmButton.disabled = !hasAgents;
-    }
-
-    document.querySelectorAll('button[data-bs-target="#createTestCaseModal"]').forEach((button) => {
-        button.disabled = !hasAgents;
-    });
-}
-
-function updateAgentWarning() {
-    const warning = document.getElementById('agentWarning');
-    if (!warning) {
-        return;
-    }
-
-    if (agents.length === 0) {
-        warning.classList.remove('d-none');
-    } else {
-        warning.classList.add('d-none');
     }
 }
 

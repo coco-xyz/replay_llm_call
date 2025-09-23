@@ -53,10 +53,19 @@ async def list_regressions(
     status: Optional[str] = Query(None, description="Filter by status"),
     limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    search: Optional[str] = Query(
+        None,
+        min_length=1,
+        description="Filter regressions by ID or agent name (case-insensitive)",
+    ),
 ) -> List[RegressionTestResponse]:
     try:
         records = regression_service.list_regression_tests(
-            agent_id=agent_id, status=status, limit=limit, offset=offset
+            agent_id=agent_id,
+            status=status,
+            limit=limit,
+            offset=offset,
+            search=search,
         )
         return [convert_regression_test_data_to_response(record) for record in records]
     except Exception as exc:  # pragma: no cover

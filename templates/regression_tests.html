@@ -165,6 +165,56 @@
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
 
+    .filter-search-group {
+        position: relative;
+        width: 240px;
+        flex: 0 0 auto;
+    }
+
+    .filter-search-results {
+        position: absolute;
+        top: calc(100% + 0.25rem);
+        left: 0;
+        right: 0;
+        z-index: 30;
+        background: var(--card-background);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 20px -12px rgba(15, 23, 42, 0.45);
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .filter-search-results button {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        color: var(--text-primary);
+    }
+
+    .filter-search-results button:hover,
+    .filter-search-results button:focus {
+        background: #f8fafc;
+        outline: none;
+    }
+
+    .filter-search-results .result-secondary {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+
+    .filter-search-empty {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
     .system-prompt-cell {
         max-width: 200px;
         cursor: pointer;
@@ -242,9 +292,12 @@
                 <span class="text-muted fw-medium me-2 d-flex align-items-center">
                     <i class="fas fa-filter me-2"></i>Filters:
                 </span>
-                <select class="form-select form-select-sm" id="agentFilter" style="width: 220px; flex: 0 0 auto;">
-                    <option value="">All agents</option>
-                </select>
+                <div class="filter-search-group" data-filter="agent">
+                    <input type="hidden" id="agentFilter" value="">
+                    <input type="text" class="form-control form-control-sm" id="agentFilterInput"
+                        placeholder="Search agents" autocomplete="off">
+                    <div class="filter-search-results d-none" id="agentFilterResults"></div>
+                </div>
                 <select class="form-select form-select-sm" id="statusFilter" style="width: 180px; flex: 0 0 auto;">
                     <option value="">All statuses</option>
                     <option value="pending">Pending</option>
@@ -326,10 +379,13 @@
                 <div id="startRegressionAlert"></div>
                 <form id="startRegressionForm">
                     <div class="mb-3">
-                        <label for="regressionAgentSelect" class="form-label">Agent *</label>
-                        <select class="form-select" id="regressionAgentSelect" required>
-                            <option value="">Select an agent...</option>
-                        </select>
+                        <label for="regressionAgentInput" class="form-label">Agent *</label>
+                        <div class="filter-search-group" data-filter="regression-agent">
+                            <input type="hidden" id="regressionAgentId" required>
+                            <input type="text" class="form-control" id="regressionAgentInput"
+                                placeholder="Search agents" autocomplete="off">
+                            <div class="filter-search-results d-none" id="regressionAgentResults"></div>
+                        </div>
                         <div class="form-text">All active test cases belonging to this agent will run concurrently.
                         </div>
                     </div>

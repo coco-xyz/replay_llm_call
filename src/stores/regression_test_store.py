@@ -2,12 +2,13 @@
 
 from typing import List, Optional
 
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
+from sqlalchemy.orm import joinedload
 
 from src.core.error_codes import DatabaseErrorCode
 from src.core.exceptions import DatabaseException
 from src.core.logger import get_logger
-from src.models import RegressionTest
+from src.models import Agent, RegressionTest
 from src.stores.database import database_session
 
 logger = get_logger(__name__)
@@ -76,22 +77,31 @@ class RegressionTestStore:
         limit: int = 20,
         offset: int = 0,
         include_deleted: bool = False,
+        search: Optional[str] = None,
     ) -> List[RegressionTest]:
         try:
             with database_session() as db:
                 query = db.query(RegressionTest)
+                if search:
+                    like_pattern = f"%{search.strip()}%"
+                    query = (
+                        query.join(Agent, RegressionTest.agent)
+                        .filter(
+                            or_(
+                                RegressionTest.id.ilike(like_pattern),
+                                Agent.name.ilike(like_pattern),
+                            )
+                        )
+                        .options(joinedload(RegressionTest.agent))
+                    )
                 if agent_id:
                     query = query.filter(RegressionTest.agent_id == agent_id)
                 if status:
                     query = query.filter(RegressionTest.status == status)
                 if not include_deleted:
                     query = query.filter(RegressionTest.is_deleted.is_(False))
-                return (
-                    query.order_by(desc(RegressionTest.created_at))
-                    .limit(limit)
-                    .offset(offset)
-                    .all()
-                )
+                query = query.order_by(desc(RegressionTest.created_at))
+                return query.limit(limit).offset(offset).all()
         except Exception as exc:  # pragma: no cover
             logger.error("Failed to list regression tests: %s", exc)
             raise DatabaseException(

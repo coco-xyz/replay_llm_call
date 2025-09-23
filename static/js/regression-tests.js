@@ -7,11 +7,46 @@ const PAGE_SIZE = 20;
 const FETCH_LIMIT = PAGE_SIZE + 1;
 
 let regressionTests = [];
-let agentOptions = [];
 let currentFilters = { agentId: '', status: '' };
 let refreshTimeout = null;
 let currentPage = 1;
 let hasNextPage = false;
+
+const agentCache = new Map();
+const pendingAgentRequests = new Map();
+
+const agentAutocompleteConfigs = {
+    filter: {
+        inputId: 'agentFilterInput',
+        hiddenId: 'agentFilter',
+        resultsId: 'agentFilterResults',
+        onSelect(agent) {
+            if (currentFilters.agentId !== agent.id) {
+                currentFilters.agentId = agent.id;
+                currentPage = 1;
+                loadRegressions(1);
+            }
+        },
+        onClear() {
+            if (currentFilters.agentId) {
+                currentFilters.agentId = '';
+                currentPage = 1;
+                loadRegressions(1);
+            }
+        },
+    },
+    modal: {
+        inputId: 'regressionAgentInput',
+        hiddenId: 'regressionAgentId',
+        resultsId: 'regressionAgentResults',
+        onSelect(agent) {
+            populateDefaultsForAgent(agent);
+        },
+        onClear() {
+            populateDefaultsForAgent(null);
+        },
+    },
+};
 
 window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
@@ -19,8 +54,180 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initializeData() {
-    await loadAgents();
+    const urlParams = new URLSearchParams(window.location.search);
+    currentFilters.agentId = urlParams.get('agentId') || '';
+    currentFilters.status = urlParams.get('status') || '';
+
+    setupAgentAutocompleteControls();
+    await hydrateFilterInputs();
     await loadRegressions(1);
+}
+
+function setupAgentAutocompleteControls() {
+    Object.entries(agentAutocompleteConfigs).forEach(([key, config]) => {
+        setupAgentAutocomplete(key, config);
+    });
+}
+
+function setupAgentAutocomplete(key, config) {
+    const input = document.getElementById(config.inputId);
+    const hidden = document.getElementById(config.hiddenId);
+    const results = document.getElementById(config.resultsId);
+    if (!input || !hidden || !results) {
+        return;
+    }
+
+    let debounceTimer = null;
+    let activeController = null;
+
+    const closeResults = () => {
+        results.classList.add('d-none');
+        results.innerHTML = '';
+    };
+
+    const selectResult = (agent) => {
+        hidden.value = agent.id;
+        input.value = agent.name;
+        agentCache.set(agent.id, agent);
+        closeResults();
+        if (typeof config.onSelect === 'function') {
+            config.onSelect(agent);
+        }
+    };
+
+    const renderResults = (items) => {
+        if (!items || items.length === 0) {
+            results.innerHTML = '<div class="filter-search-empty">No matches</div>';
+            results.classList.remove('d-none');
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        items.forEach((agent) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            const primary = document.createElement('span');
+            primary.textContent = agent.name || agent.id;
+            button.appendChild(primary);
+            if (agent.description) {
+                const secondary = document.createElement('span');
+                secondary.className = 'result-secondary';
+                secondary.textContent = agent.description;
+                button.appendChild(secondary);
+            }
+            button.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+                selectResult(agent);
+            });
+            fragment.appendChild(button);
+        });
+        results.innerHTML = '';
+        results.appendChild(fragment);
+        results.classList.remove('d-none');
+    };
+
+    const performSearch = (query) => {
+        if (!query) {
+            closeResults();
+            return;
+        }
+
+        if (activeController) {
+            activeController.abort();
+        }
+
+        activeController = new AbortController();
+        searchAgents(query, { signal: activeController.signal })
+            .then(renderResults)
+            .catch((error) => {
+                if (isAbortError(error)) {
+                    return;
+                }
+                console.error('Agent search failed:', error);
+                results.innerHTML = '<div class="filter-search-empty text-danger">Search failed</div>';
+                results.classList.remove('d-none');
+            });
+    };
+
+    input.addEventListener('input', (event) => {
+        const query = event.target.value.trim();
+        if (hidden.value) {
+            hidden.value = '';
+            if (typeof config.onClear === 'function') {
+                config.onClear();
+            }
+        }
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+        }
+        if (!query) {
+            closeResults();
+            return;
+        }
+        debounceTimer = window.setTimeout(() => performSearch(query), 250);
+    });
+
+    input.addEventListener('focus', () => {
+        const query = input.value.trim();
+        if (query) {
+            performSearch(query);
+        }
+    });
+
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeResults();
+            input.blur();
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        window.setTimeout(closeResults, 150);
+    });
+}
+
+function resetAgentAutocomplete(key) {
+    const config = agentAutocompleteConfigs[key];
+    if (!config) {
+        return;
+    }
+    const input = document.getElementById(config.inputId);
+    const hidden = document.getElementById(config.hiddenId);
+    const results = document.getElementById(config.resultsId);
+    if (input) {
+        input.value = '';
+    }
+    if (hidden && hidden.value) {
+        hidden.value = '';
+        if (typeof config.onClear === 'function') {
+            config.onClear();
+        }
+    } else if (hidden) {
+        hidden.value = '';
+    }
+    if (results) {
+        results.classList.add('d-none');
+        results.innerHTML = '';
+    }
+}
+
+async function hydrateFilterInputs() {
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.value = currentFilters.status || '';
+    }
+
+    if (currentFilters.agentId) {
+        const hidden = document.getElementById('agentFilter');
+        if (hidden) {
+            hidden.value = currentFilters.agentId;
+        }
+        const agent = await ensureAgentLoaded(currentFilters.agentId);
+        const input = document.getElementById('agentFilterInput');
+        if (input) {
+            input.value = agent?.name || currentFilters.agentId;
+        }
+    }
 }
 
 function setupEventListeners() {
@@ -32,44 +239,30 @@ function setupEventListeners() {
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', () => {
-            const agentFilter = document.getElementById('agentFilter');
+            resetAgentAutocomplete('filter');
             const statusFilter = document.getElementById('statusFilter');
-            if (agentFilter) agentFilter.value = '';
-            if (statusFilter) statusFilter.value = '';
+            if (statusFilter) {
+                statusFilter.value = '';
+            }
             currentFilters = { agentId: '', status: '' };
             currentPage = 1;
             loadRegressions(1);
         });
     }
 
-    const agentFilter = document.getElementById('agentFilter');
-    if (agentFilter) {
-        agentFilter.addEventListener('change', (event) => {
-            currentFilters.agentId = event.target.value;
-            currentPage = 1;
-            loadRegressions(1);
-        });
-        agentFilter.value = currentFilters.agentId;
-    }
-
     const statusFilter = document.getElementById('statusFilter');
     if (statusFilter) {
+        statusFilter.value = currentFilters.status || '';
         statusFilter.addEventListener('change', (event) => {
             currentFilters.status = event.target.value;
             currentPage = 1;
             loadRegressions(1);
         });
-        statusFilter.value = currentFilters.status;
     }
 
     const startRegressionBtn = document.getElementById('confirmStartRegression');
     if (startRegressionBtn) {
         startRegressionBtn.addEventListener('click', startRegression);
-    }
-
-    const regressionAgentSelect = document.getElementById('regressionAgentSelect');
-    if (regressionAgentSelect) {
-        regressionAgentSelect.addEventListener('change', (event) => populateDefaultsForAgent(event.target.value));
     }
 
     const startModal = document.getElementById('startRegressionModal');
@@ -80,15 +273,17 @@ function setupEventListeners() {
             if (settingsInput && !settingsInput.value.trim()) {
                 settingsInput.value = '{}';
             }
-            if (agentOptions.length === 1) {
-                document.getElementById('regressionAgentSelect').value = agentOptions[0].id;
-                populateDefaultsForAgent(agentOptions[0].id);
+            const agentInput = document.getElementById('regressionAgentInput');
+            if (agentInput) {
+                agentInput.focus();
             }
         });
 
         startModal.addEventListener('hidden.bs.modal', () => {
             document.getElementById('startRegressionForm').reset();
             clearModalAlert('startRegressionAlert');
+            resetAgentAutocomplete('modal');
+            populateDefaultsForAgent(null);
         });
     }
 
@@ -120,23 +315,104 @@ function setupEventListeners() {
     }
 }
 
-async function loadAgents() {
-    try {
-        const url = new URL('/v1/api/agents/', window.location.origin);
-        url.searchParams.set('limit', '1000');
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+function isAbortError(error) {
+    return error && (error.name === 'AbortError' || error.code === 20);
+}
 
-        const agents = await response.json();
-        agentOptions = agents.filter((agent) => !agent.is_deleted);
-        populateAgentFilter(agentOptions);
-        populateRegressionAgentSelect(agentOptions);
-    } catch (error) {
-        console.error('Error loading agents:', error);
-        showAlert('Error loading agents: ' + error.message, 'danger');
+async function fetchJson(url, options = {}) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
     }
+    return response.json();
+}
+
+async function searchAgents(query, options = {}) {
+    if (!query) {
+        return [];
+    }
+    const params = new URLSearchParams({ search: query, limit: '5' });
+    try {
+        const results = await fetchJson(`/v1/api/agents/?${params}`, options);
+        results.forEach((agent) => {
+            agentCache.set(agent.id, agent);
+        });
+        return results;
+    } catch (error) {
+        if (isAbortError(error)) {
+            return [];
+        }
+        console.error('Error searching agents:', error);
+        return [];
+    }
+}
+
+async function ensureAgentLoaded(agentId) {
+    if (!agentId) {
+        return null;
+    }
+    if (agentCache.has(agentId)) {
+        return agentCache.get(agentId);
+    }
+    if (pendingAgentRequests.has(agentId)) {
+        return pendingAgentRequests.get(agentId);
+    }
+
+    const promise = (async () => {
+        try {
+            const agent = await fetchJson(`/v1/api/agents/${agentId}`);
+            agentCache.set(agentId, agent);
+            return agent;
+        } catch (error) {
+            console.error(`Failed to fetch agent ${agentId}:`, error);
+            agentCache.set(agentId, null);
+            return null;
+        } finally {
+            pendingAgentRequests.delete(agentId);
+        }
+    })();
+
+    pendingAgentRequests.set(agentId, promise);
+    return promise;
+}
+
+async function populateDefaultsForAgent(agentOrData) {
+    const modelNameInput = document.getElementById('regressionModelName');
+    const systemPromptInput = document.getElementById('regressionSystemPrompt');
+    const modelSettingsInput = document.getElementById('regressionModelSettings');
+    const hiddenAgentInput = document.getElementById('regressionAgentId');
+
+    if (!modelNameInput || !systemPromptInput || !modelSettingsInput || !hiddenAgentInput) {
+        return;
+    }
+
+    if (!agentOrData) {
+        hiddenAgentInput.value = '';
+        modelNameInput.value = '';
+        systemPromptInput.value = '';
+        if (!modelSettingsInput.value.trim()) {
+            modelSettingsInput.value = '{}';
+        }
+        return;
+    }
+
+    let agentData = agentOrData;
+    if (typeof agentData === 'string') {
+        agentData = await ensureAgentLoaded(agentData);
+    }
+
+    if (!agentData) {
+        hiddenAgentInput.value = '';
+        return;
+    }
+
+    hiddenAgentInput.value = agentData.id;
+    modelNameInput.value = agentData.default_model_name || '';
+    systemPromptInput.value = agentData.default_system_prompt || '';
+    const settingsValue = agentData.default_model_settings
+        ? JSON.stringify(agentData.default_model_settings, null, 2)
+        : '{}';
+    modelSettingsInput.value = settingsValue;
 }
 
 function createRegressionsUrl(page) {
@@ -365,64 +641,13 @@ function buildStatusBadge(status) {
     }
 }
 
-function populateAgentFilter(agents) {
-    const filter = document.getElementById('agentFilter');
-    if (!filter) return;
-
-    filter.innerHTML = '<option value="">All agents</option>';
-    agents.forEach((agent) => {
-        const option = document.createElement('option');
-        option.value = agent.id;
-        option.textContent = agent.name;
-        filter.appendChild(option);
-    });
-
-    if (currentFilters.agentId) {
-        filter.value = currentFilters.agentId;
-    }
-}
-
-function populateRegressionAgentSelect(agents) {
-    const select = document.getElementById('regressionAgentSelect');
-    const startButton = document.getElementById('startRegressionBtn');
-    if (!select) return;
-
-    select.innerHTML = '<option value="">Select an agent...</option>';
-    agents.forEach((agent) => {
-        const option = document.createElement('option');
-        option.value = agent.id;
-        option.textContent = agent.name;
-        select.appendChild(option);
-    });
-
-    if (startButton) {
-        startButton.disabled = agents.length === 0;
-    }
-}
-
-function populateDefaultsForAgent(agentId) {
-    if (!agentId) {
-        return;
-    }
-
-    const agent = agentOptions.find((item) => item.id === agentId);
-    if (!agent) {
-        return;
-    }
-
-    document.getElementById('regressionModelName').value = agent.default_model_name || '';
-    document.getElementById('regressionSystemPrompt').value = agent.default_system_prompt || '';
-    const settings = agent.default_model_settings ? JSON.stringify(agent.default_model_settings, null, 2) : '{}';
-    document.getElementById('regressionModelSettings').value = settings;
-}
-
 async function startRegression() {
-    const agentSelect = document.getElementById('regressionAgentSelect');
+    const agentHidden = document.getElementById('regressionAgentId');
     const modelNameInput = document.getElementById('regressionModelName');
     const systemPromptInput = document.getElementById('regressionSystemPrompt');
     const modelSettingsInput = document.getElementById('regressionModelSettings');
 
-    const agentId = agentSelect.value;
+    const agentId = agentHidden ? agentHidden.value : '';
     const modelName = modelNameInput.value.trim();
     const systemPrompt = systemPromptInput.value.trim();
     const modelSettingsText = modelSettingsInput.value.trim();

@@ -201,6 +201,55 @@
         padding: 1.5rem;
     }
 
+    .filter-search-group {
+        position: relative;
+        width: 220px;
+    }
+
+    .filter-search-results {
+        position: absolute;
+        top: calc(100% + 0.25rem);
+        left: 0;
+        right: 0;
+        z-index: 20;
+        background: var(--card-background);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 20px -12px rgba(15, 23, 42, 0.45);
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .filter-search-results button {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        color: var(--text-primary);
+    }
+
+    .filter-search-results button:hover,
+    .filter-search-results button:focus {
+        background: #f8fafc;
+        outline: none;
+    }
+
+    .filter-search-results .result-secondary {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+
+    .filter-search-empty {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
     /* Empty State */
     .empty-state {
         text-align: center;
@@ -324,15 +373,24 @@
                     <option value="success">Success</option>
                     <option value="failed">Failed</option>
                 </select>
-                <select class="form-select form-select-sm" id="agentFilter" style="width: 200px;">
-                    <option value="">All Agents</option>
-                </select>
-                <select class="form-select form-select-sm" id="testCaseFilter" style="width: 220px;">
-                    <option value="">All Test Cases</option>
-                </select>
-                <select class="form-select form-select-sm" id="regressionFilter" style="width: 200px;">
-                    <option value="">All Regressions</option>
-                </select>
+                <div class="filter-search-group" data-filter="test-case">
+                    <input type="hidden" id="testCaseFilter" value="">
+                    <input type="text" class="form-control form-control-sm" id="testCaseFilterInput"
+                        placeholder="Search test cases" autocomplete="off">
+                    <div class="filter-search-results d-none" id="testCaseFilterResults"></div>
+                </div>
+                <div class="filter-search-group" data-filter="agent">
+                    <input type="hidden" id="agentFilter" value="">
+                    <input type="text" class="form-control form-control-sm" id="agentFilterInput"
+                        placeholder="Search agents" autocomplete="off">
+                    <div class="filter-search-results d-none" id="agentFilterResults"></div>
+                </div>
+                <div class="filter-search-group" data-filter="regression">
+                    <input type="hidden" id="regressionFilter" value="">
+                    <input type="text" class="form-control form-control-sm" id="regressionFilterInput"
+                        placeholder="Search regressions" autocomplete="off">
+                    <div class="filter-search-results d-none" id="regressionFilterResults"></div>
+                </div>
                 <button class="btn btn-outline-secondary btn-sm ms-auto" id="clearFiltersBtn">
                     <i class="fas fa-eraser me-1"></i>Clear
                 </button>

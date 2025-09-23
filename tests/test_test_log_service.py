@@ -39,6 +39,7 @@ class FakeStore:
         assert log_id == self.log.id
         return self.log
 
+
 def test_get_test_log_includes_response_example():
     service = LogService()
     fake_log = FakeTestLog()
@@ -50,8 +51,7 @@ def test_get_test_log_includes_response_example():
     assert result.response_example == fake_log.response_example
     assert result.response_example_vector == fake_log.response_example_vector
     assert (
-        result.response_expectation_snapshot
-        == fake_log.response_expectation_snapshot
+        result.response_expectation_snapshot == fake_log.response_expectation_snapshot
     )
     assert result.similarity_score == fake_log.similarity_score
     assert result.is_passed == fake_log.is_passed

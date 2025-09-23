@@ -20,8 +20,12 @@ EVALUATION_SETTINGS_KEY = "evaluation_agent"
 class EvaluationSettingsData(BaseModel):
     """Pydantic representation of evaluation agent configuration."""
 
-    model_name: str = Field(..., description="Model identifier for the evaluation agent")
-    provider: str = Field(..., description="Provider responsible for the evaluation model")
+    model_name: str = Field(
+        ..., description="Model identifier for the evaluation agent"
+    )
+    provider: str = Field(
+        ..., description="Provider responsible for the evaluation model"
+    )
     updated_at: Optional[datetime] = Field(
         None, description="Timestamp of the last persisted change"
     )
@@ -59,7 +63,10 @@ class EvaluationSettingsService:
         if not model_name:
             raise ValueError("Model name cannot be empty.")
 
-        payload = {"model_name": model_name, "provider": settings.ai__eval_agent__provider}
+        payload = {
+            "model_name": model_name,
+            "provider": settings.ai__eval_agent__provider,
+        }
         record = self.store.upsert_setting(EVALUATION_SETTINGS_KEY, payload)
         logger.info("Evaluation model updated to '%s'", model_name)
         return EvaluationSettingsData(

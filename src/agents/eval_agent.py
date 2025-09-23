@@ -25,7 +25,9 @@ explicit acceptance criteria. Follow these principles:
 class EvalAgentOutput(BaseModel):
     """Structured result returned by the evaluation agent."""
 
-    passed: bool = Field(..., description="Whether the actual response satisfies requirements")
+    passed: bool = Field(
+        ..., description="Whether the actual response satisfies requirements"
+    )
     feedback: str = Field(..., description="Brief explanation of the judgement")
     satisfied_criteria: List[str] = Field(
         default_factory=list,

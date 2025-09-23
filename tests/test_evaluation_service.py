@@ -8,7 +8,9 @@ from src.services.evaluation_settings_service import EvaluationSettingsData
 
 
 class FakeSettingsService:
-    def __init__(self, model_name: str = "openai/gpt-4o-mini", provider: str = "openrouter"):
+    def __init__(
+        self, model_name: str = "openai/gpt-4o-mini", provider: str = "openrouter"
+    ):
         self._data = EvaluationSettingsData(
             model_name=model_name,
             provider=provider,
@@ -18,7 +20,9 @@ class FakeSettingsService:
     def get_settings(self) -> EvaluationSettingsData:
         return self._data
 
-    def update_settings(self, *_args, **_kwargs) -> EvaluationSettingsData:  # pragma: no cover - not used
+    def update_settings(
+        self, *_args, **_kwargs
+    ) -> EvaluationSettingsData:  # pragma: no cover - not used
         raise NotImplementedError
 
 

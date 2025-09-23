@@ -11,8 +11,8 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.core.logger import get_logger
 from src.core.embedding import JinaEmbeddingClient
+from src.core.logger import get_logger
 from src.models import TestCase
 from src.services.agent_service import AgentService, AgentSummary
 from src.services.llm_parser_service import parse_llm_raw_data, validate_raw_data_format

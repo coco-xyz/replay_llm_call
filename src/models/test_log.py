@@ -68,9 +68,7 @@ class TestLog(BaseDBModel):
     evaluation_model_name: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
     )
-    evaluation_metadata: Mapped[Optional[dict]] = mapped_column(
-        JSON, nullable=True
-    )
+    evaluation_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Execution status (synchronous execution: success or failed)
     status: Mapped[str] = mapped_column(String(20), default="success", nullable=False)

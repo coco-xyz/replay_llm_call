@@ -7,8 +7,8 @@ from typing import Dict, Optional
 from pydantic import BaseModel, Field
 
 from src.agents.eval_agent import EvalAgentOutput, create_evaluation_agent
-from src.core.logger import get_logger
 from src.core.llm_registry import get_eval_model
+from src.core.logger import get_logger
 from src.services.evaluation_settings_service import (
     EvaluationSettingsData,
     EvaluationSettingsService,
@@ -20,10 +20,16 @@ logger = get_logger(__name__)
 class EvaluationResult(BaseModel):
     """Outcome of an evaluation agent run."""
 
-    passed: bool = Field(..., description="Whether the evaluation marked the log as passing")
+    passed: bool = Field(
+        ..., description="Whether the evaluation marked the log as passing"
+    )
     feedback: str = Field(..., description="Human-readable evaluation summary")
-    model_name: str = Field(..., description="Model identifier used for the evaluation agent")
-    metadata: Dict = Field(default_factory=dict, description="Structured payload returned by the agent")
+    model_name: str = Field(
+        ..., description="Model identifier used for the evaluation agent"
+    )
+    metadata: Dict = Field(
+        default_factory=dict, description="Structured payload returned by the agent"
+    )
 
 
 class EvaluationService:
@@ -75,14 +81,19 @@ class EvaluationService:
             result = await agent.run(prompt)
             output: EvalAgentOutput = result.output
             metadata = output.model_dump()
-            feedback = output.feedback.strip() or "Evaluation completed without additional feedback."
+            feedback = (
+                output.feedback.strip()
+                or "Evaluation completed without additional feedback."
+            )
             return EvaluationResult(
                 passed=bool(output.passed),
                 feedback=feedback,
                 model_name=model_name,
                 metadata=metadata,
             )
-        except Exception as exc:  # pragma: no cover - defensive against runtime LLM issues
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - defensive against runtime LLM issues
             logger.error("Evaluation agent failed: %s", exc, exc_info=True)
             return EvaluationResult(
                 passed=False,
@@ -111,19 +122,14 @@ class EvaluationService:
     ) -> str:
         sections = []
         if test_case_name:
-            sections.append(
-                "Test Case Name:\n"
-                + f"""\n{test_case_name.strip()}\n"""
-            )
+            sections.append("Test Case Name:\n" + f"""\n{test_case_name.strip()}\n""")
 
         if expectation:
-            sections.append(
-                "Acceptance Criteria:\n"
-                + f"""\n{expectation.strip()}\n"""
-            )
+            sections.append("Acceptance Criteria:\n" + f"""\n{expectation.strip()}\n""")
         else:
             sections.append(
-                "Acceptance Criteria:\n" """\nNo explicit criteria were provided. Derive expectations from the reference response if available and ensure factual correctness.\n"""
+                "Acceptance Criteria:\n"
+                """\nNo explicit criteria were provided. Derive expectations from the reference response if available and ensure factual correctness.\n"""
             )
 
         if reference_response:
@@ -133,12 +139,12 @@ class EvaluationService:
             )
         else:
             sections.append(
-                "Reference Response (if helpful):\n" """\nNot provided. Focus on the acceptance criteria above.\n"""
+                "Reference Response (if helpful):\n"
+                """\nNot provided. Focus on the acceptance criteria above.\n"""
             )
 
         sections.append(
-            "Actual Response to Evaluate:\n"
-            + f"""\n{actual_response.strip()}\n"""
+            "Actual Response to Evaluate:\n" + f"""\n{actual_response.strip()}\n"""
         )
 
         instruction = (

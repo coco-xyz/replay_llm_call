@@ -22,6 +22,7 @@ def _build_test_case(**overrides):
         "system_prompt": "system",
         "last_user_message": "user",
         "response_example": None,
+        "response_expectation": None,
         "is_deleted": False,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
@@ -47,6 +48,28 @@ def test_get_test_case_includes_soft_delete_flag(monkeypatch):
     assert result is not None
     assert result.is_deleted is True
     assert call_args == {"case_id": "case-1", "include_deleted": True}
+
+
+def test_get_test_case_includes_response_expectation(monkeypatch):
+    service = TestCaseService()
+    expected = "Must mention pricing and delivery time."
+    test_case = _build_test_case(response_expectation=expected)
+
+    monkeypatch.setattr(
+        service.store,
+        "get_by_id",
+        lambda _case_id, include_deleted=True: test_case,
+    )
+    monkeypatch.setattr(
+        service.agent_service,
+        "get_agent_summary",
+        lambda _agent_id: None,
+    )
+
+    result = service.get_test_case("case-1")
+
+    assert result is not None
+    assert result.response_expectation == expected
 
 
 def test_update_test_case_blocks_deleted_records(monkeypatch):

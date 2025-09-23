@@ -13,8 +13,8 @@ from src.services.agent_service import AgentService, AgentSummary
 from src.services.test_case_service import TestCaseService
 from src.services.test_execution_service import (
     ExecutionResult,
-    TestExecutionData,
     ExecutionService,
+    TestExecutionData,
 )
 from src.stores.regression_test_store import RegressionTestStore
 

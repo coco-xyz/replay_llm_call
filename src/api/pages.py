@@ -167,4 +167,18 @@ async def test_log_detail_page(request: Request, log_id: str):
     )
 
 
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    """Application settings page."""
+
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "static_asset_version": settings.static__asset_version,
+            "active_page": "settings",
+        },
+    )
+
+
 __all__ = ["router"]

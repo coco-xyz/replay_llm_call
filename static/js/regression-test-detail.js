@@ -315,11 +315,7 @@ async function renderRegressionLogs(logs) {
             const llmResponseEncoded = encodeTooltipPayload(rawLlmResponse);
             const llmResponseFallback = encodeTooltipPayload('No LLM response captured');
 
-            const similarityValue = formatSimilarityScore(log.similarity_score);
-            const similarityBadge = similarityValue === '—'
-                ? ''
-                : `<span class=\"badge bg-info ms-2\" title=\"Similarity score\">${escapeHtml(similarityValue)}</span>`;
-            const passBadge = formatPassBadge(log.is_passed);
+            const passBadge = formatPassBadge(log);
 
             const executedAt = formatDate(log.created_at);
 
@@ -342,7 +338,6 @@ async function renderRegressionLogs(logs) {
                     <td>
                         <div class="d-flex flex-column align-items-start gap-1">
                             ${passBadge}
-                            ${similarityBadge}
                         </div>
                     </td>
                     <td>
@@ -433,22 +428,71 @@ function formatResponseTime(value) {
     return `${value}ms`;
 }
 
-function formatSimilarityScore(value) {
-    if (value === null || value === undefined) {
-        return '—';
+function resolveEvaluationDisplay(target) {
+    const status = target && typeof target.is_passed !== 'undefined' ? target.is_passed : null;
+    if (status === true) {
+        return { label: 'Passed', badgeClass: 'bg-success', icon: 'check' };
     }
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
-        return '—';
+    if (status === false) {
+        return { label: 'Failed', badgeClass: 'bg-danger', icon: 'times' };
     }
-    return numeric.toFixed(2);
+    return { label: 'Unknown', badgeClass: 'bg-secondary', icon: 'question' };
 }
 
-function formatPassBadge(isPassed) {
-    if (isPassed) {
-        return '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>';
+function buildEvaluationTooltip(log) {
+    if (!log) {
+        return 'Evaluation details unavailable.';
     }
-    return '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
+
+    const lines = [];
+    const feedback = (log.evaluation_feedback || '').trim();
+    if (feedback) {
+        lines.push(feedback);
+    }
+
+    if (log.response_expectation_snapshot) {
+        lines.push(`Expectation snapshot:\n${log.response_expectation_snapshot.trim()}`);
+    }
+
+    if (log.evaluation_model_name) {
+        lines.push(`Model: ${log.evaluation_model_name}`);
+    }
+
+    const metadata = log.evaluation_metadata || {};
+    if (Array.isArray(metadata.missing_criteria) && metadata.missing_criteria.length > 0) {
+        lines.push(`Missing criteria:\n- ${metadata.missing_criteria.join('\n- ')}`);
+    }
+    if (Array.isArray(metadata.satisfied_criteria) && metadata.satisfied_criteria.length > 0) {
+        lines.push(`Satisfied criteria:\n- ${metadata.satisfied_criteria.join('\n- ')}`);
+    }
+
+    if (lines.length === 0) {
+        const display = resolveEvaluationDisplay(log);
+        if (display.label === 'Passed') {
+            lines.push('Marked as passed.');
+        } else if (display.label === 'Failed') {
+            lines.push('Marked as failed.');
+        } else {
+            lines.push('Evaluation skipped or not applicable.');
+        }
+    }
+
+    return lines.join('\n\n');
+}
+
+function formatPassBadge(log) {
+    const display = resolveEvaluationDisplay(log);
+    const tooltipContent = encodeTooltipPayload(buildEvaluationTooltip(log));
+    const fallback = encodeTooltipPayload(display.label);
+
+    return `
+        <span class="badge ${display.badgeClass} log-preview"
+              data-bs-toggle="tooltip" data-bs-placement="top"
+              data-bs-custom-class="log-tooltip" data-bs-html="true"
+              data-tooltip-content="${tooltipContent}" data-tooltip-fallback="${fallback}">
+            <i class="fas fa-${display.icon} me-1"></i>${display.label}
+        </span>
+    `;
 }
 
 async function loadTestCaseDetails(testCaseId) {

@@ -128,7 +128,7 @@
         padding: 1rem;
         font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
         font-size: 0.875rem;
-        max-height: 320px;
+        max-height: 200px;
         overflow-y: auto;
         white-space: pre-wrap;
         word-break: break-word;
@@ -232,7 +232,7 @@
     <div id="regressionContent" class="d-none">
         <div class="row g-4 mb-4">
             <div class="col-lg-6">
-                <div class="card h-100">
+                <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Execution Summary</span>
                         <span id="statusBadge"></span>
@@ -274,23 +274,27 @@
                         </table>
                     </div>
                 </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">Override Parameters</div>
+
+                <!-- Model Information Card -->
+                <div class="card mt-3">
+                    <div class="card-header">Model Configuration</div>
                     <div class="card-body">
                         <div class="mb-3">
                             <h6 class="text-uppercase text-muted small mb-1">Model Name</h6>
                             <div class="fw-semibold" id="overrideModel"></div>
                         </div>
-                        <div class="mb-3">
-                            <h6 class="text-uppercase text-muted small mb-1">System Prompt</h6>
-                            <div class="llm-response" id="overridePrompt"></div>
-                        </div>
                         <div>
                             <h6 class="text-uppercase text-muted small mb-1">Model Settings JSON</h6>
                             <div class="llm-response" id="overrideSettings"></div>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">System Prompt</div>
+                    <div class="card-body">
+                        <div class="llm-response" id="overridePrompt" style="max-height: 480px;"></div>
                     </div>
                 </div>
             </div>

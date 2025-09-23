@@ -190,229 +190,250 @@
     }
 
     /* Model Name History Dropdown */
+
+    /* Required field validation styles */
+    .form-control.is-invalid {
+        border-color: var(--danger-color);
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+    }
+
+    .required-field-label {
+        font-weight: 500;
+    }
+
+    .required-asterisk {
+        color: var(--danger-color);
+        font-weight: bold;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-    <div class="container py-4">
-        <!-- Header -->
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
-            <div class="mb-3 mb-lg-0">
-                <h1 class="page-title">
-                    <i class="fas fa-play me-3"></i>Test Execution
-                </h1>
-                <p class="page-subtitle mb-0">Execute and test your LLM configurations</p>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <!-- Execute Controls -->
-                <button class="btn btn-success" id="executeBtn" onclick="executeTest()" disabled>
-                    <i class="fas fa-play me-2"></i>Execute Test
-                </button>
-                <button class="btn btn-outline-primary" onclick="resetToOriginal()">
-                    <i class="fas fa-undo me-2"></i>Reset to Original
-                </button>
-                <button class="btn btn-outline-secondary" onclick="viewTestLogs()">
-                    <i class="fas fa-history me-2"></i>View Test Logs
-                </button>
-            </div>
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
+        <div class="mb-3 mb-lg-0">
+            <h1 class="page-title">
+                <i class="fas fa-play me-3"></i>Test Execution
+            </h1>
+            <p class="page-subtitle mb-0">Execute and test your LLM configurations</p>
         </div>
-
-        <div id="executionAgentWarning" class="alert alert-warning d-none" role="alert">
-            <i class="fas fa-circle-exclamation me-2"></i>
-            <span>No active agents available. Configure an agent before executing test cases.</span>
-            <a href="/agents" class="alert-link ms-1">Manage Agents</a>
+        <div class="d-flex align-items-center gap-2">
+            <!-- Execute Controls -->
+            <button class="btn btn-success" id="executeBtn" onclick="executeTest()" disabled>
+                <i class="fas fa-play me-2"></i>Execute Test
+            </button>
+            <button class="btn btn-outline-primary" onclick="resetToOriginal()">
+                <i class="fas fa-undo me-2"></i>Reset to Original
+            </button>
+            <button class="btn btn-outline-secondary" onclick="viewTestLogs()">
+                <i class="fas fa-history me-2"></i>View Test Logs
+            </button>
         </div>
+    </div>
 
-        <!-- Test Case Selection -->
-        <div class="card mb-4">
-            <div class="card-body py-3">
-                <div class="d-flex flex-wrap align-items-center gap-3">
-                    <span class="text-muted fw-medium me-2 d-flex align-items-center">
-                        <i class="fas fa-cog me-2"></i>Configuration:
-                    </span>
-                    <select class="form-select form-select-sm" id="agentSelect" style="width: 200px; flex: 0 0 auto;">
-                        <option value="">All agents</option>
-                    </select>
-                    <select class="form-select form-select-sm" id="testCaseSelect"
-                        style="flex: 1 1 300px; max-width: 500px;">
-                        <option value="">Select a test case...</option>
-                    </select>
-                    <div class="form-text ms-auto" id="selectedTestCaseInfo" style="flex: 0 0 auto; margin-bottom: 0;">
-                        Select a test case to preview its details.
-                    </div>
+    <div id="executionAgentWarning" class="alert alert-warning d-none" role="alert">
+        <i class="fas fa-circle-exclamation me-2"></i>
+        <span>No active agents available. Configure an agent before executing test cases.</span>
+        <a href="/agents" class="alert-link ms-1">Manage Agents</a>
+    </div>
+
+    <!-- Test Case Selection -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <span class="text-muted fw-medium me-2 d-flex align-items-center">
+                    <i class="fas fa-cog me-2"></i>Configuration:
+                </span>
+                <select class="form-select form-select-sm" id="agentSelect" style="width: 200px; flex: 0 0 auto;">
+                    <option value="">All agents</option>
+                </select>
+                <select class="form-select form-select-sm" id="testCaseSelect"
+                    style="flex: 1 1 300px; max-width: 500px;">
+                    <option value="">Select a test case...</option>
+                </select>
+                <div class="form-text ms-auto" id="selectedTestCaseInfo" style="flex: 0 0 auto; margin-bottom: 0;">
+                    Select a test case to preview its details.
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="row">
-            <!-- Left Panel: Execution Parameters -->
-            <div class="col-lg-6">
+    <div class="row">
+        <!-- Left Panel: Execution Parameters -->
+        <div class="col-lg-6">
 
-                <!-- Execution Parameters -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Execution Parameters</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="modelName" class="form-label">Model Name</label>
-                            <div class="position-relative">
-                                <input type="text" class="form-control prompt-editor" id="modelName"
-                                    placeholder="model name from openrouter, e.g., anthropic/claude-sonnet-4"
-                                    autocomplete="off">
-                                <div class="model-history-dropdown" id="modelNameDropdown">
-                                    <!-- 历史记录将在这里动态生成 -->
-                                </div>
+            <!-- Execution Parameters -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Execution Parameters</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="modelName" class="form-label">
+                            Model Name <span class="text-danger">*</span>
+                        </label>
+                        <div class="position-relative">
+                            <input type="text" class="form-control prompt-editor" id="modelName"
+                                placeholder="model name from openrouter, e.g., anthropic/claude-sonnet-4"
+                                autocomplete="off" required>
+                            <div class="model-history-dropdown" id="modelNameDropdown">
+                                <!-- 历史记录将在这里动态生成 -->
                             </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center mb-2">
-                                <button class="btn btn-link text-decoration-none p-0 text-muted" type="button"
-                                    data-bs-toggle="collapse" data-bs-target="#modelSettingsCollapse"
-                                    aria-expanded="false" aria-controls="modelSettingsCollapse">
-                                    <i class="fas fa-chevron-right me-1" id="modelSettingsChevron"
-                                        style="font-size: 0.8em;"></i>
-                                    <span style="font-size: 0.9em;">Model Settings (Optional)</span>
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <button class="btn btn-link text-decoration-none p-0 text-muted" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#modelSettingsCollapse" aria-expanded="false"
+                                aria-controls="modelSettingsCollapse">
+                                <i class="fas fa-chevron-right me-1" id="modelSettingsChevron"
+                                    style="font-size: 0.8em;"></i>
+                                <span style="font-size: 0.9em;">Model Settings (Optional)</span>
+                            </button>
+                        </div>
+                        <div class="collapse" id="modelSettingsCollapse">
+                            <div class="ms-3">
+                                <textarea class="form-control" id="modelSettings" rows="4"
+                                    placeholder='{"temperature": 0.7, "max_tokens": 1000}'></textarea>
+                                <small class="text-muted mt-1 d-block">
+                                    <strong>Supported:</strong> temperature, max_tokens, top_p, parallel_tool_calls,
+                                    seed, presence_penalty, frequency_penalty.
+                                    Note: parallel_tool_calls is boolean, others are float.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="systemPrompt" class="form-label">
+                            System Prompt <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control prompt-editor" id="systemPrompt" rows="4"
+                            placeholder="System prompt will be loaded from test case..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="userMessage" class="form-label">
+                            User Message <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control prompt-editor" id="userMessage" rows="3"
+                            placeholder="User message will be loaded from test case..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="toolsConfig" class="form-label">Tools Configuration</label>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">Configure tools for this execution</small>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addTool()">
+                                    <i class="fas fa-plus me-1"></i>Add Tool
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetTools()">
+                                    <i class="fas fa-undo me-1"></i>Reset
                                 </button>
                             </div>
-                            <div class="collapse" id="modelSettingsCollapse">
-                                <div class="ms-3">
-                                    <textarea class="form-control" id="modelSettings" rows="4"
-                                        placeholder='{"temperature": 0.7, "max_tokens": 1000}'></textarea>
-                                    <small class="text-muted mt-1 d-block">
-                                        <strong>Supported:</strong> temperature, max_tokens, top_p, parallel_tool_calls,
-                                        seed, presence_penalty, frequency_penalty.
-                                        Note: parallel_tool_calls is boolean, others are float.
-                                    </small>
-                                </div>
-                            </div>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="systemPrompt" class="form-label">System Prompt</label>
-                            <textarea class="form-control prompt-editor" id="systemPrompt" rows="4"
-                                placeholder="System prompt will be loaded from test case..."></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="userMessage" class="form-label">User Message</label>
-                            <textarea class="form-control prompt-editor" id="userMessage" rows="3"
-                                placeholder="User message will be loaded from test case..."></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="toolsConfig" class="form-label">Tools Configuration</label>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <small class="text-muted">Configure tools for this execution</small>
-                                <div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addTool()">
-                                        <i class="fas fa-plus me-1"></i>Add Tool
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="resetTools()">
-                                        <i class="fas fa-undo me-1"></i>Reset
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="toolsContainer" class="border rounded p-3 bg-light">
-                                <div id="toolsList">
-                                    <p class="text-muted mb-0">No tools configured</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Panel: Execution Results -->
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Execution Results</h6>
-                        <div id="resultStatus" class="d-none">
-                            <span class="badge bg-secondary" id="statusBadge">Ready</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div id="executionResults" class="result-panel p-3">
-                            <div class="text-center text-muted">
-                                <i class="fas fa-info-circle fa-2x mb-3"></i>
-                                <p>Select a test case and click "Execute Test" to see results here</p>
+                        <div id="toolsContainer" class="border rounded p-3 bg-light">
+                            <div id="toolsList">
+                                <p class="text-muted mb-0">No tools configured</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Tool Editor Modal -->
-    <div class="modal fade" id="toolEditorModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Tool Configuration</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <!-- Right Panel: Execution Results -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Execution Results</h6>
+                    <div id="resultStatus" class="d-none">
+                        <span class="badge bg-secondary" id="statusBadge">Ready</span>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <form id="toolEditorForm">
-                        <input type="hidden" id="toolIndex">
-                        <div class="mb-3">
-                            <label for="toolType" class="form-label">Tool Type</label>
-                            <select class="form-select" id="toolType">
-                                <option value="function">Function</option>
-                            </select>
+                <div class="card-body">
+                    <div id="executionResults" class="result-panel p-3">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-info-circle fa-2x mb-3"></i>
+                            <p>Select a test case and click "Execute Test" to see results here</p>
                         </div>
-                        <div class="mb-3">
-                            <label for="toolName" class="form-label">Function Name *</label>
-                            <input type="text" class="form-control" id="toolName" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="toolDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="toolDescription" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="toolParameters" class="form-label">Parameters Schema (JSON) *</label>
-                            <textarea class="form-control" id="toolParameters" rows="8" required
-                                placeholder='{"type": "object", "properties": {...}, "required": [...]}'></textarea>
-                            <div class="form-text">Enter the JSON schema for function parameters</div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="toolStrict">
-                                <label class="form-check-label" for="toolStrict">
-                                    Strict mode
-                                </label>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveTool()">
-                        <i class="fas fa-save me-2"></i>Save Tool
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Tool Editor Modal -->
+<div class="modal fade" id="toolEditorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Tool Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="toolEditorForm">
+                    <input type="hidden" id="toolIndex">
+                    <div class="mb-3">
+                        <label for="toolType" class="form-label">Tool Type</label>
+                        <select class="form-select" id="toolType">
+                            <option value="function">Function</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="toolName" class="form-label">Function Name *</label>
+                        <input type="text" class="form-control" id="toolName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="toolDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="toolDescription" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="toolParameters" class="form-label">Parameters Schema (JSON) *</label>
+                        <textarea class="form-control" id="toolParameters" rows="8" required
+                            placeholder='{"type": "object", "properties": {...}, "required": [...]}'></textarea>
+                        <div class="form-text">Enter the JSON schema for function parameters</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="toolStrict">
+                            <label class="form-check-label" for="toolStrict">
+                                Strict mode
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTool()">
+                    <i class="fas fa-save me-2"></i>Save Tool
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-    <script src="/static/js/model-history.js?v={{ static_asset_version }}"></script>
-    <script src="/static/js/test-execution.js?v={{ static_asset_version }}"></script>
+<script src="/static/js/hover-tooltips.js?v={{ static_asset_version }}"></script>
+<script src="/static/js/model-history.js?v={{ static_asset_version }}"></script>
+<script src="/static/js/test-execution.js?v={{ static_asset_version }}"></script>
 
-        <script>
-            // Handle Model Settings collapse icon rotation
-            document.getElementById('modelSettingsCollapse').addEventListener('show.bs.collapse', function () {
-                document.getElementById('modelSettingsChevron').classList.remove('fa-chevron-right');
-                document.getElementById('modelSettingsChevron').classList.add('fa-chevron-down');
-            });
+<script>
+    // Handle Model Settings collapse icon rotation
+    document.getElementById('modelSettingsCollapse').addEventListener('show.bs.collapse', function () {
+        document.getElementById('modelSettingsChevron').classList.remove('fa-chevron-right');
+        document.getElementById('modelSettingsChevron').classList.add('fa-chevron-down');
+    });
 
-            document.getElementById('modelSettingsCollapse').addEventListener('hide.bs.collapse', function () {
-                document.getElementById('modelSettingsChevron').classList.remove('fa-chevron-down');
-                document.getElementById('modelSettingsChevron').classList.add('fa-chevron-right');
-            });
-        </script>
+    document.getElementById('modelSettingsCollapse').addEventListener('hide.bs.collapse', function () {
+        document.getElementById('modelSettingsChevron').classList.remove('fa-chevron-down');
+        document.getElementById('modelSettingsChevron').classList.add('fa-chevron-right');
+    });
+</script>
 {% endblock %}

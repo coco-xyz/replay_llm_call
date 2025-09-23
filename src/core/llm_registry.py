@@ -78,6 +78,16 @@ def get_fallback_model() -> Model:
     )
 
 
+def get_eval_model(model_name: Optional[str] = None) -> Model:
+    """Get evaluation agent model."""
+
+    primary_name = model_name or settings.ai__eval_agent__model_name
+    return create_fallback_model(
+        primary_model_name=primary_name,
+        primary_provider=settings.ai__eval_agent__provider,
+    )
+
+
 def list_available_models() -> Dict[str, Callable[[], Model]]:
     """
     List all available model getters.
@@ -89,6 +99,7 @@ def list_available_models() -> Dict[str, Callable[[], Model]]:
         "demo": get_demo_model,
         "default": get_default_model,
         "fallback": get_fallback_model,
+        "evaluation": lambda: get_eval_model(),
     }
 
 

@@ -35,17 +35,24 @@ class LogData(BaseModel):
     response_example: Optional[str] = Field(
         None, description="Response example captured with the log"
     )
-    response_example_vector: Optional[List[float]] = Field(
-        None, description="Embedding captured from the response example"
+    response_expectation_snapshot: Optional[str] = Field(
+        None, description="Expectation captured with the log"
     )
     response_time_ms: Optional[int] = Field(
         None, description="Response time in milliseconds"
     )
-    similarity_score: float = Field(
-        0.0, description="Cosine similarity vs. the test case example"
+    is_passed: Optional[bool] = Field(
+        None,
+        description="Evaluation outcome: true=passed, false=failed, None=unknown",
     )
-    is_passed: bool = Field(
-        False, description="Indicates whether the similarity met the threshold"
+    evaluation_feedback: Optional[str] = Field(
+        None, description="Summary provided by the evaluation agent"
+    )
+    evaluation_model_name: Optional[str] = Field(
+        None, description="Model used by the evaluation agent"
+    )
+    evaluation_metadata: Optional[Dict] = Field(
+        None, description="Structured evaluation payload"
     )
     status: str = Field(..., description="Execution status")
     error_message: Optional[str] = Field(None, description="Error message if failed")
@@ -94,10 +101,12 @@ class LogService:
                 tools=test_log.tools,
                 llm_response=test_log.llm_response,
                 response_example=test_log.response_example,
-                response_example_vector=test_log.response_example_vector,
+                response_expectation_snapshot=test_log.response_expectation_snapshot,
                 response_time_ms=test_log.response_time_ms,
-                similarity_score=test_log.similarity_score,
                 is_passed=test_log.is_passed,
+                evaluation_feedback=test_log.evaluation_feedback,
+                evaluation_model_name=test_log.evaluation_model_name,
+                evaluation_metadata=test_log.evaluation_metadata,
                 status=test_log.status,
                 error_message=test_log.error_message,
                 created_at=test_log.created_at,
@@ -139,10 +148,12 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
+                    response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
+                    evaluation_feedback=log.evaluation_feedback,
+                    evaluation_model_name=log.evaluation_model_name,
+                    evaluation_metadata=log.evaluation_metadata,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -182,10 +193,12 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
+                    response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
+                    evaluation_feedback=log.evaluation_feedback,
+                    evaluation_model_name=log.evaluation_model_name,
+                    evaluation_metadata=log.evaluation_metadata,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -226,10 +239,12 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
+                    response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
+                    evaluation_feedback=log.evaluation_feedback,
+                    evaluation_model_name=log.evaluation_model_name,
+                    evaluation_metadata=log.evaluation_metadata,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -282,10 +297,12 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
+                    response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
+                    evaluation_feedback=log.evaluation_feedback,
+                    evaluation_model_name=log.evaluation_model_name,
+                    evaluation_metadata=log.evaluation_metadata,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,
@@ -367,10 +384,12 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
+                    response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
+                    evaluation_feedback=log.evaluation_feedback,
+                    evaluation_model_name=log.evaluation_model_name,
+                    evaluation_metadata=log.evaluation_metadata,
                     status=log.status,
                     error_message=log.error_message,
                     created_at=log.created_at,

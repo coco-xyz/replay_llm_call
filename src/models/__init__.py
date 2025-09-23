@@ -6,6 +6,7 @@ Contains SQLAlchemy models for database entities and Pydantic schemas for API va
 """
 
 from .agent import Agent
+from .app_setting import AppSetting
 from .base import Base, BaseDBModel, TimestampMixin
 from .regression_test import RegressionTest
 from .test_case import TestCase
@@ -21,4 +22,5 @@ __all__ = [
     "TestCase",
     "TestLog",
     "RegressionTest",
+    "AppSetting",
 ]

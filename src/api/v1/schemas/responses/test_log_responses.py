@@ -30,17 +30,24 @@ class TestLogResponse(BaseModel):
     response_example: Optional[str] = Field(
         None, description="Response example captured with the log"
     )
-    response_example_vector: Optional[List[float]] = Field(
-        None, description="Embedding captured from the response example"
+    response_expectation_snapshot: Optional[str] = Field(
+        None, description="Acceptance criteria captured when the log was created"
     )
     response_time_ms: Optional[int] = Field(
         None, description="Response time in milliseconds"
     )
-    similarity_score: float = Field(
-        0.0, description="Cosine similarity vs. the test case example"
+    is_passed: Optional[bool] = Field(
+        None,
+        description="Evaluation outcome: true=passed, false=failed, None=unknown",
     )
-    is_passed: bool = Field(
-        False, description="Indicates whether the log met the similarity threshold"
+    evaluation_feedback: Optional[str] = Field(
+        None, description="Summary returned by the evaluation agent"
+    )
+    evaluation_model_name: Optional[str] = Field(
+        None, description="Model used by the evaluation agent"
+    )
+    evaluation_metadata: Optional[Dict] = Field(
+        None, description="Structured payload from the evaluation agent"
     )
     status: str = Field(..., description="Execution status")
     error_message: Optional[str] = Field(None, description="Error message if failed")

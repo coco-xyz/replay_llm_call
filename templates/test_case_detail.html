@@ -282,6 +282,12 @@
                             placeholder="Update the example LLM response..."></textarea>
                         <div class="form-text">Used for similarity scoring when future logs are generated.</div>
                     </div>
+                    <div class="mb-3">
+                        <label for="editResponseExpectation" class="form-label">Response Expectation</label>
+                        <textarea class="form-control" id="editResponseExpectation" rows="4"
+                            placeholder="Clarify the acceptance criteria or evaluation guidelines..."></textarea>
+                        <div class="form-text">Helpful for humans and automated evaluators to check outputs.</div>
+                    </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>Note:</strong> Update the agent to hand off this test case to a different model
@@ -541,6 +547,18 @@
                                 </div>
                             </div>
 
+                            <!-- Response Expectation -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <i class="fas fa-clipboard-check me-2"></i>Response Expectation
+                                </div>
+                                <div class="card-body">
+                                    ${testCase.response_expectation
+                ? `<div class=\"code-block\">${escapeHtml(testCase.response_expectation)}</div>`
+                : '<p class=\"text-muted mb-0\">No response expectation recorded</p>'}
+                                </div>
+                            </div>
+
                             <!-- Middle Messages (moved below Response Example) -->
                             <div class="card mb-4">
                                 <div class="card-header">
@@ -618,6 +636,7 @@
             document.getElementById('editTestCaseName').value = currentTestCase.name;
             document.getElementById('editTestCaseDescription').value = currentTestCase.description || '';
             document.getElementById('editResponseExample').value = currentTestCase.response_example || '';
+            document.getElementById('editResponseExpectation').value = currentTestCase.response_expectation || '';
 
             // Populate agent select
             const editAgentSelect = document.getElementById('editTestCaseAgent');
@@ -689,7 +708,10 @@
         const name = document.getElementById('editTestCaseName').value.trim();
         const description = document.getElementById('editTestCaseDescription').value.trim();
         const agentId = document.getElementById('editTestCaseAgent').value;
-        const responseExample = document.getElementById('editResponseExample').value.trim();
+        const responseExampleField = document.getElementById('editResponseExample');
+        const responseExample = responseExampleField ? responseExampleField.value.trim() : '';
+        const responseExpectationField = document.getElementById('editResponseExpectation');
+        const responseExpectation = responseExpectationField ? responseExpectationField.value.trim() : '';
 
         if (!name || !agentId) {
             showAlert('Please provide a name and agent for the test case', 'warning');
@@ -706,7 +728,8 @@
                     name: name,
                     description: description || null,
                     agent_id: agentId || null,
-                    response_example: responseExample || null
+                    response_example: responseExample || null,
+                    response_expectation: responseExpectation || null
                 })
             });
 

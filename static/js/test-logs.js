@@ -14,45 +14,40 @@ let agentsData = [];
 let regressionsData = [];
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', () => {
+    initializeTestLogsPage().catch((error) => {
+        console.error('Failed to initialize test logs page:', error);
+        showAlert('Failed to initialize test logs page: ' + error.message, 'danger');
+    });
+});
+
+async function initializeTestLogsPage() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Preload filter state from URL so the first fetch respects it
+    currentFilters.status = urlParams.get('status') || '';
+    currentFilters.testCaseId = urlParams.get('testCaseId') || '';
+    currentFilters.agentId = urlParams.get('agentId') || '';
+    currentFilters.regressionTestId = urlParams.get('regressionTestId') || '';
+    currentLogId = urlParams.get('logId');
+    currentPage = 1;
+
     setupEventListeners();
 
-    // Load test cases first, then test logs
-    await loadTestCases();
-    await loadAgents();
-    await loadRegressions();
+    await Promise.all([
+        loadTestCases(),
+        loadAgents(),
+        loadRegressions()
+    ]);
+
+    applyCurrentFiltersToControls();
+
     await loadTestLogs();
 
-    // Check if specific log or test case is requested
-    const urlParams = new URLSearchParams(window.location.search);
-    const logId = urlParams.get('logId');
-    const testCaseId = urlParams.get('testCaseId');
-    const regressionTestId = urlParams.get('regressionTestId');
-
-    if (logId) {
-        setTimeout(() => viewLogInNewPage(logId), 1000);
-    } else if (testCaseId) {
-        setTimeout(() => {
-            const testCaseFilter = document.getElementById('testCaseFilter');
-            if (testCaseFilter) {
-                testCaseFilter.value = testCaseId;
-                currentFilters.testCaseId = testCaseId;
-                currentPage = 1;
-                loadTestLogs();
-            }
-        }, 1000);
-    } else if (regressionTestId) {
-        setTimeout(() => {
-            const regressionFilter = document.getElementById('regressionFilter');
-            if (regressionFilter) {
-                regressionFilter.value = regressionTestId;
-                currentFilters.regressionTestId = regressionTestId;
-                currentPage = 1;
-                loadTestLogs();
-            }
-        }, 1000);
+    if (currentLogId) {
+        viewLogInNewPage(currentLogId);
     }
-});
+}
 
 function setupEventListeners() {
     // Refresh button
@@ -123,6 +118,28 @@ function setupEventListeners() {
             currentPage = 1;
             loadTestLogs();
         });
+    }
+}
+
+function applyCurrentFiltersToControls() {
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.value = currentFilters.status || '';
+    }
+
+    const testCaseFilter = document.getElementById('testCaseFilter');
+    if (testCaseFilter) {
+        testCaseFilter.value = currentFilters.testCaseId || '';
+    }
+
+    const agentFilter = document.getElementById('agentFilter');
+    if (agentFilter) {
+        agentFilter.value = currentFilters.agentId || '';
+    }
+
+    const regressionFilter = document.getElementById('regressionFilter');
+    if (regressionFilter) {
+        regressionFilter.value = currentFilters.regressionTestId || '';
     }
 }
 
@@ -288,26 +305,96 @@ function formatResponseTime(value) {
     return `${value}ms`;
 }
 
-function formatSimilarityScore(value) {
-    if (value === null || value === undefined) {
-        return '—';
+function resolveEvaluationDisplay(target) {
+    const status = target && typeof target.is_passed !== 'undefined' ? target.is_passed : null;
+    if (status === true) {
+        return { label: 'Passed', badgeClass: 'bg-success', icon: 'check' };
     }
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
-        return '—';
+    if (status === false) {
+        return { label: 'Failed', badgeClass: 'bg-danger', icon: 'times' };
     }
-    return numeric.toFixed(2);
+    return { label: 'Unknown', badgeClass: 'bg-secondary', icon: 'question' };
 }
 
-function formatPassBadge(isPassed) {
-    if (isPassed) {
-        return '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>';
+function buildEvaluationTooltip(log) {
+    if (!log) {
+        return 'Evaluation details unavailable.';
     }
-    return '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
+
+    const lines = [];
+    const feedback = (log.evaluation_feedback || '').trim();
+    if (feedback) {
+        lines.push(feedback);
+    }
+
+    if (log.response_expectation_snapshot) {
+        lines.push(`Expectation snapshot:\n${log.response_expectation_snapshot.trim()}`);
+    }
+
+    if (log.evaluation_model_name) {
+        lines.push(`Model: ${log.evaluation_model_name}`);
+    }
+
+    const metadata = log.evaluation_metadata || {};
+    if (Array.isArray(metadata.missing_criteria) && metadata.missing_criteria.length > 0) {
+        lines.push(`Missing criteria:\n- ${metadata.missing_criteria.join('\n- ')}`);
+    }
+    if (Array.isArray(metadata.satisfied_criteria) && metadata.satisfied_criteria.length > 0) {
+        lines.push(`Satisfied criteria:\n- ${metadata.satisfied_criteria.join('\n- ')}`);
+    }
+
+    if (lines.length === 0) {
+        const display = resolveEvaluationDisplay(log);
+        if (display.label === 'Passed') {
+            lines.push('Marked as passed.');
+        } else if (display.label === 'Failed') {
+            lines.push('Marked as failed.');
+        } else {
+            lines.push('Evaluation skipped or not applicable.');
+        }
+    }
+
+    return lines.join('\n\n');
 }
 
-function formatPassStatus(isPassed) {
-    return isPassed ? 'Passed' : 'Failed';
+function formatPassBadge(log) {
+    const display = resolveEvaluationDisplay(log);
+    const tooltipContent = encodeTooltipPayload(buildEvaluationTooltip(log));
+    const fallback = encodeTooltipPayload(display.label);
+    return `
+        <span class="badge ${display.badgeClass} log-preview"
+              data-bs-toggle="tooltip" data-bs-placement="top"
+              data-bs-custom-class="log-tooltip" data-bs-html="true"
+              data-tooltip-content="${tooltipContent}" data-tooltip-fallback="${fallback}">
+            <i class="fas fa-${display.icon} me-1"></i>${display.label}
+        </span>
+    `;
+}
+
+function formatEvaluationFeedback(feedback) {
+    if (!feedback) {
+        return '<span class="text-muted">—</span>';
+    }
+
+    const trimmed = feedback.trim();
+    if (!trimmed) {
+        return '<span class="text-muted">—</span>';
+    }
+
+    return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
+}
+
+function formatExpectationSnapshot(snapshot) {
+    if (!snapshot) {
+        return '<span class="text-muted">—</span>';
+    }
+
+    const trimmed = snapshot.trim();
+    if (!trimmed) {
+        return '<span class="text-muted">—</span>';
+    }
+
+    return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
 }
 
 function formatRegressionLabel(regressionId) {
@@ -381,11 +468,7 @@ function displayTestLogs(logs) {
         const llmResponseContent = hasLlmResponse ? truncateText(rawLlmResponse, 160) : '—';
         const llmResponseEncoded = encodeTooltipPayload(rawLlmResponse);
         const llmResponseFallback = encodeTooltipPayload('No LLM response captured');
-        const similarityValue = formatSimilarityScore(log.similarity_score);
-        const similarityBadge = similarityValue === '—'
-            ? ''
-            : `<span class=\"badge bg-info\">${escapeHtml(similarityValue)}</span>`;
-        const passBadge = formatPassBadge(log.is_passed);
+        const passBadge = formatPassBadge(log);
 
         return `
         <tr>
@@ -430,8 +513,7 @@ function displayTestLogs(logs) {
                 </span>
             </td>
             <td>
-                <div class=\"d-flex flex-column align-items-start gap-1\">${passBadge}${similarityBadge ? `\n                    ${similarityBadge}` : ''}
-                </div>
+                <div class=\"d-flex flex-column align-items-start gap-1\">${passBadge}</div>
             </td>
             <td>
                 <small class="text-muted">${formatDate(log.created_at)}</small>
@@ -496,8 +578,10 @@ async function viewLog(logId) {
                         <tr><td><strong>Agent:</strong></td><td>${formatAgentLabel(log.agent_id)}</td></tr>
                         <tr><td><strong>Regression:</strong></td><td>${formatRegressionLabel(log.regression_test_id)}</td></tr>
                         <tr><td><strong>Response Time:</strong></td><td>${formatResponseTime(log.response_time_ms)}</td></tr>
-                        <tr><td><strong>Similarity Score:</strong></td><td>${formatSimilarityScore(log.similarity_score)}</td></tr>
-                        <tr><td><strong>Passed:</strong></td><td>${formatPassStatus(log.is_passed)}</td></tr>
+                        <tr><td><strong>Evaluation Result:</strong></td><td>${formatPassBadge(log)}</td></tr>
+                        <tr><td><strong>Evaluation Feedback:</strong></td><td>${formatEvaluationFeedback(log.evaluation_feedback)}</td></tr>
+                        <tr><td><strong>Evaluation Model:</strong></td><td>${escapeHtml(log.evaluation_model_name || '—')}</td></tr>
+                        <tr><td><strong>Expectation Snapshot:</strong></td><td>${formatExpectationSnapshot(log.response_expectation_snapshot)}</td></tr>
                         <tr><td><strong>Test Case:</strong></td><td>
                             <div>
                                 <a href="/test-cases/${log.test_case_id}" class="text-decoration-none" target="_blank">
@@ -577,7 +661,13 @@ async function viewLog(logId) {
             }
     `;
 
-        document.getElementById('logDetails').innerHTML = detailsHtml;
+        const logDetailsContainer = document.getElementById('logDetails');
+        logDetailsContainer.innerHTML = detailsHtml;
+        applyTooltipContent(logDetailsContainer);
+        if (window.HoverTooltip) {
+            window.HoverTooltip.attach(logDetailsContainer);
+        }
+        initializeTooltips();
 
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('viewLogModal'));

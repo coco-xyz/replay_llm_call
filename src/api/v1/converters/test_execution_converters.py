@@ -6,7 +6,7 @@ Converters between API layer and service layer schemas for test execution.
 
 from src.api.v1.schemas.requests import TestExecutionRequest
 from src.api.v1.schemas.responses import TestExecutionResponse
-from src.services.test_execution_service import ExecutionResult, ExecutionData
+from src.services.test_execution_service import ExecutionData, ExecutionResult
 
 
 def convert_test_execution_request(request: TestExecutionRequest) -> ExecutionData:

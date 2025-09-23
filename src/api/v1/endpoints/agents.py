@@ -6,11 +6,12 @@ from fastapi import APIRouter, HTTPException, Query
 
 from src.api.v1.converters import (
     convert_agent_create_request,
+    convert_agent_data_to_list_item_response,
     convert_agent_data_to_response,
     convert_agent_update_request,
 )
 from src.api.v1.schemas.requests import AgentCreateRequest, AgentUpdateRequest
-from src.api.v1.schemas.responses import AgentResponse
+from src.api.v1.schemas.responses import AgentListItemResponse, AgentResponse
 from src.core.logger import get_logger
 from src.services.agent_service import AgentService
 
@@ -31,7 +32,7 @@ async def create_agent(request: AgentCreateRequest) -> AgentResponse:
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/", response_model=List[AgentResponse])
+@router.get("/", response_model=List[AgentListItemResponse])
 async def list_agents(
     limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -40,14 +41,14 @@ async def list_agents(
         min_length=1,
         description="Filter agents by name using a case-insensitive substring match",
     ),
-) -> List[AgentResponse]:
+) -> List[AgentListItemResponse]:
     try:
         agents = agent_service.list_agents(
             limit=limit,
             offset=offset,
             search=search,
         )
-        return [convert_agent_data_to_response(agent) for agent in agents]
+        return [convert_agent_data_to_list_item_response(agent) for agent in agents]
     except Exception as exc:  # pragma: no cover - defensive logging
         logger.error("API: Failed to list agents: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")

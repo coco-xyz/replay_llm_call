@@ -10,11 +10,12 @@ from fastapi import APIRouter, HTTPException, Query
 
 from src.api.v1.converters import (
     convert_test_case_create_request,
+    convert_test_case_data_to_list_item_response,
     convert_test_case_data_to_response,
     convert_test_case_update_request,
 )
 from src.api.v1.schemas.requests import TestCaseCreateRequest, TestCaseUpdateRequest
-from src.api.v1.schemas.responses import TestCaseResponse
+from src.api.v1.schemas.responses import TestCaseListItemResponse, TestCaseResponse
 from src.core.logger import get_logger
 from src.services.test_case_service import TestCaseService
 
@@ -55,7 +56,7 @@ async def create_test_case(request: TestCaseCreateRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/", response_model=List[TestCaseResponse])
+@router.get("/", response_model=List[TestCaseListItemResponse])
 async def get_test_cases(
     limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -82,14 +83,14 @@ async def get_test_cases(
             limit=limit, offset=offset, agent_id=agent_id
         )
         logger.debug(f"API: Retrieved {len(result)} test cases")
-        return [convert_test_case_data_to_response(item) for item in result]
+        return [convert_test_case_data_to_list_item_response(item) for item in result]
 
     except Exception as e:
         logger.error(f"API: Failed to get test cases: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/search", response_model=List[TestCaseResponse])
+@router.get("/search", response_model=List[TestCaseListItemResponse])
 async def search_test_cases(
     q: str = Query(..., min_length=1, description="Search query"),
     limit: int = Query(20, ge=1, le=500),
@@ -117,7 +118,7 @@ async def search_test_cases(
             q, limit=limit, offset=offset, agent_id=agent_id
         )
         logger.debug(f"API: Found {len(result)} test cases matching '{q}'")
-        return [convert_test_case_data_to_response(item) for item in result]
+        return [convert_test_case_data_to_list_item_response(item) for item in result]
 
     except Exception as e:
         logger.error(f"API: Failed to search test cases: {e}")

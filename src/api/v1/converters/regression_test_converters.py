@@ -1,7 +1,10 @@
 """Regression test API converters."""
 
 from src.api.v1.schemas.requests import RegressionTestCreateRequest
-from src.api.v1.schemas.responses import RegressionTestResponse
+from src.api.v1.schemas.responses import (
+    RegressionTestListItemResponse,
+    RegressionTestResponse,
+)
 from src.services.regression_test_service import (
     RegressionTestCreateData,
     RegressionTestData,
@@ -50,7 +53,28 @@ def convert_regression_test_data_to_response(
     )
 
 
+def convert_regression_test_data_to_list_item_response(
+    data: RegressionTestData,
+) -> RegressionTestListItemResponse:
+    """Convert regression data to lightweight list response."""
+
+    return RegressionTestListItemResponse(
+        id=data.id,
+        agent_id=data.agent_id,
+        status=data.status,
+        model_name_override=data.model_name_override,
+        system_prompt_override=data.system_prompt_override,
+        model_settings_override=data.model_settings_override,
+        total_count=data.total_count,
+        passed_count=data.passed_count,
+        declined_count=data.declined_count,
+        created_at=data.created_at,
+        agent=convert_agent_summary_to_response(data.agent),
+    )
+
+
 __all__ = [
     "convert_regression_test_create_request",
     "convert_regression_test_data_to_response",
+    "convert_regression_test_data_to_list_item_response",
 ]

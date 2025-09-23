@@ -9,6 +9,7 @@ from src.api.v1.schemas.responses.test_case_responses import (
     AgentSummaryResponse as TestCaseAgentSummaryResponse,
 )
 from src.api.v1.schemas.responses.test_case_responses import (
+    TestCaseListItemResponse,
     TestCaseResponse,
 )
 from src.services.test_case_service import (
@@ -72,4 +73,26 @@ def convert_test_case_data_to_response(data: TestCaseData) -> TestCaseResponse:
         is_deleted=data.is_deleted,
         created_at=data.created_at,
         updated_at=data.updated_at,
+    )
+
+
+def convert_test_case_data_to_list_item_response(
+    data: TestCaseData,
+) -> TestCaseListItemResponse:
+    """Convert service layer data to lightweight list response."""
+
+    return TestCaseListItemResponse(
+        id=data.id,
+        name=data.name,
+        description=data.description,
+        last_user_message=data.last_user_message,
+        response_example=data.response_example,
+        response_expectation=data.response_expectation,
+        agent_id=data.agent_id,
+        agent=(
+            TestCaseAgentSummaryResponse.model_validate(data.agent)
+            if data.agent
+            else None
+        ),
+        created_at=data.created_at,
     )

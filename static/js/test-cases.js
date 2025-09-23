@@ -700,7 +700,6 @@ async function createTestCase() {
         const modal = bootstrap.Modal.getInstance(document.getElementById('createTestCaseModal'));
         modal.hide();
         document.getElementById('createTestCaseForm').reset();
-        populateAgentSelects();
 
         // Reload test cases
         loadTestCases(1);

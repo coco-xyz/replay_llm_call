@@ -43,4 +43,28 @@ class RegressionTestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-__all__ = ["RegressionTestResponse"]
+class RegressionTestListItemResponse(BaseModel):
+    """Summary payload returned by regression list endpoints."""
+
+    id: str = Field(..., description="Regression test identifier")
+    agent_id: str = Field(..., description="Agent identifier")
+    status: str = Field(..., description="Regression status")
+    model_name_override: str = Field(..., description="Model name override")
+    system_prompt_override: str = Field(..., description="System prompt override")
+    model_settings_override: Dict = Field(..., description="Model settings override")
+    total_count: int = Field(..., description="Total number of executed test cases")
+    passed_count: int = Field(
+        ..., description="Number of test logs evaluated as passed"
+    )
+    declined_count: int = Field(
+        ..., description="Number of test logs evaluated as declined"
+    )
+    created_at: datetime = Field(..., description="Record creation timestamp")
+    agent: Optional[AgentSummaryResponse] = Field(
+        None, description="Summary information about the agent"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+__all__ = ["RegressionTestResponse", "RegressionTestListItemResponse"]

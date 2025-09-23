@@ -44,3 +44,28 @@ class TestCaseResponse(BaseModel):
     updated_at: datetime = Field(..., description="Last update timestamp")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TestCaseListItemResponse(BaseModel):
+    """Summary representation for listing test cases."""
+
+    id: str = Field(..., description="Test case ID")
+    name: str = Field(..., description="Test case name")
+    description: Optional[str] = Field(None, description="Test case description")
+    last_user_message: str = Field(..., description="Last user message")
+    response_example: Optional[str] = Field(
+        None, description="Example LLM response for similarity comparisons"
+    )
+    response_expectation: Optional[str] = Field(
+        None, description="Acceptance criteria or evaluation notes"
+    )
+    agent_id: str = Field(..., description="Owning agent ID")
+    agent: Optional[AgentSummaryResponse] = Field(
+        None, description="Owning agent summary"
+    )
+    created_at: datetime = Field(..., description="Creation timestamp")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+__all__ = ["TestCaseResponse", "TestCaseListItemResponse"]

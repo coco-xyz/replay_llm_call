@@ -22,6 +22,10 @@ class TestCaseCreateRequest(BaseModel):
         None,
         description="Example LLM response for this test case",
     )
+    response_expectation: Optional[str] = Field(
+        None,
+        description="Acceptance criteria or evaluation notes for the expected response",
+    )
 
 
 class TestCaseUpdateRequest(BaseModel):
@@ -39,4 +43,8 @@ class TestCaseUpdateRequest(BaseModel):
     agent_id: Optional[str] = Field(None, description="Updated owning agent")
     response_example: Optional[str] = Field(
         None, description="Updated example LLM response"
+    )
+    response_expectation: Optional[str] = Field(
+        None,
+        description="Updated acceptance criteria or evaluation notes",
     )

@@ -7,6 +7,7 @@ Response schemas for all API v1 endpoints.
 from .agent_responses import AgentResponse, AgentSummaryResponse
 from .health_response import HealthResponse
 from .regression_test_responses import RegressionTestResponse
+from .settings_responses import EvaluationSettingsResponse
 from .test_case_responses import TestCaseResponse
 from .test_execution_responses import TestExecutionResponse
 from .test_log_responses import TestLogResponse
@@ -16,6 +17,7 @@ __all__ = [
     "AgentSummaryResponse",
     "HealthResponse",
     "RegressionTestResponse",
+    "EvaluationSettingsResponse",
     "TestCaseResponse",
     "TestExecutionResponse",
     "TestLogResponse",

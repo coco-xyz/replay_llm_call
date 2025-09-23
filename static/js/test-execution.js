@@ -416,8 +416,10 @@ function displayExecutionResult(result) {
 
     // Display results
     const responseTime = result.response_time_ms != null ? `${result.response_time_ms}ms` : '—';
-    const similarityScore = result.similarity_score != null ? Number(result.similarity_score).toFixed(2) : '—';
-    const passedBadge = result.is_passed ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>' : '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
+    const evaluationBadge = formatEvaluationBadge(result);
+    const evaluationFeedback = formatEvaluationFeedback(result.evaluation_feedback);
+    const evaluationModel = escapeHtml(result.evaluation_model_name || '—');
+    const expectationSnapshot = formatExpectationSnapshot(result.response_expectation_snapshot);
 
     const html = `
         <div class="row mb-3">
@@ -430,9 +432,11 @@ function displayExecutionResult(result) {
                         </span>
                     </td></tr>
                     <tr><td><strong>Response Time:</strong></td><td>${responseTime}</td></tr>
-                    <tr><td><strong>Similarity Score:</strong></td><td>${similarityScore}</td></tr>
-                    <tr><td><strong>Passed:</strong></td><td>${passedBadge}</td></tr>
-                    <tr><td><strong>Log ID:</strong></td><td>${result.log_id || '—'}</td></tr>
+                    <tr><td><strong>Evaluation Result:</strong></td><td>${evaluationBadge}</td></tr>
+                    <tr><td><strong>Evaluation Feedback:</strong></td><td>${evaluationFeedback}</td></tr>
+                    <tr><td><strong>Evaluation Model:</strong></td><td>${evaluationModel}</td></tr>
+                    <tr><td><strong>Expectation Snapshot:</strong></td><td>${expectationSnapshot}</td></tr>
+                    <tr><td><strong>Log ID:</strong></td><td>${escapeHtml(result.log_id || '—')}</td></tr>
                 </table>
             </div>
             <div class="col-md-4">
@@ -462,6 +466,11 @@ function displayExecutionResult(result) {
     `;
 
     resultsContainer.innerHTML = html;
+    applyTooltipContent(resultsContainer);
+    if (window.HoverTooltip) {
+        window.HoverTooltip.attach(resultsContainer);
+    }
+    initializeTooltips(resultsContainer);
 }
 
 function displayExecutionError(errorMessage) {
@@ -613,6 +622,140 @@ function showAlert(message, type) {
             alertDiv.remove();
         }
     }, 5000);
+}
+
+function buildEvaluationTooltip(result) {
+    if (!result) {
+        return 'Evaluation details unavailable.';
+    }
+
+    const lines = [];
+    const feedback = (result.evaluation_feedback || '').trim();
+    if (feedback) {
+        lines.push(feedback);
+    }
+
+    if (result.response_expectation_snapshot) {
+        lines.push(`Expectation snapshot:\n${result.response_expectation_snapshot.trim()}`);
+    }
+
+    if (result.evaluation_model_name) {
+        lines.push(`Model: ${result.evaluation_model_name}`);
+    }
+
+    const metadata = result.evaluation_metadata || {};
+    if (Array.isArray(metadata.missing_criteria) && metadata.missing_criteria.length > 0) {
+        lines.push(`Missing criteria:\n- ${metadata.missing_criteria.join('\n- ')}`);
+    }
+    if (Array.isArray(metadata.satisfied_criteria) && metadata.satisfied_criteria.length > 0) {
+        lines.push(`Satisfied criteria:\n- ${metadata.satisfied_criteria.join('\n- ')}`);
+    }
+
+    if (lines.length === 0) {
+        lines.push(result.is_passed ? 'Marked as passed.' : 'Marked as failed.');
+    }
+
+    return lines.join('\n\n');
+}
+
+function formatEvaluationBadge(result) {
+    const isPassed = Boolean(result && result.is_passed);
+    const badgeClass = isPassed ? 'bg-success' : 'bg-danger';
+    const icon = isPassed ? 'check' : 'times';
+    const label = isPassed ? 'Passed' : 'Failed';
+    const tooltipContent = encodeTooltipPayload(buildEvaluationTooltip(result));
+    const fallback = encodeTooltipPayload(label);
+
+    return `
+        <span class="badge ${badgeClass} log-preview"
+              data-bs-toggle="tooltip" data-bs-placement="top"
+              data-bs-custom-class="log-tooltip" data-bs-html="true"
+              data-tooltip-content="${tooltipContent}" data-tooltip-fallback="${fallback}">
+            <i class="fas fa-${icon} me-1"></i>${label}
+        </span>
+    `;
+}
+
+function formatEvaluationFeedback(feedback) {
+    if (!feedback) {
+        return '<span class="text-muted">—</span>';
+    }
+    const trimmed = feedback.trim();
+    if (!trimmed) {
+        return '<span class="text-muted">—</span>';
+    }
+    return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
+}
+
+function formatExpectationSnapshot(snapshot) {
+    if (!snapshot) {
+        return '<span class="text-muted">—</span>';
+    }
+    const trimmed = snapshot.trim();
+    if (!trimmed) {
+        return '<span class="text-muted">—</span>';
+    }
+    return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
+}
+
+function formatTooltipContent(text, fallback = '—') {
+    if (!text) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const normalized = text.trim();
+    if (!normalized) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const htmlContent = escapeHtml(text).replace(/\n/g, '<br>');
+    return `<div class='tooltip-log-content'>${htmlContent}</div>`;
+}
+
+function encodeTooltipPayload(text) {
+    if (!text) {
+        return '';
+    }
+    return encodeURIComponent(text);
+}
+
+function decodeTooltipPayload(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        console.error('Failed to decode tooltip payload', error);
+        return value;
+    }
+}
+
+function applyTooltipContent(container) {
+    if (!container) {
+        return;
+    }
+    const tooltipTargets = container.querySelectorAll('[data-tooltip-content]');
+    tooltipTargets.forEach((element) => {
+        const encodedContent = element.getAttribute('data-tooltip-content') || '';
+        const encodedFallback = element.getAttribute('data-tooltip-fallback') || '';
+        const content = decodeTooltipPayload(encodedContent);
+        const fallback = decodeTooltipPayload(encodedFallback);
+        const tooltipHtml = formatTooltipContent(content, fallback || undefined);
+        element.setAttribute('data-bs-title', tooltipHtml);
+        element.setAttribute('data-hover-html', tooltipHtml);
+    });
+}
+
+function initializeTooltips(container) {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+        return;
+    }
+    const scope = container || document;
+    const elements = scope.querySelectorAll
+        ? scope.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)')
+        : document.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)');
+    elements.forEach((element) => {
+        bootstrap.Tooltip.getOrCreateInstance(element);
+    });
 }
 
 function escapeHtml(text) {

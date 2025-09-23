@@ -12,11 +12,11 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 from sklearn.metrics.pairwise import cosine_similarity
 
-from src.core.config import settings
 from src.core.embedding import JinaEmbeddingClient
 from src.core.logger import get_logger
 from src.models import TestLog
 from src.services.agent_service import AgentService
+from src.services.evaluation_service import EvaluationResult, EvaluationService
 from src.services.llm_execution_service import execute_llm_test
 from src.services.test_case_service import TestCaseService
 from src.stores.test_log_store import TestLogStore
@@ -70,7 +70,21 @@ class ExecutionResult(BaseModel):
     )
     llm_response: Optional[str] = Field(None, description="LLM response text")
     similarity_score: Optional[float] = Field(None, description="Similarity score between response and example")
-    is_passed: Optional[bool] = Field(None, description="Whether the test passed based on similarity threshold")
+    is_passed: Optional[bool] = Field(
+        None, description="Whether the evaluation marked the run as passed"
+    )
+    evaluation_feedback: Optional[str] = Field(
+        None, description="Summary returned by the evaluation agent"
+    )
+    evaluation_model_name: Optional[str] = Field(
+        None, description="Model used for the evaluation"
+    )
+    evaluation_metadata: Optional[Dict] = Field(
+        None, description="Structured payload returned by the evaluation agent"
+    )
+    response_expectation: Optional[str] = Field(
+        None, description="Expectation snapshot used for evaluation"
+    )
 
     # Additional service-layer specific fields
     execution_context: Optional[Dict] = Field(
@@ -87,7 +101,7 @@ class ExecutionService:
         self.test_log_store = TestLogStore()
         self.agent_service = AgentService()
         self.embedding_client = JinaEmbeddingClient()
-        self.similarity_threshold = settings.test_logs__similarity_threshold
+        self.evaluation_service = EvaluationService()
 
     async def execute_test(self, request: TestExecutionData) -> ExecutionResult:
         """
@@ -150,6 +164,7 @@ class ExecutionService:
 
             # Record start time
             start_time = time.time()
+            evaluation_settings = self.evaluation_service.get_settings()
 
             # Execute the LLM test
             try:
@@ -193,7 +208,14 @@ class ExecutionService:
                             embed_error,
                         )
 
-                is_passed = similarity_score >= self.similarity_threshold
+                evaluation_result = await self.evaluation_service.evaluate(
+                    actual_response=llm_response,
+                    expectation=test_case.response_expectation,
+                    reference_response=test_case.response_example,
+                    test_case_name=test_case.name,
+                    settings=evaluation_settings,
+                )
+                is_passed = evaluation_result.passed
 
                 # Create success log
                 test_log = TestLog(
@@ -209,10 +231,14 @@ class ExecutionService:
                     llm_response=llm_response,
                     response_example=test_case.response_example,
                     response_example_vector=test_case.response_example_vector,
+                    response_expectation_snapshot=test_case.response_expectation,
                     response_time_ms=response_time_ms,
                     llm_response_vector=llm_response_vector,
                     similarity_score=similarity_score,
                     is_passed=is_passed,
+                    evaluation_feedback=evaluation_result.feedback,
+                    evaluation_model_name=evaluation_result.model_name,
+                    evaluation_metadata=evaluation_result.metadata,
                     status="success",
                     error_message=None,
                 )
@@ -233,6 +259,10 @@ class ExecutionService:
                     executed_at=saved_log.created_at,
                     similarity_score=similarity_score,
                     is_passed=is_passed,
+                    evaluation_feedback=evaluation_result.feedback,
+                    evaluation_model_name=evaluation_result.model_name,
+                    evaluation_metadata=evaluation_result.metadata,
+                    response_expectation=test_case.response_expectation,
                 )
 
             except Exception as llm_error:
@@ -241,6 +271,12 @@ class ExecutionService:
 
                 # Create failure log
                 error_message = str(llm_error)
+                evaluation_result = EvaluationResult(
+                    passed=False,
+                    feedback=f"Evaluation skipped due to execution failure: {error_message}",
+                    model_name=evaluation_settings.model_name,
+                    metadata={"reason": "execution_failed"},
+                )
                 test_log = TestLog(
                     id=str(uuid.uuid4()),
                     test_case_id=request.test_case_id,
@@ -254,10 +290,14 @@ class ExecutionService:
                     llm_response=None,
                     response_example=test_case.response_example,
                     response_example_vector=test_case.response_example_vector,
+                    response_expectation_snapshot=test_case.response_expectation,
                     response_time_ms=response_time_ms,
                     llm_response_vector=None,
                     similarity_score=0.0,
                     is_passed=False,
+                    evaluation_feedback=evaluation_result.feedback,
+                    evaluation_model_name=evaluation_result.model_name,
+                    evaluation_metadata=evaluation_result.metadata,
                     status="failed",
                     error_message=error_message,
                 )
@@ -278,6 +318,10 @@ class ExecutionService:
                     executed_at=saved_log.created_at,
                     similarity_score=0.0,
                     is_passed=False,
+                    evaluation_feedback=evaluation_result.feedback,
+                    evaluation_model_name=evaluation_result.model_name,
+                    evaluation_metadata=evaluation_result.metadata,
+                    response_expectation=test_case.response_expectation,
                 )
 
         except ValueError as e:

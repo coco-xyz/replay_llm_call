@@ -30,6 +30,9 @@ class TestCaseResponse(BaseModel):
     response_example: Optional[str] = Field(
         None, description="Example LLM response for similarity comparisons"
     )
+    response_expectation: Optional[str] = Field(
+        None, description="Acceptance criteria or evaluation notes"
+    )
     agent_id: str = Field(..., description="Owning agent ID")
     agent: Optional[AgentSummaryResponse] = Field(
         None, description="Owning agent summary"

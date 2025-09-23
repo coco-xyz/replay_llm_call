@@ -49,6 +49,7 @@ class TestCase(BaseDBModel):
     response_example_vector: Mapped[Optional[List[float]]] = mapped_column(
         ARRAY(DOUBLE_PRECISION), nullable=True
     )
+    response_expectation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Soft delete flag
     is_deleted: Mapped[bool] = mapped_column(

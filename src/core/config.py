@@ -152,6 +152,13 @@ class Settings(BaseSettings):
         default="openai/gpt-4o-mini", description="Model name for demo agent"
     )
 
+    ai__eval_agent__provider: str = Field(
+        default="openrouter", description="Provider for evaluation agent"
+    )
+    ai__eval_agent__model_name: str = Field(
+        default="openai/gpt-4o-mini", description="Default evaluation model name"
+    )
+
     ai__jina_embeddings__base_url: str = Field(
         default="https://api.jina.ai/v1",
         description="Base URL for Jina embeddings API",

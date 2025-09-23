@@ -31,6 +31,9 @@ class TestCaseCreateData(BaseModel):
     response_example: Optional[str] = Field(
         None, description="Example LLM response for similarity comparisons"
     )
+    response_expectation: Optional[str] = Field(
+        None, description="Acceptance criteria for evaluation"
+    )
 
 
 class TestCaseUpdateData(BaseModel):
@@ -46,6 +49,9 @@ class TestCaseUpdateData(BaseModel):
     agent_id: Optional[str] = Field(None, description="Updated owning agent")
     response_example: Optional[str] = Field(
         None, description="Updated example LLM response"
+    )
+    response_expectation: Optional[str] = Field(
+        None, description="Updated response expectation"
     )
 
 
@@ -64,6 +70,9 @@ class TestCaseData(BaseModel):
     last_user_message: str = Field(..., description="Last user message")
     response_example: Optional[str] = Field(
         None, description="Example LLM response for similarity comparisons"
+    )
+    response_expectation: Optional[str] = Field(
+        None, description="Acceptance criteria for evaluation"
     )
     agent_id: str = Field(..., description="Owning agent identifier")
     agent: Optional[AgentSummary] = Field(
@@ -118,6 +127,9 @@ class TestCaseService:
                 raise
 
             response_example = self._normalize_optional_text(request.response_example)
+            response_expectation = self._normalize_optional_text(
+                request.response_expectation
+            )
             response_example_vector = None
             if response_example:
                 response_example_vector = self.embedding_client.embed_text(
@@ -139,6 +151,7 @@ class TestCaseService:
                 last_user_message=parsed_data.last_user_message,
                 response_example=response_example,
                 response_example_vector=response_example_vector,
+                response_expectation=response_expectation,
                 is_deleted=False,
             )
 
@@ -296,6 +309,11 @@ class TestCaseService:
                     test_case.response_example = None
                     test_case.response_example_vector = None
 
+            if request.response_expectation is not None:
+                test_case.response_expectation = self._normalize_optional_text(
+                    request.response_expectation
+                )
+
             # Save changes
             updated_test_case = self.store.update(test_case)
 
@@ -412,6 +430,7 @@ class TestCaseService:
             system_prompt=test_case.system_prompt,
             last_user_message=test_case.last_user_message,
             response_example=test_case.response_example,
+            response_expectation=test_case.response_expectation,
             agent_id=test_case.agent_id,
             agent=agent_summary,
             is_deleted=test_case.is_deleted,

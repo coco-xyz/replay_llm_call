@@ -342,7 +342,7 @@
         const testCase = findTestCaseById(log.test_case_id);
         const responseTime = formatResponseTime(log.response_time_ms);
 
-        const passBadge = log.is_passed ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>' : '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
+        const passBadge = formatPassBadge(log);
 
         const detailsHtml = `
                     <div class="row">
@@ -385,12 +385,20 @@
                                             <td><strong>${responseTime}</strong></td>
                                         </tr>
                                         <tr>
-                                            <td>Similarity Score:</td>
-                                            <td>${escapeHtml(formatSimilarityScore(log.similarity_score))}</td>
+                                            <td>Evaluation Result:</td>
+                                            <td>${passBadge}</td>
                                         </tr>
                                         <tr>
-                                            <td>Passed:</td>
-                                            <td>${passBadge}</td>
+                                            <td>Evaluation Feedback:</td>
+                                            <td>${formatEvaluationFeedback(log.evaluation_feedback)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Evaluation Model:</td>
+                                            <td>${escapeHtml(log.evaluation_model_name || '—')}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Expectation Snapshot:</td>
+                                            <td>${formatExpectationSnapshot(log.response_expectation_snapshot)}</td>
                                         </tr>
                                         <tr>
                                             <td>Test Case:</td>
@@ -590,8 +598,14 @@
                     ` : ''}
                 `;
 
-        document.getElementById('logDetailsContent').innerHTML = detailsHtml;
-        document.getElementById('logDetailsContent').classList.remove('d-none');
+        const detailsContainer = document.getElementById('logDetailsContent');
+        detailsContainer.innerHTML = detailsHtml;
+        applyTooltipContent(detailsContainer);
+        if (window.HoverTooltip) {
+            window.HoverTooltip.attach(detailsContainer);
+        }
+        initializeTooltips(detailsContainer);
+        detailsContainer.classList.remove('d-none');
         document.getElementById('actionButtons').classList.remove('d-none');
 
         // Setup Model Settings collapse handlers
@@ -768,19 +782,78 @@
         return `${value}ms`;
     }
 
-    function formatSimilarityScore(value) {
-        if (value === null || value === undefined) {
-            return '—';
+    function buildEvaluationTooltip(log) {
+        if (!log) {
+            return 'Evaluation details unavailable.';
         }
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric)) {
-            return '—';
+
+        const lines = [];
+        const feedback = (log.evaluation_feedback || '').trim();
+        if (feedback) {
+            lines.push(feedback);
         }
-        return numeric.toFixed(2);
+
+        if (log.response_expectation_snapshot) {
+            lines.push(`Expectation snapshot:\n${log.response_expectation_snapshot.trim()}`);
+        }
+
+        if (log.evaluation_model_name) {
+            lines.push(`Model: ${log.evaluation_model_name}`);
+        }
+
+        const metadata = log.evaluation_metadata || {};
+        if (Array.isArray(metadata.missing_criteria) && metadata.missing_criteria.length > 0) {
+            lines.push(`Missing criteria:\n- ${metadata.missing_criteria.join('\n- ')}`);
+        }
+        if (Array.isArray(metadata.satisfied_criteria) && metadata.satisfied_criteria.length > 0) {
+            lines.push(`Satisfied criteria:\n- ${metadata.satisfied_criteria.join('\n- ')}`);
+        }
+
+        if (lines.length === 0) {
+            lines.push(log.is_passed ? 'Marked as passed.' : 'Marked as failed.');
+        }
+
+        return lines.join('\n\n');
     }
 
-    function formatPassStatus(isPassed) {
-        return isPassed ? 'Passed' : 'Failed';
+    function formatPassBadge(log) {
+        const isPassed = Boolean(log && log.is_passed);
+        const badgeClass = isPassed ? 'bg-success' : 'bg-danger';
+        const icon = isPassed ? 'check' : 'times';
+        const label = isPassed ? 'Passed' : 'Failed';
+        const tooltipContent = encodeTooltipPayload(buildEvaluationTooltip(log));
+        const fallback = encodeTooltipPayload(label);
+
+        return `
+            <span class="badge ${badgeClass} log-preview"
+                  data-bs-toggle="tooltip" data-bs-placement="top"
+                  data-bs-custom-class="log-tooltip" data-bs-html="true"
+                  data-tooltip-content="${tooltipContent}" data-tooltip-fallback="${fallback}">
+                <i class="fas fa-${icon} me-1"></i>${label}
+            </span>
+        `;
+    }
+
+    function formatEvaluationFeedback(feedback) {
+        if (!feedback) {
+            return '<span class="text-muted">—</span>';
+        }
+        const trimmed = feedback.trim();
+        if (!trimmed) {
+            return '<span class="text-muted">—</span>';
+        }
+        return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
+    }
+
+    function formatExpectationSnapshot(snapshot) {
+        if (!snapshot) {
+            return '<span class="text-muted">—</span>';
+        }
+        const trimmed = snapshot.trim();
+        if (!trimmed) {
+            return '<span class="text-muted">—</span>';
+        }
+        return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
     }
 
     function hideLoading() {
@@ -808,6 +881,66 @@
         if (!text) return '';
         if (text.length <= maxLength) return escapeHtml(text);
         return escapeHtml(text.substring(0, maxLength)) + '...';
+    }
+
+    function formatTooltipContent(text, fallback = '—') {
+        if (!text) {
+            return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+        }
+        const normalized = text.trim();
+        if (!normalized) {
+            return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+        }
+        const htmlContent = escapeHtml(text).replace(/\n/g, '<br>');
+        return `<div class='tooltip-log-content'>${htmlContent}</div>`;
+    }
+
+    function encodeTooltipPayload(text) {
+        if (!text) {
+            return '';
+        }
+        return encodeURIComponent(text);
+    }
+
+    function decodeTooltipPayload(value) {
+        if (!value) {
+            return '';
+        }
+        try {
+            return decodeURIComponent(value);
+        } catch (error) {
+            console.error('Failed to decode tooltip payload', error);
+            return value;
+        }
+    }
+
+    function applyTooltipContent(container) {
+        if (!container) {
+            return;
+        }
+        const tooltipTargets = container.querySelectorAll('[data-tooltip-content]');
+        tooltipTargets.forEach((element) => {
+            const encodedContent = element.getAttribute('data-tooltip-content') || '';
+            const encodedFallback = element.getAttribute('data-tooltip-fallback') || '';
+            const content = decodeTooltipPayload(encodedContent);
+            const fallback = decodeTooltipPayload(encodedFallback);
+            const tooltipHtml = formatTooltipContent(content, fallback || undefined);
+            element.setAttribute('data-bs-title', tooltipHtml);
+            element.setAttribute('data-hover-html', tooltipHtml);
+        });
+    }
+
+    function initializeTooltips(container) {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+            return;
+        }
+        const scope = container || document;
+        const elements = scope.querySelectorAll
+            ? scope.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)')
+            : document.querySelectorAll('[data-bs-toggle="tooltip"]:not(.log-preview)');
+        elements.forEach((element) => {
+            bootstrap.Tooltip.getOrCreateInstance(element);
+        });
     }
 
     async function copyToClipboard(elementId, buttonElement) {

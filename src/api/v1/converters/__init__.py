@@ -14,6 +14,7 @@ from .regression_test_converters import (
     convert_regression_test_create_request,
     convert_regression_test_data_to_response,
 )
+from .settings_converters import convert_evaluation_settings_to_response
 from .test_case_converters import (
     convert_test_case_create_request,
     convert_test_case_data_to_response,
@@ -32,6 +33,7 @@ __all__ = [
     "convert_agent_summary_to_response",
     "convert_regression_test_create_request",
     "convert_regression_test_data_to_response",
+    "convert_evaluation_settings_to_response",
     "convert_test_case_create_request",
     "convert_test_case_update_request",
     "convert_test_case_data_to_response",

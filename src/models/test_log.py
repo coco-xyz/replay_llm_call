@@ -53,6 +53,9 @@ class TestLog(BaseDBModel):
     response_example_vector: Mapped[Optional[List[float]]] = mapped_column(
         ARRAY(DOUBLE_PRECISION), nullable=True
     )
+    response_expectation_snapshot: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True
+    )
     response_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     llm_response_vector: Mapped[Optional[List[float]]] = mapped_column(
         ARRAY(DOUBLE_PRECISION), nullable=True
@@ -61,6 +64,13 @@ class TestLog(BaseDBModel):
         DOUBLE_PRECISION, nullable=False, default=0
     )
     is_passed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    evaluation_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    evaluation_model_name: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
+    evaluation_metadata: Mapped[Optional[dict]] = mapped_column(
+        JSON, nullable=True
+    )
 
     # Execution status (synchronous execution: success or failed)
     status: Mapped[str] = mapped_column(String(20), default="success", nullable=False)

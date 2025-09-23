@@ -315,11 +315,7 @@ async function renderRegressionLogs(logs) {
             const llmResponseEncoded = encodeTooltipPayload(rawLlmResponse);
             const llmResponseFallback = encodeTooltipPayload('No LLM response captured');
 
-            const similarityValue = formatSimilarityScore(log.similarity_score);
-            const similarityBadge = similarityValue === '—'
-                ? ''
-                : `<span class=\"badge bg-info ms-2\" title=\"Similarity score\">${escapeHtml(similarityValue)}</span>`;
-            const passBadge = formatPassBadge(log.is_passed);
+            const passBadge = formatPassBadge(log);
 
             const executedAt = formatDate(log.created_at);
 
@@ -342,7 +338,6 @@ async function renderRegressionLogs(logs) {
                     <td>
                         <div class="d-flex flex-column align-items-start gap-1">
                             ${passBadge}
-                            ${similarityBadge}
                         </div>
                     </td>
                     <td>
@@ -433,22 +428,56 @@ function formatResponseTime(value) {
     return `${value}ms`;
 }
 
-function formatSimilarityScore(value) {
-    if (value === null || value === undefined) {
-        return '—';
+function buildEvaluationTooltip(log) {
+    if (!log) {
+        return 'Evaluation details unavailable.';
     }
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
-        return '—';
+
+    const lines = [];
+    const feedback = (log.evaluation_feedback || '').trim();
+    if (feedback) {
+        lines.push(feedback);
     }
-    return numeric.toFixed(2);
+
+    if (log.response_expectation_snapshot) {
+        lines.push(`Expectation snapshot:\n${log.response_expectation_snapshot.trim()}`);
+    }
+
+    if (log.evaluation_model_name) {
+        lines.push(`Model: ${log.evaluation_model_name}`);
+    }
+
+    const metadata = log.evaluation_metadata || {};
+    if (Array.isArray(metadata.missing_criteria) && metadata.missing_criteria.length > 0) {
+        lines.push(`Missing criteria:\n- ${metadata.missing_criteria.join('\n- ')}`);
+    }
+    if (Array.isArray(metadata.satisfied_criteria) && metadata.satisfied_criteria.length > 0) {
+        lines.push(`Satisfied criteria:\n- ${metadata.satisfied_criteria.join('\n- ')}`);
+    }
+
+    if (lines.length === 0) {
+        lines.push(log.is_passed ? 'Marked as passed.' : 'Marked as failed.');
+    }
+
+    return lines.join('\n\n');
 }
 
-function formatPassBadge(isPassed) {
-    if (isPassed) {
-        return '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Passed</span>';
-    }
-    return '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>';
+function formatPassBadge(log) {
+    const isPassed = Boolean(log && log.is_passed);
+    const badgeClass = isPassed ? 'bg-success' : 'bg-danger';
+    const icon = isPassed ? 'check' : 'times';
+    const label = isPassed ? 'Passed' : 'Failed';
+    const tooltipContent = encodeTooltipPayload(buildEvaluationTooltip(log));
+    const fallback = encodeTooltipPayload(label);
+
+    return `
+        <span class="badge ${badgeClass} log-preview"
+              data-bs-toggle="tooltip" data-bs-placement="top"
+              data-bs-custom-class="log-tooltip" data-bs-html="true"
+              data-tooltip-content="${tooltipContent}" data-tooltip-fallback="${fallback}">
+            <i class="fas fa-${icon} me-1"></i>${label}
+        </span>
+    `;
 }
 
 async function loadTestCaseDetails(testCaseId) {

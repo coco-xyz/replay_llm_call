@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block page_title %}Settings - LLM Replay System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
+
+    .card {
+        background: var(--card-background);
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .card-header {
+        background: transparent;
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .form-control {
+        border-radius: 0.5rem;
+        border: 1px solid var(--border-color);
+        padding: 0.625rem 0.75rem;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .settings-help {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+
+    #saveSettingsBtn {
+        min-width: 140px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
+        <div class="mb-3 mb-lg-0">
+            <h1 class="page-title">Settings</h1>
+            <p class="page-subtitle mb-0">Configure evaluation behavior for automated test verdicts</p>
+        </div>
+        <button class="btn btn-outline-primary" id="refreshSettingsBtn">
+            <i class="fas fa-rotate me-2"></i>Reload
+        </button>
+    </div>
+
+    <div id="alertContainer" class="d-none"></div>
+
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-scale-balanced me-2"></i>Evaluation Agent
+        </div>
+        <div class="card-body">
+            <form id="evaluationSettingsForm" class="mb-0">
+                <div class="mb-3">
+                    <label for="evaluationProvider" class="form-label">Provider</label>
+                    <input type="text" class="form-control" id="evaluationProvider" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="evaluationModel" class="form-label">Model Name</label>
+                    <input type="text" class="form-control" id="evaluationModel" placeholder="e.g. openai/gpt-4o-mini">
+                    <div class="form-text settings-help">
+                        Specify the model identifier exposed by your provider. Changes take effect immediately for new test runs.
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-secondary" id="resetSettingsBtn">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveSettingsBtn">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/settings.js?v={{ static_asset_version }}"></script>
+{% endblock %}

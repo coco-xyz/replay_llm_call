@@ -35,9 +35,18 @@ async def create_agent(request: AgentCreateRequest) -> AgentResponse:
 async def list_agents(
     limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
+    search: str | None = Query(
+        None,
+        min_length=1,
+        description="Filter agents by name using a case-insensitive substring match",
+    ),
 ) -> List[AgentResponse]:
     try:
-        agents = agent_service.list_agents(limit=limit, offset=offset)
+        agents = agent_service.list_agents(
+            limit=limit,
+            offset=offset,
+            search=search,
+        )
         return [convert_agent_data_to_response(agent) for agent in agents]
     except Exception as exc:  # pragma: no cover - defensive logging
         logger.error("API: Failed to list agents: %s", exc)

@@ -118,9 +118,13 @@ class AgentService:
         *,
         limit: int = 20,
         offset: int = 0,
+        search: Optional[str] = None,
     ) -> List[AgentData]:
         agents = self.store.list_agents(
-            include_deleted=include_deleted, limit=limit, offset=offset
+            include_deleted=include_deleted,
+            limit=limit,
+            offset=offset,
+            search=search,
         )
         return [AgentData.model_validate(agent) for agent in agents]
 

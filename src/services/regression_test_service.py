@@ -248,9 +248,14 @@ class RegressionTestService:
         status: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
+        search: Optional[str] = None,
     ) -> List[RegressionTestData]:
         records = self.store.list_regression_tests(
-            agent_id=agent_id, status=status, limit=limit, offset=offset
+            agent_id=agent_id,
+            status=status,
+            limit=limit,
+            offset=offset,
+            search=search,
         )
         agent_cache: Dict[str, AgentSummary] = {}
         data: List[RegressionTestData] = []

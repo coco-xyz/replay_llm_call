@@ -14,7 +14,7 @@ from src.services.test_case_service import TestCaseService
 from src.services.test_execution_service import (
     ExecutionResult,
     ExecutionService,
-    TestExecutionData,
+    ExecutionData,
 )
 from src.stores.regression_test_store import RegressionTestStore
 
@@ -184,7 +184,7 @@ class RegressionTestService:
         async def execute_case(case) -> None:
             async with semaphore:
                 try:
-                    execution_request = TestExecutionData(
+                    execution_request = ExecutionData(
                         test_case_id=case.id,
                         agent_id=agent.id,
                         regression_test_id=regression.id,
@@ -214,9 +214,7 @@ class RegressionTestService:
 
         passed_count = sum(1 for result in results if result.is_passed is True)
         declined_count = sum(1 for result in results if result.is_passed is False)
-        unknown_from_results = sum(
-            1 for result in results if result.is_passed is None
-        )
+        unknown_from_results = sum(1 for result in results if result.is_passed is None)
         missing_results = max(0, len(test_cases) - len(results))
         unknown_count = unknown_from_results + missing_results
 
@@ -248,7 +246,7 @@ class RegressionTestService:
         *,
         agent_id: Optional[str] = None,
         status: Optional[str] = None,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
     ) -> List[RegressionTestData]:
         records = self.store.list_regression_tests(

@@ -20,9 +20,15 @@ class RegressionTestResponse(BaseModel):
     total_count: int = Field(..., description="Total number of executed test cases")
     success_count: int = Field(..., description="Number of successful executions")
     failed_count: int = Field(..., description="Number of failed executions")
-    passed_count: int = Field(..., description="Number of test logs evaluated as passed")
-    declined_count: int = Field(..., description="Number of test logs evaluated as declined")
-    unknown_count: int = Field(..., description="Number of test logs without an evaluation outcome")
+    passed_count: int = Field(
+        ..., description="Number of test logs evaluated as passed"
+    )
+    declined_count: int = Field(
+        ..., description="Number of test logs evaluated as declined"
+    )
+    unknown_count: int = Field(
+        ..., description="Number of test logs without an evaluation outcome"
+    )
     error_message: Optional[str] = Field(
         None, description="Aggregated error message if the regression failed"
     )

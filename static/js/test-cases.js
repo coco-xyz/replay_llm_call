@@ -4,10 +4,16 @@
  * Handles test case CRUD operations and UI interactions.
  */
 
+const PAGE_SIZE = 20;
+const FETCH_LIMIT = PAGE_SIZE + 1;
+
 let currentTestCases = [];
 let currentTestCaseId = null;
 let agents = [];
 let selectedAgentId = '';
+let currentPage = 1;
+let hasNextPage = false;
+let currentSearchTerm = '';
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', async function () {
@@ -20,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     await loadAgents();
-    loadTestCases();
+    loadTestCases(1);
 
     if (initialAgentId) {
         const agentFilter = document.getElementById('agentFilter');
@@ -41,7 +47,8 @@ function setupEventListeners() {
     if (searchInput) {
         searchInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                searchTestCases();
+                e.preventDefault();
+                applySearchFilters();
             }
         });
 
@@ -50,7 +57,7 @@ function setupEventListeners() {
         searchInput.addEventListener('input', function () {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
-                searchTestCases();
+                applySearchFilters();
             }, 500); // 500ms debounce
         });
     }
@@ -59,7 +66,7 @@ function setupEventListeners() {
     if (agentFilter) {
         agentFilter.addEventListener('change', function () {
             selectedAgentId = this.value;
-            loadTestCases();
+            loadTestCases(1);
         });
     }
 
@@ -69,21 +76,60 @@ function setupEventListeners() {
             const agentSelect = document.getElementById('agentFilter');
             const searchField = document.getElementById('searchInput');
             selectedAgentId = '';
+            currentSearchTerm = '';
+            currentPage = 1;
             if (agentSelect) {
                 agentSelect.value = '';
             }
             if (searchField) {
                 searchField.value = '';
             }
-            loadTestCases();
+            loadTestCases(1);
+        });
+    }
+
+    const prevBtn = document.getElementById('testCasesPrevPageBtn');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                loadTestCases(currentPage - 1);
+            }
+        });
+    }
+
+    const nextBtn = document.getElementById('testCasesNextPageBtn');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (hasNextPage) {
+                loadTestCases(currentPage + 1);
+            }
         });
     }
 }
 
-async function loadTestCases() {
+function applySearchFilters() {
+    const searchInput = document.getElementById('searchInput');
+    currentSearchTerm = searchInput ? searchInput.value.trim() : '';
+    currentPage = 1;
+    loadTestCases(1);
+}
+
+async function loadTestCases(page = currentPage) {
+    currentPage = page;
     showLoading(true);
     try {
-        const url = new URL('/v1/api/test-cases/', window.location.origin);
+        const isSearching = currentSearchTerm.length > 0;
+        const basePath = isSearching
+            ? '/v1/api/test-cases/search'
+            : '/v1/api/test-cases/';
+        const url = new URL(basePath, window.location.origin);
+        url.searchParams.set('limit', FETCH_LIMIT.toString());
+        url.searchParams.set('offset', ((page - 1) * PAGE_SIZE).toString());
+        if (isSearching) {
+            url.searchParams.set('q', currentSearchTerm);
+        }
         if (selectedAgentId) {
             url.searchParams.append('agent_id', selectedAgentId);
         }
@@ -94,8 +140,12 @@ async function loadTestCases() {
         }
 
         const testCases = await response.json();
-        currentTestCases = testCases;
-        displayTestCases(testCases);
+        hasNextPage = testCases.length > PAGE_SIZE;
+        currentTestCases = hasNextPage
+            ? testCases.slice(0, PAGE_SIZE)
+            : testCases;
+        displayTestCases(currentTestCases);
+        updateTestCasesPagination();
 
     } catch (error) {
         console.error('Error loading test cases:', error);
@@ -107,7 +157,9 @@ async function loadTestCases() {
 
 async function loadAgents() {
     try {
-        const response = await fetch('/v1/api/agents/');
+        const url = new URL('/v1/api/agents/', window.location.origin);
+        url.searchParams.set('limit', '1000');
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -205,6 +257,7 @@ function displayTestCases(testCases) {
         container.innerHTML = '';
         table.style.display = 'none';
         emptyState.classList.remove('d-none');
+        updateTestCasesPagination();
         return;
     }
 
@@ -318,6 +371,51 @@ function displayTestCases(testCases) {
     initializeTooltips();
 }
 
+function updateTestCasesPagination() {
+    const pagination = document.getElementById('testCasesPagination');
+    const status = document.getElementById('testCasesPaginationStatus');
+    const pageLabel = document.getElementById('testCasesPaginationCurrentPage');
+    const prevBtn = document.getElementById('testCasesPrevPage');
+    const nextBtn = document.getElementById('testCasesNextPage');
+
+    if (!pagination || !status || !pageLabel || !prevBtn || !nextBtn) {
+        return;
+    }
+
+    if (currentTestCases.length === 0) {
+        pagination.classList.add('d-none');
+        status.textContent = '';
+        pageLabel.textContent = '';
+        if (currentPage <= 1) {
+            prevBtn.classList.add('disabled');
+        } else {
+            prevBtn.classList.remove('disabled');
+        }
+        if (!hasNextPage) {
+            nextBtn.classList.add('disabled');
+        } else {
+            nextBtn.classList.remove('disabled');
+        }
+        return;
+    }
+
+    pagination.classList.remove('d-none');
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end = start + currentTestCases.length - 1;
+    status.textContent = `Showing ${start}-${end}`;
+    pageLabel.textContent = `Page ${currentPage}`;
+    if (currentPage <= 1) {
+        prevBtn.classList.add('disabled');
+    } else {
+        prevBtn.classList.remove('disabled');
+    }
+    if (!hasNextPage) {
+        nextBtn.classList.add('disabled');
+    } else {
+        nextBtn.classList.remove('disabled');
+    }
+}
+
 async function createTestCase() {
     const name = document.getElementById('testCaseName').value.trim();
     const description = document.getElementById('testCaseDescription').value.trim();
@@ -373,7 +471,7 @@ async function createTestCase() {
         populateAgentSelects();
 
         // Reload test cases
-        loadTestCases();
+        loadTestCases(1);
 
     } catch (error) {
         console.error('Error creating test case:', error);
@@ -459,7 +557,7 @@ async function updateTestCase() {
         modal.hide();
 
         // Reload test cases
-        loadTestCases();
+        loadTestCases(currentPage);
 
     } catch (error) {
         console.error('Error updating test case:', error);
@@ -528,7 +626,7 @@ async function confirmReimportTestCase() {
         clearModalAlert('reimportAlertContainer');
 
         // Reload test cases
-        loadTestCases();
+        loadTestCases(currentPage);
 
         showAlert('Test case raw data re-imported successfully!', 'success');
 
@@ -553,7 +651,7 @@ async function deleteTestCase(testCaseId) {
         }
 
         showAlert('Test case deleted successfully!', 'success');
-        loadTestCases();
+        loadTestCases(currentPage);
 
     } catch (error) {
         console.error('Error deleting test case:', error);
@@ -766,38 +864,6 @@ function executeTestCase(testCaseId) {
 function executeFromView() {
     if (currentTestCaseId) {
         executeTestCase(currentTestCaseId);
-    }
-}
-
-async function searchTestCases() {
-    const query = document.getElementById('searchInput').value.trim();
-
-    if (!query) {
-        loadTestCases();
-        return;
-    }
-
-    showLoading(true);
-    try {
-        const url = new URL('/v1/api/test-cases/search', window.location.origin);
-        url.searchParams.append('q', query);
-        if (selectedAgentId) {
-            url.searchParams.append('agent_id', selectedAgentId);
-        }
-
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const testCases = await response.json();
-        displayTestCases(testCases);
-
-    } catch (error) {
-        console.error('Error searching test cases:', error);
-        showAlert('Error searching test cases: ' + error.message, 'danger');
-    } finally {
-        showLoading(false);
     }
 }
 

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.services.test_execution_service import ExecutionService, TestExecutionData
+from src.services.test_execution_service import ExecutionService, ExecutionData
 
 
 class DummyTestCaseService:
@@ -80,7 +80,7 @@ async def test_execute_test_marks_unknown_when_expectations_missing(monkeypatch)
     store = DummyTestLogStore()
     service.test_log_store = store
 
-    request = TestExecutionData(test_case_id="case-123")
+    request = ExecutionData(test_case_id="case-123")
     result = await service.execute_test(request)
 
     assert result.is_passed is None

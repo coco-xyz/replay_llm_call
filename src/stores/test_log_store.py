@@ -81,7 +81,7 @@ class TestLogStore:
             ) from e
 
     def get_by_test_case_id(
-        self, test_case_id: str, limit: int = 100, offset: int = 0
+        self, test_case_id: str, limit: int = 20, offset: int = 0
     ) -> List[TestLog]:
         """
         Get test logs by test case ID with pagination.
@@ -127,7 +127,7 @@ class TestLogStore:
             .filter(TestCase.is_deleted.is_(False))
         )
 
-    def get_all(self, limit: int = 100, offset: int = 0) -> List[TestLog]:
+    def get_all(self, limit: int = 20, offset: int = 0) -> List[TestLog]:
         """
         Get all test logs with pagination.
 
@@ -162,7 +162,7 @@ class TestLogStore:
     def get_by_status(
         self,
         status: str,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
         agent_id: Optional[str] = None,
         regression_test_id: Optional[str] = None,
@@ -215,7 +215,7 @@ class TestLogStore:
         test_case_id: Optional[str] = None,
         agent_id: Optional[str] = None,
         regression_test_id: Optional[str] = None,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
     ) -> List[TestLog]:
         """
@@ -268,7 +268,7 @@ class TestLogStore:
     def get_by_regression_test(
         self,
         regression_test_id: str,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
     ) -> List[TestLog]:
         """Return logs that belong to a specific regression test."""

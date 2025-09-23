@@ -21,7 +21,7 @@ test_log_service = LogService()
 
 @router.get("/", response_model=List[TestLogResponse])
 async def get_test_logs(
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
+    limit: int = Query(20, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     agent_id: Optional[str] = Query(None, description="Filter by agent ID"),
     regression_test_id: Optional[str] = Query(
@@ -91,7 +91,7 @@ async def get_test_log(log_id: str):
 @router.get("/test-case/{test_case_id}", response_model=List[TestLogResponse])
 async def get_logs_by_test_case(
     test_case_id: str,
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ):
     """
@@ -124,7 +124,7 @@ async def get_logs_by_test_case(
 @router.get("/filter/status/{status}", response_model=List[TestLogResponse])
 async def get_logs_by_status(
     status: str,
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     agent_id: Optional[str] = Query(None, description="Filter by agent ID"),
     regression_test_id: Optional[str] = Query(
@@ -170,7 +170,7 @@ async def get_logs_filtered(
     regression_test_id: Optional[str] = Query(
         None, description="Filter by regression test ID"
     ),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ):
     """

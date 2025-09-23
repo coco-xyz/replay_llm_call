@@ -89,7 +89,7 @@ class TestCaseStore:
     def get_all(
         self,
         *,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
         agent_id: Optional[str] = None,
     ) -> List[TestCase]:
@@ -246,7 +246,8 @@ class TestCaseStore:
         self,
         name_pattern: str,
         *,
-        limit: int = 50,
+        limit: int = 20,
+        offset: int = 0,
         agent_id: Optional[str] = None,
     ) -> List[TestCase]:
         """
@@ -273,7 +274,10 @@ class TestCaseStore:
                 if agent_id:
                     query = query.filter(TestCase.agent_id == agent_id)
                 test_cases = (
-                    query.order_by(desc(TestCase.created_at)).limit(limit).all()
+                    query.order_by(desc(TestCase.created_at))
+                    .limit(limit)
+                    .offset(offset)
+                    .all()
                 )
                 logger.debug(
                     "Found %s test cases matching '%s'", len(test_cases), name_pattern

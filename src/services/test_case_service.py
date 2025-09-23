@@ -187,7 +187,7 @@ class TestCaseService:
 
     def get_all_test_cases(
         self,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
         agent_id: Optional[str] = None,
     ) -> List[TestCaseData]:
@@ -335,7 +335,11 @@ class TestCaseService:
             raise
 
     def search_test_cases(
-        self, name_pattern: str, limit: int = 50, agent_id: Optional[str] = None
+        self,
+        name_pattern: str,
+        limit: int = 20,
+        offset: int = 0,
+        agent_id: Optional[str] = None,
     ) -> List[TestCaseData]:
         """
         Search test cases by name pattern.
@@ -349,7 +353,10 @@ class TestCaseService:
         """
         try:
             test_cases = self.store.search_by_name(
-                name_pattern, limit=limit, agent_id=agent_id
+                name_pattern,
+                limit=limit,
+                offset=offset,
+                agent_id=agent_id,
             )
 
             return [self._build_test_case_data(tc) for tc in test_cases]

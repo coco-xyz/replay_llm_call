@@ -117,7 +117,7 @@ class LogService:
             raise
 
     def get_logs_by_test_case(
-        self, test_case_id: str, limit: int = 100, offset: int = 0
+        self, test_case_id: str, limit: int = 20, offset: int = 0
     ) -> List[LogData]:
         """
         Get test logs for a specific test case.
@@ -168,7 +168,7 @@ class LogService:
     def get_logs_by_regression_test(
         self,
         regression_test_id: str,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
     ) -> List[LogData]:
         """Return logs produced by a specific regression test."""
@@ -212,7 +212,7 @@ class LogService:
             )
             raise
 
-    def get_all_logs(self, limit: int = 100, offset: int = 0) -> List[LogData]:
+    def get_all_logs(self, limit: int = 20, offset: int = 0) -> List[LogData]:
         """
         Get all test logs with pagination.
 
@@ -259,7 +259,7 @@ class LogService:
     def get_logs_by_status(
         self,
         status: str,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
         agent_id: Optional[str] = None,
         regression_test_id: Optional[str] = None,
@@ -314,7 +314,7 @@ class LogService:
             logger.error(f"Failed to get logs by status {status}: {e}")
             raise
 
-    def get_success_logs(self, limit: int = 100, offset: int = 0) -> List[LogData]:
+    def get_success_logs(self, limit: int = 20, offset: int = 0) -> List[LogData]:
         """
         Get successful test logs.
 
@@ -327,7 +327,7 @@ class LogService:
         """
         return self.get_logs_by_status("success", limit=limit, offset=offset)
 
-    def get_failed_logs(self, limit: int = 100, offset: int = 0) -> List[LogData]:
+    def get_failed_logs(self, limit: int = 20, offset: int = 0) -> List[LogData]:
         """
         Get failed test logs.
 
@@ -346,7 +346,7 @@ class LogService:
         test_case_id: Optional[str] = None,
         agent_id: Optional[str] = None,
         regression_test_id: Optional[str] = None,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
     ) -> List[LogData]:
         """

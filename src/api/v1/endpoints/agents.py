@@ -2,7 +2,7 @@
 
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from src.api.v1.converters import (
     convert_agent_create_request,
@@ -32,9 +32,12 @@ async def create_agent(request: AgentCreateRequest) -> AgentResponse:
 
 
 @router.get("/", response_model=List[AgentResponse])
-async def list_agents() -> List[AgentResponse]:
+async def list_agents(
+    limit: int = Query(20, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> List[AgentResponse]:
     try:
-        agents = agent_service.list_agents()
+        agents = agent_service.list_agents(limit=limit, offset=offset)
         return [convert_agent_data_to_response(agent) for agent in agents]
     except Exception as exc:  # pragma: no cover - defensive logging
         logger.error("API: Failed to list agents: %s", exc)

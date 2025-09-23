@@ -9,9 +9,41 @@ let isExecuting = false;
 let currentTools = [];
 let editingToolIndex = -1;
 let availableAgents = [];
-let selectedAgentId = '';
 let availableTestCases = [];
 let initialTestCaseId = '';
+
+// Entity caches for autocomplete
+const entityCaches = {
+    testCases: new Map(),
+    agents: new Map(),
+};
+
+const pendingEntityRequests = {
+    testCases: new Map(),
+    agents: new Map(),
+};
+
+// Autocomplete configuration
+const AUTOCOMPLETE_FILTERS = {
+    testCase: {
+        inputId: 'testCaseSelectInput',
+        hiddenId: 'testCaseSelect',
+        resultsId: 'testCaseSelectResults',
+        filterKey: 'testCaseId',
+        searchFn: searchTestCases,
+        mapResult: (item) => {
+            const agentName = item.agent ? item.agent.name : 'Unknown agent';
+            return {
+                value: item.id,
+                display: item.name,
+                secondary: `${agentName} • ${item.id}`,
+            };
+        },
+        onSelect: (mapped) => {
+            selectTestCase(mapped.value);
+        }
+    },
+};
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,17 +66,14 @@ async function initializeTestExecutionPage() {
     if (logId) {
         try {
             logData = await fetchTestLogDetails(logId);
-            selectedAgentId = logData.agent_id || '';
         } catch (error) {
             console.error('Unable to load log for re-execution:', error);
             showAlert('Unable to load log for re-execution: ' + error.message, 'warning');
         }
-    } else if (initialAgentId) {
-        selectedAgentId = initialAgentId;
     }
 
+    setupAutocompleteFilters();
     await loadAgents();
-    await loadTestCases();
 
     if (logData) {
         await prefillExecutionFromLog(logData);
@@ -52,33 +81,12 @@ async function initializeTestExecutionPage() {
     }
 
     if (initialTestCaseId) {
-        const select = document.getElementById('testCaseSelect');
-        if (select) {
-            select.value = initialTestCaseId;
-        }
         await selectTestCase(initialTestCaseId);
     }
 }
 
 function setupEventListeners() {
-    const agentSelect = document.getElementById('agentSelect');
-    if (agentSelect) {
-        agentSelect.addEventListener('change', async function () {
-            selectedAgentId = this.value;
-            clearSelection();
-            await loadTestCases();
-        });
-    }
-
-    // Test case selection
-    document.getElementById('testCaseSelect').addEventListener('change', function () {
-        const testCaseId = this.value;
-        if (testCaseId) {
-            selectTestCase(testCaseId);
-        } else {
-            clearSelection();
-        }
-    });
+    // Autocomplete filters are set up separately in setupAutocompleteFilters()
 
     // Model name input with history
     setupModelNameInput();
@@ -99,6 +107,158 @@ function setupEventListeners() {
     }
 }
 
+function setupAutocompleteFilters() {
+    Object.entries(AUTOCOMPLETE_FILTERS).forEach(([key, config]) => {
+        setupAutocompleteFilter(key, config);
+    });
+}
+
+function setupAutocompleteFilter(key, config) {
+    const input = document.getElementById(config.inputId);
+    const hidden = document.getElementById(config.hiddenId);
+    const results = document.getElementById(config.resultsId);
+    if (!input || !hidden || !results) {
+        return;
+    }
+
+    let debounceTimer = null;
+    let activeController = null;
+
+    const closeResults = () => {
+        results.classList.add('d-none');
+        results.innerHTML = '';
+    };
+
+    const performSearch = (query) => {
+        if (!query) {
+            closeResults();
+            return;
+        }
+        if (activeController) {
+            activeController.abort();
+        }
+        activeController = new AbortController();
+        config
+            .searchFn(query, { signal: activeController.signal })
+            .then((items) => {
+                if (!items || items.length === 0) {
+                    results.innerHTML = '<div class="filter-search-empty">No matches</div>';
+                    results.classList.remove('d-none');
+                    return;
+                }
+                results.innerHTML = '';
+                const fragment = document.createDocumentFragment();
+                items.forEach((item) => {
+                    const mapped = config.mapResult(item);
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    const primary = document.createElement('span');
+                    primary.textContent = mapped.display || mapped.value;
+                    button.appendChild(primary);
+                    if (mapped.secondary) {
+                        const secondary = document.createElement('span');
+                        secondary.className = 'result-secondary';
+                        secondary.textContent = mapped.secondary;
+                        button.appendChild(secondary);
+                    }
+                    button.addEventListener('mousedown', (event) => {
+                        event.preventDefault();
+                        selectResult(mapped);
+                    });
+                    fragment.appendChild(button);
+                });
+                results.appendChild(fragment);
+                results.classList.remove('d-none');
+            })
+            .catch((error) => {
+                if (error.name === 'AbortError') {
+                    return;
+                }
+                console.error('Search failed:', error);
+                results.innerHTML = '<div class="filter-search-empty text-danger">Search failed</div>';
+                results.classList.remove('d-none');
+            });
+    };
+
+    const selectResult = (mapped) => {
+        hidden.value = mapped.value;
+        input.value = mapped.display || mapped.value;
+        closeResults();
+        if (config.onSelect) {
+            config.onSelect(mapped);
+        }
+    };
+
+    const handleInputChange = (event) => {
+        const query = event.target.value.trim();
+        if (hidden.value) {
+            hidden.value = '';
+        }
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+        }
+        if (!query) {
+            closeResults();
+            if (key === 'testCase') {
+                clearSelection();
+            }
+            return;
+        }
+        debounceTimer = window.setTimeout(() => performSearch(query), 250);
+    };
+
+    input.addEventListener('input', handleInputChange);
+    input.addEventListener('focus', (event) => {
+        const query = event.target.value.trim();
+        if (query) {
+            performSearch(query);
+        }
+    });
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeResults();
+            input.blur();
+        }
+    });
+    input.addEventListener('blur', () => {
+        window.setTimeout(closeResults, 150);
+    });
+}
+
+// Search functions
+async function searchTestCases(query, options = {}) {
+    if (!query) {
+        return [];
+    }
+    const params = new URLSearchParams({ q: query, limit: '10' });
+    try {
+        const results = await fetchJson(`/v1/api/test-cases/search?${params}`, options);
+        results.forEach((item) => {
+            entityCaches.testCases.set(item.id, item);
+        });
+        return results;
+    } catch (error) {
+        if (isAbortError(error)) {
+            return [];
+        }
+        console.error('Error searching test cases:', error);
+        return [];
+    }
+}
+
+// Utility functions for entity loading
+async function fetchJson(url, options = {}) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+}
+
+function isAbortError(error) {
+    return error && (error.name === 'AbortError' || error.code === 20);
+}
+
 async function loadAgents() {
     try {
         const response = await fetch('/v1/api/agents/');
@@ -108,7 +268,10 @@ async function loadAgents() {
 
         const data = await response.json();
         availableAgents = data.filter((agent) => !agent.is_deleted);
-        populateAgentSelect();
+        // Cache agents for autocomplete
+        availableAgents.forEach(agent => {
+            entityCaches.agents.set(agent.id, agent);
+        });
         updateAgentWarning();
     } catch (error) {
         console.error('Error loading agents:', error);
@@ -116,91 +279,24 @@ async function loadAgents() {
     }
 }
 
-function populateAgentSelect() {
-    const select = document.getElementById('agentSelect');
-    if (!select) {
-        return;
-    }
-
-    const previousValue = select.value;
-    select.innerHTML = '<option value="">All agents</option>';
-    availableAgents.forEach((agent) => {
-        const option = document.createElement('option');
-        option.value = agent.id;
-        option.textContent = agent.name;
-        select.appendChild(option);
-    });
-
-    const desiredValue = selectedAgentId || previousValue || '';
-    select.value = desiredValue;
-    if (select.value !== desiredValue) {
-        select.value = '';
-    }
-    selectedAgentId = select.value;
-}
+// Agent selection is now handled through autocomplete
 
 function updateAgentWarning() {
     const warning = document.getElementById('executionAgentWarning');
-    const agentSelect = document.getElementById('agentSelect');
     if (!warning) return;
 
     if (availableAgents.length === 0) {
         warning.classList.remove('d-none');
-        if (agentSelect) {
-            agentSelect.disabled = true;
-        }
     } else {
         warning.classList.add('d-none');
-        if (agentSelect) {
-            agentSelect.disabled = false;
-        }
     }
 }
+
+// Test case loading is now handled through autocomplete search
 
 async function loadTestCases() {
-    try {
-        const url = new URL('/v1/api/test-cases/', window.location.origin);
-        if (selectedAgentId) {
-            url.searchParams.append('agent_id', selectedAgentId);
-        }
-
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const testCases = await response.json();
-        availableTestCases = testCases;
-        populateTestCaseSelect(testCases);
-
-    } catch (error) {
-        console.error('Error loading test cases:', error);
-        showAlert('Error loading test cases: ' + error.message, 'danger');
-    }
-}
-
-function populateTestCaseSelect(testCases) {
-    const select = document.getElementById('testCaseSelect');
-
-    // Clear existing options except the first one
-    select.innerHTML = '<option value="">Select a test case...</option>';
-
-    if (!testCases || testCases.length === 0) {
-        select.disabled = true;
-        disableExecuteButton();
-        updateSelectedTestCaseInfo(null);
-        return;
-    }
-
-    select.disabled = false;
-    testCases.forEach((testCase) => {
-        const option = document.createElement('option');
-        const agentName = testCase.agent ? testCase.agent.name : 'Unknown agent';
-        option.value = testCase.id;
-        option.textContent = `${testCase.name} (${agentName})`;
-        select.appendChild(option);
-    });
-
+    // This function is kept for compatibility but test cases are now loaded via search
+    // Update the test case info display
     updateSelectedTestCaseInfo(null);
 }
 
@@ -215,7 +311,19 @@ async function selectTestCase(testCaseId) {
         currentTestCase = testCase;
 
         // Update UI
-        document.getElementById('testCaseSelect').value = testCaseId;
+        const testCaseInput = document.getElementById('testCaseSelectInput');
+        const testCaseHidden = document.getElementById('testCaseSelect');
+
+        if (testCaseHidden) {
+            testCaseHidden.value = testCaseId;
+        }
+        if (testCaseInput) {
+            testCaseInput.value = testCase.name;
+        }
+
+        // Cache the test case
+        entityCaches.testCases.set(testCase.id, testCase);
+
         populateExecutionParameters(testCase);
         validateExecutionForm();
 
@@ -240,6 +348,8 @@ async function prefillExecutionFromLog(log) {
         if (!log.test_case_id) {
             throw new Error('Log is missing an associated test case');
         }
+
+        // Agent information is now displayed within the test case details
 
         await selectTestCase(log.test_case_id);
 
@@ -315,7 +425,17 @@ function populateExecutionParameters(testCase) {
 
 function clearSelection() {
     currentTestCase = null;
-    document.getElementById('testCaseSelect').value = '';
+
+    const testCaseInput = document.getElementById('testCaseSelectInput');
+    const testCaseHidden = document.getElementById('testCaseSelect');
+
+    if (testCaseInput) {
+        testCaseInput.value = '';
+    }
+    if (testCaseHidden) {
+        testCaseHidden.value = '';
+    }
+
     document.getElementById('modelName').value = '';
     document.getElementById('modelSettings').value = '';
     document.getElementById('systemPrompt').value = '';
@@ -863,6 +983,12 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
@@ -1082,3 +1208,5 @@ function initializeTooltips(container) {
         bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl);
     });
 }
+
+

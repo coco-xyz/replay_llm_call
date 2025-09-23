@@ -57,7 +57,7 @@ async def create_test_case(request: TestCaseCreateRequest):
 
 @router.get("/", response_model=List[TestCaseResponse])
 async def get_test_cases(
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     agent_id: Optional[str] = Query(
         None, description="Filter test cases by owning agent"
@@ -92,7 +92,8 @@ async def get_test_cases(
 @router.get("/search", response_model=List[TestCaseResponse])
 async def search_test_cases(
     q: str = Query(..., min_length=1, description="Search query"),
-    limit: int = Query(50, ge=1, le=500),
+    limit: int = Query(20, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     agent_id: Optional[str] = Query(
         None, description="Filter results to a specific agent"
     ),
@@ -112,7 +113,9 @@ async def search_test_cases(
     """
     try:
         logger.debug(f"API: Searching test cases with query: '{q}'")
-        result = test_case_service.search_test_cases(q, limit=limit, agent_id=agent_id)
+        result = test_case_service.search_test_cases(
+            q, limit=limit, offset=offset, agent_id=agent_id
+        )
         logger.debug(f"API: Found {len(result)} test cases matching '{q}'")
         return [convert_test_case_data_to_response(item) for item in result]
 

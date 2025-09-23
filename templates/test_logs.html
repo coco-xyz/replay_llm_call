@@ -359,6 +359,24 @@
                 <!-- Test logs will be loaded here -->
             </tbody>
         </table>
+        <!-- Pagination -->
+        <div class="card-footer d-flex justify-content-between align-items-center d-none" id="testLogsPagination"
+            style="background-color: #f8fafc; border-top: 1px solid var(--border-color);">
+            <div class="text-muted small" id="testLogsPaginationStatus"></div>
+            <nav aria-label="Test logs pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" id="testLogsPrevPage">
+                        <a class="page-link" href="#" id="testLogsPrevPageBtn">Previous</a>
+                    </li>
+                    <li class="page-item active">
+                        <span class="page-link" id="testLogsPaginationCurrentPage">1</span>
+                    </li>
+                    <li class="page-item" id="testLogsNextPage">
+                        <a class="page-link" href="#" id="testLogsNextPageBtn">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
     </div>
 </div>
 </div>
@@ -378,23 +396,6 @@
     <a href="/test-execution" class="btn btn-primary">
         <i class="fas fa-play me-2"></i>Execute Tests
     </a>
-</div>
-
-<!-- Pagination -->
-<div id="pagination" class="d-flex justify-content-center mt-4 d-none">
-    <nav>
-        <ul class="pagination">
-            <li class="page-item" id="prevPage">
-                <a class="page-link" href="#" onclick="loadPreviousPage()">Previous</a>
-            </li>
-            <li class="page-item active">
-                <span class="page-link" id="currentPage">1</span>
-            </li>
-            <li class="page-item" id="nextPage">
-                <a class="page-link" href="#" onclick="loadNextPage()">Next</a>
-            </li>
-        </ul>
-    </nav>
 </div>
 </div>
 

@@ -3,11 +3,15 @@
  *
  * Coordinates regression history listing and launching new runs.
  */
+const PAGE_SIZE = 20;
+const FETCH_LIMIT = PAGE_SIZE + 1;
 
 let regressionTests = [];
 let agentOptions = [];
 let currentFilters = { agentId: '', status: '' };
 let refreshTimeout = null;
+let currentPage = 1;
+let hasNextPage = false;
 
 window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
@@ -16,13 +20,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
 async function initializeData() {
     await loadAgents();
-    await loadRegressions();
+    await loadRegressions(1);
 }
 
 function setupEventListeners() {
     const refreshBtn = document.getElementById('refreshRegressionsBtn');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => loadRegressions());
+        refreshBtn.addEventListener('click', () => loadRegressions(currentPage));
     }
 
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
@@ -33,7 +37,8 @@ function setupEventListeners() {
             if (agentFilter) agentFilter.value = '';
             if (statusFilter) statusFilter.value = '';
             currentFilters = { agentId: '', status: '' };
-            loadRegressions();
+            currentPage = 1;
+            loadRegressions(1);
         });
     }
 
@@ -41,7 +46,8 @@ function setupEventListeners() {
     if (agentFilter) {
         agentFilter.addEventListener('change', (event) => {
             currentFilters.agentId = event.target.value;
-            loadRegressions();
+            currentPage = 1;
+            loadRegressions(1);
         });
         agentFilter.value = currentFilters.agentId;
     }
@@ -50,7 +56,8 @@ function setupEventListeners() {
     if (statusFilter) {
         statusFilter.addEventListener('change', (event) => {
             currentFilters.status = event.target.value;
-            loadRegressions();
+            currentPage = 1;
+            loadRegressions(1);
         });
         statusFilter.value = currentFilters.status;
     }
@@ -92,11 +99,32 @@ function setupEventListeners() {
         });
     }
 
+    const prevBtn = document.getElementById('regressionsPrevPageBtn');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                loadRegressions(currentPage - 1);
+            }
+        });
+    }
+
+    const nextBtn = document.getElementById('regressionsNextPageBtn');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (hasNextPage) {
+                loadRegressions(currentPage + 1);
+            }
+        });
+    }
 }
 
 async function loadAgents() {
     try {
-        const response = await fetch('/v1/api/agents/');
+        const url = new URL('/v1/api/agents/', window.location.origin);
+        url.searchParams.set('limit', '1000');
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -111,7 +139,7 @@ async function loadAgents() {
     }
 }
 
-function createRegressionsUrl() {
+function createRegressionsUrl(page) {
     const url = new URL('/v1/api/regression-tests/', window.location.origin);
     if (currentFilters.agentId) {
         url.searchParams.append('agent_id', currentFilters.agentId);
@@ -119,11 +147,13 @@ function createRegressionsUrl() {
     if (currentFilters.status) {
         url.searchParams.append('status', currentFilters.status);
     }
-    url.searchParams.append('limit', '100');
+    url.searchParams.append('limit', FETCH_LIMIT.toString());
+    url.searchParams.append('offset', ((page - 1) * PAGE_SIZE).toString());
     return url;
 }
 
-async function loadRegressions() {
+async function loadRegressions(page = currentPage) {
+    currentPage = page;
     toggleLoading(true);
     if (refreshTimeout) {
         clearTimeout(refreshTimeout);
@@ -131,15 +161,18 @@ async function loadRegressions() {
     }
 
     try {
-        const url = createRegressionsUrl();
+        const url = createRegressionsUrl(page);
 
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        regressionTests = await response.json();
+        const results = await response.json();
+        hasNextPage = results.length > PAGE_SIZE;
+        regressionTests = hasNextPage ? results.slice(0, PAGE_SIZE) : results;
         displayRegressionTests(regressionTests);
+        updateRegressionsPagination();
         scheduleAutoRefresh(regressionTests);
     } catch (error) {
         console.error('Error loading regression tests:', error);
@@ -162,6 +195,7 @@ function displayRegressionTests(regressions) {
         container.innerHTML = '';
         table.style.display = 'none';
         emptyState.classList.remove('d-none');
+        updateRegressionsPagination();
         return;
     }
 
@@ -189,6 +223,52 @@ function displayRegressionTests(regressions) {
         window.HoverTooltip.attach(container);
     }
     initializeTooltips();
+    updateRegressionsPagination();
+}
+
+function updateRegressionsPagination() {
+    const pagination = document.getElementById('regressionsPagination');
+    const status = document.getElementById('regressionsPaginationStatus');
+    const pageLabel = document.getElementById('regressionsPaginationCurrentPage');
+    const prevBtn = document.getElementById('regressionsPrevPage');
+    const nextBtn = document.getElementById('regressionsNextPage');
+
+    if (!pagination || !status || !pageLabel || !prevBtn || !nextBtn) {
+        return;
+    }
+
+    if (regressionTests.length === 0) {
+        pagination.classList.add('d-none');
+        status.textContent = '';
+        pageLabel.textContent = '';
+        if (currentPage <= 1) {
+            prevBtn.classList.add('disabled');
+        } else {
+            prevBtn.classList.remove('disabled');
+        }
+        if (!hasNextPage) {
+            nextBtn.classList.add('disabled');
+        } else {
+            nextBtn.classList.remove('disabled');
+        }
+        return;
+    }
+
+    pagination.classList.remove('d-none');
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end = start + regressionTests.length - 1;
+    status.textContent = `Showing ${start}-${end}`;
+    pageLabel.textContent = `Page ${currentPage}`;
+    if (currentPage <= 1) {
+        prevBtn.classList.add('disabled');
+    } else {
+        prevBtn.classList.remove('disabled');
+    }
+    if (!hasNextPage) {
+        nextBtn.classList.add('disabled');
+    } else {
+        nextBtn.classList.remove('disabled');
+    }
 }
 
 function buildRegressionRow(regression) {
@@ -391,7 +471,7 @@ async function startRegression() {
 
         bootstrap.Modal.getInstance(document.getElementById('startRegressionModal')).hide();
         showAlert('Regression run started successfully.', 'success');
-        loadRegressions();
+        loadRegressions(1);
     } catch (error) {
         console.error('Error starting regression:', error);
         showModalAlert('startRegressionAlert', 'Error starting regression: ' + error.message, 'danger');
@@ -420,15 +500,19 @@ function scheduleAutoRefresh(regressions) {
 
 async function refreshRunningRegressions() {
     try {
-        const url = createRegressionsUrl();
+        const url = createRegressionsUrl(currentPage);
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const updatedRegressions = await response.json();
-        regressionTests = updatedRegressions;
-        updateRegressionRows(updatedRegressions);
+        const updatedResults = await response.json();
+        hasNextPage = updatedResults.length > PAGE_SIZE;
+        regressionTests = hasNextPage
+            ? updatedResults.slice(0, PAGE_SIZE)
+            : updatedResults;
+        updateRegressionRows(regressionTests);
+        updateRegressionsPagination();
     } catch (error) {
         console.error('Error refreshing regression tests:', error);
     } finally {

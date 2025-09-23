@@ -73,7 +73,7 @@ class RegressionTestStore:
         *,
         agent_id: Optional[str] = None,
         status: Optional[str] = None,
-        limit: int = 100,
+        limit: int = 20,
         offset: int = 0,
         include_deleted: bool = False,
     ) -> List[RegressionTest]:

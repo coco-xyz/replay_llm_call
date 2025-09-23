@@ -112,8 +112,16 @@ class AgentService:
             return None
         return AgentData.model_validate(agent)
 
-    def list_agents(self, include_deleted: bool = False) -> List[AgentData]:
-        agents = self.store.list_agents(include_deleted=include_deleted)
+    def list_agents(
+        self,
+        include_deleted: bool = False,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> List[AgentData]:
+        agents = self.store.list_agents(
+            include_deleted=include_deleted, limit=limit, offset=offset
+        )
         return [AgentData.model_validate(agent) for agent in agents]
 
     def update_agent(self, agent_id: str, data: AgentUpdateData) -> Optional[AgentData]:

@@ -59,13 +59,24 @@ class AgentStore:
                 f"Failed to fetch agent: {exc}",
             ) from exc
 
-    def list_agents(self, include_deleted: bool = False) -> List[Agent]:
+    def list_agents(
+        self,
+        include_deleted: bool = False,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> List[Agent]:
         try:
             with database_session() as db:
                 query = db.query(Agent)
                 if not include_deleted:
                     query = query.filter(Agent.is_deleted.is_(False))
-                return query.order_by(Agent.created_at.desc()).all()
+                return (
+                    query.order_by(Agent.created_at.desc())
+                    .limit(limit)
+                    .offset(offset)
+                    .all()
+                )
         except Exception as exc:  # pragma: no cover
             logger.error("Failed to list agents: %s", exc)
             raise DatabaseException(

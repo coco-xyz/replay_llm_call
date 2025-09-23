@@ -22,7 +22,7 @@ from src.stores.test_log_store import TestLogStore
 logger = get_logger(__name__)
 
 
-class TestExecutionData(BaseModel):
+class ExecutionData(BaseModel):
     """Service layer data for test execution."""
 
     test_case_id: str = Field(..., description="ID of the test case to execute")
@@ -100,7 +100,7 @@ class ExecutionService:
         self.agent_service = AgentService()
         self.evaluation_service = EvaluationService()
 
-    async def execute_test(self, request: TestExecutionData) -> ExecutionResult:
+    async def execute_test(self, request: ExecutionData) -> ExecutionResult:
         """
         Execute a test case synchronously and record the results.
 
@@ -340,7 +340,7 @@ class ExecutionService:
         Returns:
             ExecutionResult: Execution results
         """
-        request = TestExecutionData(
+        request = ExecutionData(
             test_case_id=test_case_id,
             modified_system_prompt=system_prompt,
             modified_last_user_message=user_message,

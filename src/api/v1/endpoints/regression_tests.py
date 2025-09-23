@@ -51,7 +51,7 @@ async def start_regression(
 async def list_regressions(
     agent_id: Optional[str] = Query(None, description="Filter by agent ID"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ) -> List[RegressionTestResponse]:
     try:
@@ -75,7 +75,7 @@ async def get_regression(regression_test_id: str) -> RegressionTestResponse:
 @router.get("/{regression_test_id}/logs", response_model=List[TestLogResponse])
 async def get_regression_logs(
     regression_test_id: str,
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ) -> List[TestLogResponse]:
     try:

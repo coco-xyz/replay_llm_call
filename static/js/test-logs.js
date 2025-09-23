@@ -3,10 +3,12 @@
  *
  * Handles test log viewing and filtering.
  */
+const PAGE_SIZE = 20;
+const FETCH_LIMIT = PAGE_SIZE + 1;
 
 let currentLogs = [];
 let currentPage = 1;
-let currentLimit = 50;
+let hasNextPage = false;
 let currentFilters = { status: '', testCaseId: '', agentId: '', regressionTestId: '' };
 let currentLogId = null;
 let testCasesData = []; // Store test cases data for lookup
@@ -119,6 +121,28 @@ function setupEventListeners() {
             loadTestLogs();
         });
     }
+
+    const prevBtn = document.getElementById('testLogsPrevPageBtn');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage -= 1;
+                loadTestLogs();
+            }
+        });
+    }
+
+    const nextBtn = document.getElementById('testLogsNextPageBtn');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (hasNextPage) {
+                currentPage += 1;
+                loadTestLogs();
+            }
+        });
+    }
 }
 
 function applyCurrentFiltersToControls() {
@@ -147,8 +171,8 @@ async function loadTestLogs() {
     showLoading(true);
     try {
         const params = new URLSearchParams({
-            limit: currentLimit,
-            offset: (currentPage - 1) * currentLimit
+            limit: FETCH_LIMIT,
+            offset: (currentPage - 1) * PAGE_SIZE
         });
 
         if (currentFilters.status) {
@@ -167,7 +191,8 @@ async function loadTestLogs() {
         const response = await fetch(`/v1/api/test-logs/filter/combined?${params}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const logs = await response.json();
-        currentLogs = logs;
+        hasNextPage = logs.length > PAGE_SIZE;
+        currentLogs = hasNextPage ? logs.slice(0, PAGE_SIZE) : logs;
 
         displayTestLogs(currentLogs);
         updatePagination();
@@ -182,7 +207,9 @@ async function loadTestLogs() {
 
 async function loadTestCases() {
     try {
-        const response = await fetch('/v1/api/test-cases/');
+        const url = new URL('/v1/api/test-cases/', window.location.origin);
+        url.searchParams.set('limit', '1000');
+        const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const testCases = await response.json();
@@ -196,7 +223,9 @@ async function loadTestCases() {
 
 async function loadAgents() {
     try {
-        const response = await fetch('/v1/api/agents/');
+        const url = new URL('/v1/api/agents/', window.location.origin);
+        url.searchParams.set('limit', '1000');
+        const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const agents = await response.json();
@@ -210,7 +239,7 @@ async function loadAgents() {
 async function loadRegressions() {
     try {
         const url = new URL('/v1/api/regression-tests/', window.location.origin);
-        url.searchParams.append('limit', '200');
+        url.searchParams.append('limit', '1000');
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
@@ -434,6 +463,7 @@ function displayTestLogs(logs) {
         container.innerHTML = '';
         table.style.display = 'none';
         emptyState.classList.remove('d-none');
+        updatePagination();
         return;
     }
 
@@ -541,6 +571,7 @@ function displayTestLogs(logs) {
         window.HoverTooltip.attach(container);
     }
     initializeTooltips();
+    updatePagination();
 }
 
 // Function to open log in new page
@@ -716,43 +747,48 @@ function reExecuteFromLog() {
     }
 }
 
-function loadPreviousPage() {
-    if (currentPage > 1) {
-        currentPage--;
-        loadTestLogs();
-    }
-}
-
-function loadNextPage() {
-    currentPage++;
-    loadTestLogs();
-}
-
 function updatePagination() {
-    const pagination = document.getElementById('pagination');
-    const prevPage = document.getElementById('prevPage');
-    const nextPage = document.getElementById('nextPage');
-    const currentPageSpan = document.getElementById('currentPage');
+    const pagination = document.getElementById('testLogsPagination');
+    const status = document.getElementById('testLogsPaginationStatus');
+    const pageLabel = document.getElementById('testLogsPaginationCurrentPage');
+    const prevBtn = document.getElementById('testLogsPrevPage');
+    const nextBtn = document.getElementById('testLogsNextPage');
 
-    if (currentLogs.length > 0) {
-        pagination.classList.remove('d-none');
-        currentPageSpan.textContent = currentPage;
+    if (!pagination || !status || !pageLabel || !prevBtn || !nextBtn) {
+        return;
+    }
 
-        // Update previous button
-        if (currentPage <= 1) {
-            prevPage.classList.add('disabled');
-        } else {
-            prevPage.classList.remove('disabled');
-        }
-
-        // Update next button (disable if we got less than the limit)
-        if (currentLogs.length < currentLimit) {
-            nextPage.classList.add('disabled');
-        } else {
-            nextPage.classList.remove('disabled');
-        }
-    } else {
+    if (currentLogs.length === 0) {
         pagination.classList.add('d-none');
+        status.textContent = '';
+        pageLabel.textContent = '';
+        if (currentPage <= 1) {
+            prevBtn.classList.add('disabled');
+        } else {
+            prevBtn.classList.remove('disabled');
+        }
+        if (!hasNextPage) {
+            nextBtn.classList.add('disabled');
+        } else {
+            nextBtn.classList.remove('disabled');
+        }
+        return;
+    }
+
+    pagination.classList.remove('d-none');
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end = start + currentLogs.length - 1;
+    status.textContent = `Showing ${start}-${end}`;
+    pageLabel.textContent = `Page ${currentPage}`;
+    if (currentPage <= 1) {
+        prevBtn.classList.add('disabled');
+    } else {
+        prevBtn.classList.remove('disabled');
+    }
+    if (!hasNextPage) {
+        nextBtn.classList.add('disabled');
+    } else {
+        nextBtn.classList.remove('disabled');
     }
 }
 

@@ -3,19 +3,23 @@
  *
  * Handles fetching, creating, updating, and deleting agents for the replay UI.
  */
+const PAGE_SIZE = 20;
+const FETCH_LIMIT = PAGE_SIZE + 1;
 
 let agents = [];
+let currentPage = 1;
+let hasNextPage = false;
 
 // Initialize page
 window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
-    loadAgents();
+    loadAgents(1);
 });
 
 function setupEventListeners() {
     const refreshBtn = document.getElementById('refreshAgentsBtn');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => loadAgents());
+        refreshBtn.addEventListener('click', () => loadAgents(currentPage));
     }
 
     const createBtn = document.getElementById('confirmCreateAgent');
@@ -55,17 +59,26 @@ function setupEventListeners() {
     }
 }
 
-async function loadAgents() {
+async function loadAgents(page = currentPage) {
     toggleLoading(true);
     try {
-        const response = await fetch('/v1/api/agents/');
+        const url = new URL('/v1/api/agents/', window.location.origin);
+        url.searchParams.set('limit', FETCH_LIMIT.toString());
+        const offset = (page - 1) * PAGE_SIZE;
+        url.searchParams.set('offset', offset.toString());
+
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        agents = await response.json();
+        const data = await response.json();
+        hasNextPage = data.length > PAGE_SIZE;
+        agents = hasNextPage ? data.slice(0, PAGE_SIZE) : data;
+        currentPage = page;
         displayAgents(agents);
         updateAgentHints(agents);
+        updatePaginationControls();
     } catch (error) {
         console.error('Error loading agents:', error);
         showAlert('Error loading agents: ' + error.message, 'danger');
@@ -256,7 +269,7 @@ async function createAgent() {
 
         bootstrap.Modal.getInstance(document.getElementById('createAgentModal')).hide();
         showAlert('Agent created successfully.', 'success');
-        loadAgents();
+        loadAgents(1);
     } catch (error) {
         console.error('Error creating agent:', error);
         showModalAlert('createAgentAlert', 'Error creating agent: ' + error.message, 'danger');
@@ -329,7 +342,7 @@ async function updateAgent() {
 
         bootstrap.Modal.getInstance(document.getElementById('editAgentModal')).hide();
         showAlert('Agent updated successfully.', 'success');
-        loadAgents();
+        loadAgents(currentPage);
     } catch (error) {
         console.error('Error updating agent:', error);
         showModalAlert('editAgentAlert', 'Error updating agent: ' + error.message, 'danger');
@@ -353,7 +366,7 @@ async function deleteAgent(agentId) {
         }
 
         showAlert('Agent deleted successfully.', 'success');
-        loadAgents();
+        loadAgents(currentPage);
     } catch (error) {
         console.error('Error deleting agent:', error);
         showAlert('Error deleting agent: ' + error.message, 'danger');
@@ -365,6 +378,51 @@ function openAgentTestCases(agentId) {
 }
 
 // Helpers
+function updatePaginationControls() {
+    const pagination = document.getElementById('agentsPagination');
+    const status = document.getElementById('agentsPaginationStatus');
+    const pageLabel = document.getElementById('agentsPaginationCurrentPage');
+    const prevBtn = document.getElementById('agentsPrevPage');
+    const nextBtn = document.getElementById('agentsNextPage');
+
+    if (!pagination || !status || !pageLabel || !prevBtn || !nextBtn) {
+        return;
+    }
+
+    if (agents.length === 0) {
+        pagination.classList.add('d-none');
+        status.textContent = '';
+        pageLabel.textContent = '';
+        if (currentPage <= 1) {
+            prevBtn.classList.add('disabled');
+        } else {
+            prevBtn.classList.remove('disabled');
+        }
+        if (!hasNextPage) {
+            nextBtn.classList.add('disabled');
+        } else {
+            nextBtn.classList.remove('disabled');
+        }
+        return;
+    }
+
+    pagination.classList.remove('d-none');
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end = start + agents.length - 1;
+    status.textContent = `Showing ${start}-${end}`;
+    pageLabel.textContent = `Page ${currentPage}`;
+    if (currentPage <= 1) {
+        prevBtn.classList.add('disabled');
+    } else {
+        prevBtn.classList.remove('disabled');
+    }
+    if (!hasNextPage) {
+        nextBtn.classList.add('disabled');
+    } else {
+        nextBtn.classList.remove('disabled');
+    }
+}
+
 function toggleLoading(show) {
     const spinner = document.getElementById('loadingSpinner');
     const table = document.getElementById('agentsTable');
@@ -542,3 +600,22 @@ window.openEditAgent = openEditAgent;
 window.viewAgentDetails = viewAgentDetails;
 window.deleteAgent = deleteAgent;
 window.openAgentTestCases = openAgentTestCases;
+const prevBtn = document.getElementById('agentsPrevPageBtn');
+if (prevBtn) {
+    prevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentPage > 1) {
+            loadAgents(currentPage - 1);
+        }
+    });
+}
+
+const nextBtn = document.getElementById('agentsNextPageBtn');
+if (nextBtn) {
+    nextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (hasNextPage) {
+            loadAgents(currentPage + 1);
+        }
+    });
+}

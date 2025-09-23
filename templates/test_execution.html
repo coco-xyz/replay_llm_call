@@ -190,6 +190,21 @@
     }
 
     /* Model Name History Dropdown */
+
+    /* Required field validation styles */
+    .form-control.is-invalid {
+        border-color: var(--danger-color);
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+    }
+
+    .required-field-label {
+        font-weight: 500;
+    }
+
+    .required-asterisk {
+        color: var(--danger-color);
+        font-weight: bold;
+    }
 </style>
 {% endblock %}
 
@@ -255,11 +270,13 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label for="modelName" class="form-label">Model Name</label>
+                            <label for="modelName" class="form-label">
+                                Model Name <span class="text-danger">*</span>
+                            </label>
                             <div class="position-relative">
                                 <input type="text" class="form-control prompt-editor" id="modelName"
                                     placeholder="model name from openrouter, e.g., anthropic/claude-sonnet-4"
-                                    autocomplete="off">
+                                    autocomplete="off" required>
                                 <div class="model-history-dropdown" id="modelNameDropdown">
                                     <!-- 历史记录将在这里动态生成 -->
                                 </div>
@@ -290,15 +307,19 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="systemPrompt" class="form-label">System Prompt</label>
+                            <label for="systemPrompt" class="form-label">
+                                System Prompt <span class="text-danger">*</span>
+                            </label>
                             <textarea class="form-control prompt-editor" id="systemPrompt" rows="4"
-                                placeholder="System prompt will be loaded from test case..."></textarea>
+                                placeholder="System prompt will be loaded from test case..." required></textarea>
                         </div>
 
                         <div class="mb-3">
-                            <label for="userMessage" class="form-label">User Message</label>
+                            <label for="userMessage" class="form-label">
+                                User Message <span class="text-danger">*</span>
+                            </label>
                             <textarea class="form-control prompt-editor" id="userMessage" rows="3"
-                                placeholder="User message will be loaded from test case..."></textarea>
+                                placeholder="User message will be loaded from test case..." required></textarea>
                         </div>
 
                         <div class="mb-3">

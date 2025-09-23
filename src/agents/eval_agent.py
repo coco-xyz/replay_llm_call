@@ -44,8 +44,8 @@ def create_evaluation_agent(model: Model) -> Agent[EvalAgentOutput]:
 
     return Agent(
         model=model,
-        result_type=EvalAgentOutput,
-        system_prompt=EVAL_SYSTEM_PROMPT,
+        output_type=EvalAgentOutput,
+        instructions=EVAL_SYSTEM_PROMPT,
     )
 
 

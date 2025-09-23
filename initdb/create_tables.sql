@@ -3,6 +3,25 @@
 -- This file contains the SQL DDL for creating the database tables
 -- for the LLM test replay system.
 
+-- Schema migrations tracking table to keep baseline in sync with migrations
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version VARCHAR(255) PRIMARY KEY,
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- Record the migration versions represented by this baseline snapshot
+INSERT INTO schema_migrations (version) VALUES
+    ('001'),
+    ('002'),
+    ('003'),
+    ('004'),
+    ('005'),
+    ('006'),
+    ('007'),
+    ('008'),
+    ('009')
+ON CONFLICT (version) DO NOTHING;
+
 -- Agents table
 CREATE TABLE IF NOT EXISTS agents (
     id VARCHAR(255) PRIMARY KEY,

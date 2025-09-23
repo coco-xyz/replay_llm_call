@@ -71,6 +71,21 @@ function setupEventListeners() {
 
     // Model name input with history
     setupModelNameInput();
+
+    // Add validation listeners for required fields
+    const modelNameInput = document.getElementById('modelName');
+    const systemPromptInput = document.getElementById('systemPrompt');
+    const userMessageInput = document.getElementById('userMessage');
+
+    if (modelNameInput) {
+        modelNameInput.addEventListener('input', validateExecutionForm);
+    }
+    if (systemPromptInput) {
+        systemPromptInput.addEventListener('input', validateExecutionForm);
+    }
+    if (userMessageInput) {
+        userMessageInput.addEventListener('input', validateExecutionForm);
+    }
 }
 
 async function loadAgents() {
@@ -191,7 +206,7 @@ async function selectTestCase(testCaseId) {
         // Update UI
         document.getElementById('testCaseSelect').value = testCaseId;
         populateExecutionParameters(testCase);
-        enableExecuteButton();
+        validateExecutionForm();
 
     } catch (error) {
         console.error('Error loading test case:', error);
@@ -249,7 +264,7 @@ async function prefillExecutionFromLog(log) {
             : [];
         displayTools();
 
-        enableExecuteButton();
+        validateExecutionForm();
         showAlert('Loaded execution parameters from the selected test log.', 'info');
     } catch (error) {
         console.error('Failed to prefill execution from log:', error);
@@ -282,6 +297,9 @@ function populateExecutionParameters(testCase) {
     displayTools();
 
     updateSelectedTestCaseInfo(testCase);
+
+    // Validate form after populating
+    validateExecutionForm();
 }
 
 function clearSelection() {
@@ -315,6 +333,51 @@ function disableExecuteButton() {
     btn.classList.add('btn-secondary');
 }
 
+function validateExecutionForm() {
+    const modelNameInput = document.getElementById('modelName');
+    const systemPromptInput = document.getElementById('systemPrompt');
+    const userMessageInput = document.getElementById('userMessage');
+
+    const modelName = modelNameInput.value.trim();
+    const systemPrompt = systemPromptInput.value.trim();
+    const userMessage = userMessageInput.value.trim();
+
+    // Remove previous validation classes
+    modelNameInput.classList.remove('is-invalid');
+    systemPromptInput.classList.remove('is-invalid');
+    userMessageInput.classList.remove('is-invalid');
+
+    // Check each field and add validation classes
+    let isValid = true;
+
+    if (!modelName) {
+        modelNameInput.classList.add('is-invalid');
+        isValid = false;
+    }
+
+    if (!systemPrompt) {
+        systemPromptInput.classList.add('is-invalid');
+        isValid = false;
+    }
+
+    if (!userMessage) {
+        userMessageInput.classList.add('is-invalid');
+        isValid = false;
+    }
+
+    if (!currentTestCase) {
+        isValid = false;
+    }
+
+    if (isValid) {
+        enableExecuteButton();
+    } else {
+        disableExecuteButton();
+    }
+
+    return isValid;
+}
+
 async function executeTest() {
     if (!currentTestCase || isExecuting) {
         return;
@@ -325,8 +388,22 @@ async function executeTest() {
     const userMessage = document.getElementById('userMessage').value.trim();
     const modelSettingsText = document.getElementById('modelSettings').value.trim();
 
+    // Validate required fields
     if (!modelName) {
         showAlert('Please specify a model name', 'warning');
+        document.getElementById('modelName').focus();
+        return;
+    }
+
+    if (!systemPrompt) {
+        showAlert('Please specify a system prompt', 'warning');
+        document.getElementById('systemPrompt').focus();
+        return;
+    }
+
+    if (!userMessage) {
+        showAlert('Please specify a user message', 'warning');
+        document.getElementById('userMessage').focus();
         return;
     }
 

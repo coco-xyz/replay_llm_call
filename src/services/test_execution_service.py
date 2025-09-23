@@ -147,6 +147,7 @@ class ExecutionService:
                 request.modified_system_prompt
                 or test_case.system_prompt
                 or agent.default_system_prompt
+                or "You are a helpful assistant."  # Fallback to prevent None
             )
             user_message = (
                 request.modified_last_user_message or test_case.last_user_message

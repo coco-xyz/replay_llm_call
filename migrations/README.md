@@ -15,6 +15,7 @@ This directory contains database migration files for the LLM Replay System.
 - `009_add_evaluation_agent.sql` - Adds evaluation fields and app_settings table for JSON settings
 - `010_remove_vector_similarity_columns.sql` - Removes embedding/similarity columns in favor of agent-based evaluation
 - `011_allow_null_is_passed.sql` - Allows NULL for is_passed to represent unknown outcomes
+- `012_add_regression_evaluation_counts.sql` - Adds passed/declined/unknown counters to regression tests
 
 ## How to Apply Migrations
 
@@ -53,4 +54,4 @@ Migration files should follow the pattern: `{version}_{description}.sql`
 
 ## Current Schema Version
 
-After applying all migrations, your database should be at version: **011**
+After applying all migrations, your database should be at version: **012**

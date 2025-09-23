@@ -217,8 +217,8 @@ function buildRegressionRow(regression) {
     const results = `
         <div class="d-flex flex-wrap gap-1 mt-1">
             <span class="badge bg-primary small">Total ${regression.total_count}</span>
-            <span class="badge bg-success small">Passed ${regression.success_count}</span>
-            <span class="badge bg-danger small">Failed ${regression.failed_count}</span>
+            <span class="badge bg-success small">Passed ${regression.passed_count}</span>
+            <span class="badge bg-danger small">Declined ${regression.declined_count}</span>
         </div>
     `;
     const statusColumn = `

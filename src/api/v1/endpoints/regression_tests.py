@@ -6,11 +6,16 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from src.api.v1.converters import (
     convert_regression_test_create_request,
+    convert_regression_test_data_to_list_item_response,
     convert_regression_test_data_to_response,
     convert_test_log_data_to_response,
 )
 from src.api.v1.schemas.requests import RegressionTestCreateRequest
-from src.api.v1.schemas.responses import RegressionTestResponse, TestLogResponse
+from src.api.v1.schemas.responses import (
+    RegressionTestListItemResponse,
+    RegressionTestResponse,
+    TestLogResponse,
+)
 from src.core.logger import get_logger
 from src.services.regression_test_service import RegressionTestService
 from src.services.task_dispatcher import BackgroundTaskRegressionDispatcher
@@ -47,7 +52,7 @@ async def start_regression(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/", response_model=List[RegressionTestResponse])
+@router.get("/", response_model=List[RegressionTestListItemResponse])
 async def list_regressions(
     agent_id: Optional[str] = Query(None, description="Filter by agent ID"),
     status: Optional[str] = Query(None, description="Filter by status"),
@@ -58,7 +63,7 @@ async def list_regressions(
         min_length=1,
         description="Filter regressions by ID or agent name (case-insensitive)",
     ),
-) -> List[RegressionTestResponse]:
+) -> List[RegressionTestListItemResponse]:
     try:
         records = regression_service.list_regression_tests(
             agent_id=agent_id,
@@ -67,7 +72,10 @@ async def list_regressions(
             offset=offset,
             search=search,
         )
-        return [convert_regression_test_data_to_response(record) for record in records]
+        return [
+            convert_regression_test_data_to_list_item_response(record)
+            for record in records
+        ]
     except Exception as exc:  # pragma: no cover
         logger.error("API: Failed to list regressions: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.services.test_execution_service import ExecutionService, ExecutionData
+from src.services.test_execution_service import ExecutionData, ExecutionService
 
 
 class DummyTestCaseService:

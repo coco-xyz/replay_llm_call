@@ -12,9 +12,9 @@ from src.models import RegressionTest
 from src.services.agent_service import AgentService, AgentSummary
 from src.services.test_case_service import TestCaseService
 from src.services.test_execution_service import (
+    ExecutionData,
     ExecutionResult,
     ExecutionService,
-    ExecutionData,
 )
 from src.stores.regression_test_store import RegressionTestStore
 

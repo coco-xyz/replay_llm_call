@@ -8,8 +8,14 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from src.api.v1.converters import convert_test_log_data_to_response
-from src.api.v1.schemas.responses.test_log_responses import TestLogResponse
+from src.api.v1.converters import (
+    convert_test_log_data_to_list_item_response,
+    convert_test_log_data_to_response,
+)
+from src.api.v1.schemas.responses.test_log_responses import (
+    TestLogListItemResponse,
+    TestLogResponse,
+)
 from src.core.logger import get_logger
 from src.services.test_log_service import LogService
 
@@ -19,7 +25,7 @@ router = APIRouter(prefix="/api/test-logs", tags=["test-logs"])
 test_log_service = LogService()
 
 
-@router.get("/", response_model=List[TestLogResponse])
+@router.get("/", response_model=List[TestLogListItemResponse])
 async def get_test_logs(
     limit: int = Query(20, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
@@ -50,7 +56,7 @@ async def get_test_logs(
             regression_test_id=regression_test_id,
         )
         logger.debug(f"API: Retrieved {len(result)} test logs")
-        return [convert_test_log_data_to_response(log) for log in result]
+        return [convert_test_log_data_to_list_item_response(log) for log in result]
 
     except Exception as e:
         logger.error(f"API: Failed to get test logs: {e}")
@@ -88,7 +94,7 @@ async def get_test_log(log_id: str):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/test-case/{test_case_id}", response_model=List[TestLogResponse])
+@router.get("/test-case/{test_case_id}", response_model=List[TestLogListItemResponse])
 async def get_logs_by_test_case(
     test_case_id: str,
     limit: int = Query(20, ge=1, le=1000),
@@ -114,14 +120,14 @@ async def get_logs_by_test_case(
             test_case_id, limit=limit, offset=offset
         )
         logger.debug(f"API: Retrieved {len(result)} logs for test case {test_case_id}")
-        return [convert_test_log_data_to_response(log) for log in result]
+        return [convert_test_log_data_to_list_item_response(log) for log in result]
 
     except Exception as e:
         logger.error(f"API: Failed to get logs for test case {test_case_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/filter/status/{status}", response_model=List[TestLogResponse])
+@router.get("/filter/status/{status}", response_model=List[TestLogListItemResponse])
 async def get_logs_by_status(
     status: str,
     limit: int = Query(20, ge=1, le=1000),
@@ -155,14 +161,14 @@ async def get_logs_by_status(
             regression_test_id=regression_test_id,
         )
         logger.debug(f"API: Retrieved {len(result)} logs with status {status}")
-        return [convert_test_log_data_to_response(log) for log in result]
+        return [convert_test_log_data_to_list_item_response(log) for log in result]
 
     except Exception as e:
         logger.error(f"API: Failed to get logs by status {status}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/filter/combined", response_model=List[TestLogResponse])
+@router.get("/filter/combined", response_model=List[TestLogListItemResponse])
 async def get_logs_filtered(
     status: Optional[str] = Query(None, description="Filter by status"),
     test_case_id: Optional[str] = Query(None, description="Filter by test case ID"),
@@ -201,7 +207,7 @@ async def get_logs_filtered(
             offset=offset,
         )
         logger.debug(f"API: Retrieved {len(result)} filtered logs")
-        return [convert_test_log_data_to_response(log) for log in result]
+        return [convert_test_log_data_to_list_item_response(log) for log in result]
 
     except Exception as e:
         logger.error(f"API: Failed to get filtered logs: {e}")
@@ -272,7 +278,9 @@ async def delete_logs_by_test_case(test_case_id: str):
 __all__ = ["router"]
 
 
-@router.get("/regression/{regression_test_id}", response_model=List[TestLogResponse])
+@router.get(
+    "/regression/{regression_test_id}", response_model=List[TestLogListItemResponse]
+)
 async def get_logs_by_regression_test(
     regression_test_id: str,
     limit: int = Query(100, ge=1, le=1000),
@@ -290,7 +298,7 @@ async def get_logs_by_regression_test(
             len(result),
             regression_test_id,
         )
-        return [convert_test_log_data_to_response(log) for log in result]
+        return [convert_test_log_data_to_list_item_response(log) for log in result]
     except Exception as e:
         logger.error(
             "API: Failed to get logs for regression test %s: %s",

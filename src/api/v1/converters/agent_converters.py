@@ -2,6 +2,7 @@
 
 from src.api.v1.schemas.requests import AgentCreateRequest, AgentUpdateRequest
 from src.api.v1.schemas.responses.agent_responses import (
+    AgentListItemResponse,
     AgentResponse,
     AgentSummaryResponse,
 )
@@ -43,6 +44,23 @@ def convert_agent_data_to_response(data: AgentData) -> AgentResponse:
     return AgentResponse.model_validate(data)
 
 
+def convert_agent_data_to_list_item_response(
+    data: AgentData,
+) -> AgentListItemResponse:
+    """Convert service data to lightweight list response."""
+
+    return AgentListItemResponse(
+        id=data.id,
+        name=data.name,
+        description=data.description,
+        default_model_name=data.default_model_name,
+        default_system_prompt=data.default_system_prompt,
+        default_model_settings=data.default_model_settings,
+        is_deleted=data.is_deleted,
+        created_at=data.created_at,
+    )
+
+
 def convert_agent_summary_to_response(
     summary: AgentSummary | None,
 ) -> AgentSummaryResponse | None:
@@ -57,5 +75,6 @@ __all__ = [
     "convert_agent_create_request",
     "convert_agent_update_request",
     "convert_agent_data_to_response",
+    "convert_agent_data_to_list_item_response",
     "convert_agent_summary_to_response",
 ]

@@ -28,6 +28,27 @@ class AgentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AgentListItemResponse(BaseModel):
+    """Light-weight agent payload for collection endpoints."""
+
+    id: str = Field(..., description="Agent identifier")
+    name: str = Field(..., description="Agent name")
+    description: Optional[str] = Field(None, description="Agent description")
+    default_model_name: Optional[str] = Field(
+        None, description="Default model name applied during regression"
+    )
+    default_system_prompt: Optional[str] = Field(
+        None, description="Default system prompt applied during regression"
+    )
+    default_model_settings: Optional[dict] = Field(
+        None, description="Default model settings JSON"
+    )
+    is_deleted: bool = Field(False, description="Soft delete flag")
+    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AgentSummaryResponse(BaseModel):
     """Short agent representation for embedding."""
 
@@ -38,4 +59,4 @@ class AgentSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-__all__ = ["AgentResponse", "AgentSummaryResponse"]
+__all__ = ["AgentResponse", "AgentListItemResponse", "AgentSummaryResponse"]

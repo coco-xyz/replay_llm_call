@@ -54,3 +54,44 @@ class TestLogResponse(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TestLogListItemResponse(BaseModel):
+    """Trimmed representation for test log listings."""
+
+    id: str = Field(..., description="Test log ID")
+    test_case_id: str = Field(..., description="Associated test case ID")
+    agent_id: str = Field(..., description="Associated agent ID")
+    regression_test_id: Optional[str] = Field(
+        None, description="Regression test identifier if applicable"
+    )
+    model_name: str = Field(..., description="Model used for execution")
+    user_message: str = Field(..., description="User message used")
+    llm_response: Optional[str] = Field(None, description="LLM response text")
+    response_expectation_snapshot: Optional[str] = Field(
+        None, description="Acceptance criteria captured when the log was created"
+    )
+    response_time_ms: Optional[int] = Field(
+        None, description="Response time in milliseconds"
+    )
+    is_passed: Optional[bool] = Field(
+        None,
+        description="Evaluation outcome: true=passed, false=failed, None=unknown",
+    )
+    evaluation_feedback: Optional[str] = Field(
+        None, description="Summary returned by the evaluation agent"
+    )
+    evaluation_model_name: Optional[str] = Field(
+        None, description="Model used by the evaluation agent"
+    )
+    evaluation_metadata: Optional[Dict] = Field(
+        None, description="Structured payload from the evaluation agent"
+    )
+    status: str = Field(..., description="Execution status")
+    error_message: Optional[str] = Field(None, description="Error message if failed")
+    created_at: datetime = Field(..., description="Creation timestamp")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+__all__ = ["TestLogResponse", "TestLogListItemResponse"]

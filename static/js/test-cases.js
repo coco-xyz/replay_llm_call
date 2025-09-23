@@ -230,6 +230,12 @@ function displayTestCases(testCases) {
         const responseExampleDisplay = hasResponseExample ? truncateText(responseExample, 120) : '—';
         const responseExampleEncoded = encodeTooltipPayload(responseExample);
         const responseExampleFallback = encodeTooltipPayload('No response example provided');
+        const responseExpectation = testCase.response_expectation || '';
+        const hasResponseExpectation = responseExpectation.trim().length > 0;
+        const responseExpectationClass = hasResponseExpectation ? 'log-preview' : 'log-preview placeholder';
+        const responseExpectationDisplay = hasResponseExpectation ? truncateText(responseExpectation, 120) : '—';
+        const responseExpectationEncoded = encodeTooltipPayload(responseExpectation);
+        const responseExpectationFallback = encodeTooltipPayload('No response expectation provided');
         const userMessageCell = `
             <span class="${userMessageClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
                   data-tooltip-content="${userMessageEncoded}" data-tooltip-fallback="${userMessageFallback}">
@@ -240,6 +246,12 @@ function displayTestCases(testCases) {
             <span class="${responseExampleClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
                   data-tooltip-content="${responseExampleEncoded}" data-tooltip-fallback="${responseExampleFallback}">
                 ${escapeHtml(responseExampleDisplay)}
+            </span>
+        `;
+        const responseExpectationCell = `
+            <span class="${responseExpectationClass}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="log-tooltip" data-bs-html="true"
+                  data-tooltip-content="${responseExpectationEncoded}" data-tooltip-fallback="${responseExpectationFallback}">
+                ${escapeHtml(responseExpectationDisplay)}
             </span>
         `;
 
@@ -259,6 +271,9 @@ function displayTestCases(testCases) {
             </td>
             <td>
                 ${responseExampleCell}
+            </td>
+            <td>
+                ${responseExpectationCell}
             </td>
             <td>
                 <small class="text-muted">${formatDate(testCase.created_at)}</small>
@@ -308,6 +323,8 @@ async function createTestCase() {
     const description = document.getElementById('testCaseDescription').value.trim();
     const responseExampleElement = document.getElementById('responseExample');
     const responseExample = responseExampleElement ? responseExampleElement.value.trim() : '';
+    const responseExpectationElement = document.getElementById('responseExpectation');
+    const responseExpectation = responseExpectationElement ? responseExpectationElement.value.trim() : '';
     const rawDataText = document.getElementById('rawData').value.trim();
     const agentSelect = document.getElementById('createTestCaseAgent');
     const agentId = agentSelect ? agentSelect.value : '';
@@ -336,7 +353,8 @@ async function createTestCase() {
                 description: description || null,
                 raw_data: rawData,
                 agent_id: agentId,
-                response_example: responseExample || null
+                response_example: responseExample || null,
+                response_expectation: responseExpectation || null
             })
         });
 
@@ -380,6 +398,10 @@ async function editTestCase(testCaseId) {
         if (editResponseExample) {
             editResponseExample.value = testCase.response_example || '';
         }
+        const editResponseExpectation = document.getElementById('editResponseExpectation');
+        if (editResponseExpectation) {
+            editResponseExpectation.value = testCase.response_expectation || '';
+        }
         const editAgentSelect = document.getElementById('editTestCaseAgent');
         if (editAgentSelect) {
             editAgentSelect.value = testCase.agent_id || '';
@@ -400,7 +422,10 @@ async function updateTestCase() {
     const name = document.getElementById('editTestCaseName').value.trim();
     const description = document.getElementById('editTestCaseDescription').value.trim();
     const agentId = document.getElementById('editTestCaseAgent').value;
-    const responseExample = document.getElementById('editResponseExample').value.trim();
+    const responseExampleField = document.getElementById('editResponseExample');
+    const responseExample = responseExampleField ? responseExampleField.value.trim() : '';
+    const responseExpectationField = document.getElementById('editResponseExpectation');
+    const responseExpectation = responseExpectationField ? responseExpectationField.value.trim() : '';
 
     if (!name || !agentId) {
         showAlert('Please provide a name and agent for the test case', 'warning');
@@ -417,7 +442,8 @@ async function updateTestCase() {
                 name: name,
                 description: description || null,
                 agent_id: agentId || null,
-                response_example: responseExample || null
+                response_example: responseExample || null,
+                response_expectation: responseExpectation || null
             })
         });
 
@@ -655,6 +681,16 @@ async function viewTestCase(testCaseId) {
                     <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">${escapeHtml(testCase.response_example)}</pre>
                 ` : `
                     <p class="text-muted fst-italic mb-0">No response example recorded.</p>
+                `}
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <h6>Response Expectation</h6>
+                ${testCase.response_expectation ? `
+                    <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">${escapeHtml(testCase.response_expectation)}</pre>
+                ` : `
+                    <p class="text-muted fst-italic mb-0">No response expectation recorded.</p>
                 `}
             </div>
         </div>

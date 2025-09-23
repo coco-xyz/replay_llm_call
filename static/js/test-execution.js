@@ -11,13 +11,24 @@ let editingToolIndex = -1;
 let availableAgents = [];
 let selectedAgentId = '';
 let availableTestCases = [];
+let initialTestCaseId = '';
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', () => {
+    initializeTestExecutionPage().catch((error) => {
+        console.error('Failed to initialize test execution page:', error);
+        showAlert('Failed to initialize test execution page: ' + error.message, 'danger');
+    });
+});
+
+async function initializeTestExecutionPage() {
     setupEventListeners();
 
     const urlParams = new URLSearchParams(window.location.search);
     const logId = urlParams.get('logId');
+    const initialAgentId = urlParams.get('agentId');
+    initialTestCaseId = urlParams.get('testCaseId') || '';
+
     let logData = null;
 
     if (logId) {
@@ -28,11 +39,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             console.error('Unable to load log for re-execution:', error);
             showAlert('Unable to load log for re-execution: ' + error.message, 'warning');
         }
-    } else {
-        const initialAgentId = urlParams.get('agentId');
-        if (initialAgentId) {
-            selectedAgentId = initialAgentId;
-        }
+    } else if (initialAgentId) {
+        selectedAgentId = initialAgentId;
     }
 
     await loadAgents();
@@ -40,14 +48,17 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     if (logData) {
         await prefillExecutionFromLog(logData);
-    } else {
-        // Check if test case ID is provided in URL
-        const testCaseId = urlParams.get('testCaseId');
-        if (testCaseId) {
-            setTimeout(() => selectTestCase(testCaseId), 1000);
-        }
+        return;
     }
-});
+
+    if (initialTestCaseId) {
+        const select = document.getElementById('testCaseSelect');
+        if (select) {
+            select.value = initialTestCaseId;
+        }
+        await selectTestCase(initialTestCaseId);
+    }
+}
 
 function setupEventListeners() {
     const agentSelect = document.getElementById('agentSelect');
@@ -494,9 +505,7 @@ function displayExecutionResult(result) {
     // Display results
     const responseTime = result.response_time_ms != null ? `${result.response_time_ms}ms` : '—';
     const evaluationBadge = formatEvaluationBadge(result);
-    const evaluationFeedback = formatEvaluationFeedback(result.evaluation_feedback);
     const evaluationModel = escapeHtml(result.evaluation_model_name || '—');
-    const expectationSnapshot = formatExpectationSnapshot(result.response_expectation_snapshot);
 
     const html = `
         <div class="row mb-3">
@@ -510,9 +519,7 @@ function displayExecutionResult(result) {
                     </td></tr>
                     <tr><td><strong>Response Time:</strong></td><td>${responseTime}</td></tr>
                     <tr><td><strong>Evaluation Result:</strong></td><td>${evaluationBadge}</td></tr>
-                    <tr><td><strong>Evaluation Feedback:</strong></td><td>${evaluationFeedback}</td></tr>
                     <tr><td><strong>Evaluation Model:</strong></td><td>${evaluationModel}</td></tr>
-                    <tr><td><strong>Expectation Snapshot:</strong></td><td>${expectationSnapshot}</td></tr>
                     <tr><td><strong>Log ID:</strong></td><td>${escapeHtml(result.log_id || '—')}</td></tr>
                 </table>
             </div>
@@ -701,6 +708,17 @@ function showAlert(message, type) {
     }, 5000);
 }
 
+function resolveEvaluationDisplay(target) {
+    const status = target && typeof target.is_passed !== 'undefined' ? target.is_passed : null;
+    if (status === true) {
+        return { label: 'Passed', badgeClass: 'bg-success', icon: 'check' };
+    }
+    if (status === false) {
+        return { label: 'Failed', badgeClass: 'bg-danger', icon: 'times' };
+    }
+    return { label: 'Unknown', badgeClass: 'bg-secondary', icon: 'question' };
+}
+
 function buildEvaluationTooltip(result) {
     if (!result) {
         return 'Evaluation details unavailable.';
@@ -712,9 +730,7 @@ function buildEvaluationTooltip(result) {
         lines.push(feedback);
     }
 
-    if (result.response_expectation_snapshot) {
-        lines.push(`Expectation snapshot:\n${result.response_expectation_snapshot.trim()}`);
-    }
+
 
     if (result.evaluation_model_name) {
         lines.push(`Model: ${result.evaluation_model_name}`);
@@ -729,26 +745,30 @@ function buildEvaluationTooltip(result) {
     }
 
     if (lines.length === 0) {
-        lines.push(result.is_passed ? 'Marked as passed.' : 'Marked as failed.');
+        const display = resolveEvaluationDisplay(result);
+        if (display.label === 'Passed') {
+            lines.push('Marked as passed.');
+        } else if (display.label === 'Failed') {
+            lines.push('Marked as failed.');
+        } else {
+            lines.push('Evaluation skipped or not applicable.');
+        }
     }
 
     return lines.join('\n\n');
 }
 
 function formatEvaluationBadge(result) {
-    const isPassed = Boolean(result && result.is_passed);
-    const badgeClass = isPassed ? 'bg-success' : 'bg-danger';
-    const icon = isPassed ? 'check' : 'times';
-    const label = isPassed ? 'Passed' : 'Failed';
+    const display = resolveEvaluationDisplay(result);
     const tooltipContent = encodeTooltipPayload(buildEvaluationTooltip(result));
-    const fallback = encodeTooltipPayload(label);
+    const fallback = encodeTooltipPayload(display.label);
 
     return `
-        <span class="badge ${badgeClass} log-preview"
+        <span class="badge ${display.badgeClass} log-preview"
               data-bs-toggle="tooltip" data-bs-placement="top"
               data-bs-custom-class="log-tooltip" data-bs-html="true"
               data-tooltip-content="${tooltipContent}" data-tooltip-fallback="${fallback}">
-            <i class="fas fa-${icon} me-1"></i>${label}
+            <i class="fas fa-${display.icon} me-1"></i>${display.label}
         </span>
     `;
 }
@@ -761,19 +781,20 @@ function formatEvaluationFeedback(feedback) {
     if (!trimmed) {
         return '<span class="text-muted">—</span>';
     }
-    return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
+
+    // If feedback is short enough, display it directly
+    const maxLength = 150;
+    if (trimmed.length <= maxLength) {
+        return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
+    }
+
+    // For long feedback, create a truncated version with hover tooltip
+    const truncated = trimmed.substring(0, maxLength) + '...';
+
+    return `<div class="log-preview" data-hover-html="${formatTooltipContent(trimmed)}" style="white-space: pre-wrap;">${escapeHtml(truncated)}</div>`;
 }
 
-function formatExpectationSnapshot(snapshot) {
-    if (!snapshot) {
-        return '<span class="text-muted">—</span>';
-    }
-    const trimmed = snapshot.trim();
-    if (!trimmed) {
-        return '<span class="text-muted">—</span>';
-    }
-    return `<div class="text-break" style="white-space: pre-wrap;">${escapeHtml(trimmed)}</div>`;
-}
+
 
 function formatTooltipContent(text, fallback = '—') {
     if (!text) {
@@ -998,5 +1019,66 @@ function setupModelNameInput() {
     window.ModelHistoryManager.initInput({
         inputId: 'modelName',
         dropdownId: 'modelNameDropdown',
+    });
+}
+
+// Tooltip utility functions
+function formatTooltipContent(text, fallback = '—') {
+    if (!text) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const trimmed = text.trim();
+    if (!trimmed) {
+        return `<div class='tooltip-log-content'>${escapeHtml(fallback)}</div>`;
+    }
+    const htmlContent = escapeHtml(text).replace(/\n/g, '<br>');
+    return `<div class='tooltip-log-content'>${htmlContent}</div>`;
+}
+
+function encodeTooltipPayload(text) {
+    if (!text) {
+        return '';
+    }
+    return encodeURIComponent(text);
+}
+
+function decodeTooltipPayload(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        console.error('Failed to decode tooltip payload', error);
+        return value;
+    }
+}
+
+function applyTooltipContent(container) {
+    if (!container) {
+        return;
+    }
+    const tooltipTargets = container.querySelectorAll('[data-tooltip-content]');
+    tooltipTargets.forEach((element) => {
+        const encodedContent = element.getAttribute('data-tooltip-content') || '';
+        const encodedFallback = element.getAttribute('data-tooltip-fallback') || '';
+        const content = decodeTooltipPayload(encodedContent);
+        const fallback = decodeTooltipPayload(encodedFallback);
+        const tooltipHtml = formatTooltipContent(content, fallback || undefined);
+        element.setAttribute('data-bs-title', tooltipHtml);
+        element.setAttribute('data-hover-html', tooltipHtml);
+    });
+}
+
+function initializeTooltips(container) {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+        return;
+    }
+    const selector = container ? '[data-bs-toggle="tooltip"]:not(.log-preview)' : '[data-bs-toggle="tooltip"]:not(.log-preview)';
+    const tooltipTriggerList = [].slice.call(
+        container ? container.querySelectorAll(selector) : document.querySelectorAll(selector)
+    );
+    tooltipTriggerList.forEach((tooltipTriggerEl) => {
+        bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl);
     });
 }

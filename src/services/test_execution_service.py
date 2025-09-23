@@ -10,9 +10,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
-from sklearn.metrics.pairwise import cosine_similarity
 
-from src.core.embedding import JinaEmbeddingClient
 from src.core.logger import get_logger
 from src.models import TestLog
 from src.services.agent_service import AgentService
@@ -69,11 +67,9 @@ class ExecutionResult(BaseModel):
         None, description="Error message if execution failed"
     )
     llm_response: Optional[str] = Field(None, description="LLM response text")
-    similarity_score: Optional[float] = Field(
-        None, description="Similarity score between response and example"
-    )
     is_passed: Optional[bool] = Field(
-        None, description="Whether the evaluation marked the run as passed"
+        None,
+        description="Evaluation outcome: true=passed, false=failed, None=unknown",
     )
     evaluation_feedback: Optional[str] = Field(
         None, description="Summary returned by the evaluation agent"
@@ -102,7 +98,6 @@ class ExecutionService:
         self.test_case_service = TestCaseService()
         self.test_log_store = TestLogStore()
         self.agent_service = AgentService()
-        self.embedding_client = JinaEmbeddingClient()
         self.evaluation_service = EvaluationService()
 
     async def execute_test(self, request: TestExecutionData) -> ExecutionResult:
@@ -184,41 +179,39 @@ class ExecutionService:
                 # Calculate response time
                 response_time_ms = int((time.time() - start_time) * 1000)
 
-                llm_response_vector: Optional[List[float]] = None
-                similarity_score: float = 0.0
-
-                if llm_response:
-                    try:
-                        llm_response_vector = await self.embedding_client.aembed_text(
-                            llm_response
-                        )
-                        example_vector = test_case.response_example_vector
-                        if example_vector and len(example_vector) == len(
-                            llm_response_vector
-                        ):
-                            similarity_score = self._compute_similarity(
-                                example_vector,
-                                llm_response_vector,
-                            )
-                        elif example_vector:
-                            logger.warning(
-                                "Embedding dimension mismatch for test case %s",
-                                request.test_case_id,
-                            )
-                    except Exception as embed_error:  # pragma: no cover - defensive
-                        logger.error(
-                            "Failed to compute embeddings for test log generation: %s",
-                            embed_error,
-                        )
-
-                evaluation_result = await self.evaluation_service.evaluate(
-                    actual_response=llm_response,
-                    expectation=test_case.response_expectation,
-                    reference_response=test_case.response_example,
-                    test_case_name=test_case.name,
-                    settings=evaluation_settings,
+                should_evaluate = bool(
+                    (test_case.response_expectation or "").strip()
+                    or (test_case.response_example or "").strip()
                 )
-                is_passed = evaluation_result.passed
+
+                evaluation_feedback: Optional[str]
+                evaluation_model_name: Optional[str]
+                evaluation_metadata: Optional[Dict]
+
+                if should_evaluate:
+                    evaluation_result = await self.evaluation_service.evaluate(
+                        actual_response=llm_response,
+                        expectation=test_case.response_expectation,
+                        reference_response=test_case.response_example,
+                        test_case_name=test_case.name,
+                        settings=evaluation_settings,
+                    )
+                    is_passed = evaluation_result.passed
+                    evaluation_feedback = evaluation_result.feedback
+                    evaluation_model_name = evaluation_result.model_name
+                    evaluation_metadata = evaluation_result.metadata
+                else:
+                    evaluation_result = None
+                    is_passed = None
+                    evaluation_feedback = (
+                        "Evaluation skipped because no expectation or reference "
+                        "response was provided."
+                    )
+                    evaluation_model_name = None
+                    evaluation_metadata = {
+                        "reason": "evaluation_skipped",
+                        "details": "missing_expectation_and_reference",
+                    }
 
                 # Create success log
                 test_log = TestLog(
@@ -233,15 +226,12 @@ class ExecutionService:
                     tools=tools,
                     llm_response=llm_response,
                     response_example=test_case.response_example,
-                    response_example_vector=test_case.response_example_vector,
                     response_expectation_snapshot=test_case.response_expectation,
                     response_time_ms=response_time_ms,
-                    llm_response_vector=llm_response_vector,
-                    similarity_score=similarity_score,
                     is_passed=is_passed,
-                    evaluation_feedback=evaluation_result.feedback,
-                    evaluation_model_name=evaluation_result.model_name,
-                    evaluation_metadata=evaluation_result.metadata,
+                    evaluation_feedback=evaluation_feedback,
+                    evaluation_model_name=evaluation_model_name,
+                    evaluation_metadata=evaluation_metadata,
                     status="success",
                     error_message=None,
                 )
@@ -260,11 +250,10 @@ class ExecutionService:
                     response_time_ms=response_time_ms,
                     error_message=None,
                     executed_at=saved_log.created_at,
-                    similarity_score=similarity_score,
                     is_passed=is_passed,
-                    evaluation_feedback=evaluation_result.feedback,
-                    evaluation_model_name=evaluation_result.model_name,
-                    evaluation_metadata=evaluation_result.metadata,
+                    evaluation_feedback=evaluation_feedback,
+                    evaluation_model_name=evaluation_model_name,
+                    evaluation_metadata=evaluation_metadata,
                     response_expectation=test_case.response_expectation,
                 )
 
@@ -292,11 +281,8 @@ class ExecutionService:
                     tools=tools,
                     llm_response=None,
                     response_example=test_case.response_example,
-                    response_example_vector=test_case.response_example_vector,
                     response_expectation_snapshot=test_case.response_expectation,
                     response_time_ms=response_time_ms,
-                    llm_response_vector=None,
-                    similarity_score=0.0,
                     is_passed=False,
                     evaluation_feedback=evaluation_result.feedback,
                     evaluation_model_name=evaluation_result.model_name,
@@ -319,7 +305,6 @@ class ExecutionService:
                     response_time_ms=response_time_ms,
                     error_message=error_message,
                     executed_at=saved_log.created_at,
-                    similarity_score=0.0,
                     is_passed=False,
                     evaluation_feedback=evaluation_result.feedback,
                     evaluation_model_name=evaluation_result.model_name,
@@ -333,13 +318,6 @@ class ExecutionService:
         except Exception as e:
             logger.error(f"Test execution service error: {e}")
             raise
-
-    @staticmethod
-    def _compute_similarity(
-        example_vector: List[float], response_vector: List[float]
-    ) -> float:
-        score = cosine_similarity([example_vector], [response_vector])[0][0]
-        return float(score)
 
     def execute_test_with_modifications(
         self,

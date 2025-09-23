@@ -34,7 +34,6 @@ def convert_test_execution_result_to_response(
         executed_at=result.executed_at,
         error_message=result.error_message,
         llm_response=result.llm_response,
-        similarity_score=result.similarity_score,
         is_passed=result.is_passed,
         evaluation_feedback=result.evaluation_feedback,
         evaluation_model_name=result.evaluation_model_name,

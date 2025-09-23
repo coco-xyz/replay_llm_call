@@ -14,45 +14,40 @@ let agentsData = [];
 let regressionsData = [];
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', () => {
+    initializeTestLogsPage().catch((error) => {
+        console.error('Failed to initialize test logs page:', error);
+        showAlert('Failed to initialize test logs page: ' + error.message, 'danger');
+    });
+});
+
+async function initializeTestLogsPage() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Preload filter state from URL so the first fetch respects it
+    currentFilters.status = urlParams.get('status') || '';
+    currentFilters.testCaseId = urlParams.get('testCaseId') || '';
+    currentFilters.agentId = urlParams.get('agentId') || '';
+    currentFilters.regressionTestId = urlParams.get('regressionTestId') || '';
+    currentLogId = urlParams.get('logId');
+    currentPage = 1;
+
     setupEventListeners();
 
-    // Load test cases first, then test logs
-    await loadTestCases();
-    await loadAgents();
-    await loadRegressions();
+    await Promise.all([
+        loadTestCases(),
+        loadAgents(),
+        loadRegressions()
+    ]);
+
+    applyCurrentFiltersToControls();
+
     await loadTestLogs();
 
-    // Check if specific log or test case is requested
-    const urlParams = new URLSearchParams(window.location.search);
-    const logId = urlParams.get('logId');
-    const testCaseId = urlParams.get('testCaseId');
-    const regressionTestId = urlParams.get('regressionTestId');
-
-    if (logId) {
-        setTimeout(() => viewLogInNewPage(logId), 1000);
-    } else if (testCaseId) {
-        setTimeout(() => {
-            const testCaseFilter = document.getElementById('testCaseFilter');
-            if (testCaseFilter) {
-                testCaseFilter.value = testCaseId;
-                currentFilters.testCaseId = testCaseId;
-                currentPage = 1;
-                loadTestLogs();
-            }
-        }, 1000);
-    } else if (regressionTestId) {
-        setTimeout(() => {
-            const regressionFilter = document.getElementById('regressionFilter');
-            if (regressionFilter) {
-                regressionFilter.value = regressionTestId;
-                currentFilters.regressionTestId = regressionTestId;
-                currentPage = 1;
-                loadTestLogs();
-            }
-        }, 1000);
+    if (currentLogId) {
+        viewLogInNewPage(currentLogId);
     }
-});
+}
 
 function setupEventListeners() {
     // Refresh button
@@ -123,6 +118,28 @@ function setupEventListeners() {
             currentPage = 1;
             loadTestLogs();
         });
+    }
+}
+
+function applyCurrentFiltersToControls() {
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.value = currentFilters.status || '';
+    }
+
+    const testCaseFilter = document.getElementById('testCaseFilter');
+    if (testCaseFilter) {
+        testCaseFilter.value = currentFilters.testCaseId || '';
+    }
+
+    const agentFilter = document.getElementById('agentFilter');
+    if (agentFilter) {
+        agentFilter.value = currentFilters.agentId || '';
+    }
+
+    const regressionFilter = document.getElementById('regressionFilter');
+    if (regressionFilter) {
+        regressionFilter.value = currentFilters.regressionTestId || '';
     }
 }
 
@@ -288,6 +305,17 @@ function formatResponseTime(value) {
     return `${value}ms`;
 }
 
+function resolveEvaluationDisplay(target) {
+    const status = target && typeof target.is_passed !== 'undefined' ? target.is_passed : null;
+    if (status === true) {
+        return { label: 'Passed', badgeClass: 'bg-success', icon: 'check' };
+    }
+    if (status === false) {
+        return { label: 'Failed', badgeClass: 'bg-danger', icon: 'times' };
+    }
+    return { label: 'Unknown', badgeClass: 'bg-secondary', icon: 'question' };
+}
+
 function buildEvaluationTooltip(log) {
     if (!log) {
         return 'Evaluation details unavailable.';
@@ -316,25 +344,29 @@ function buildEvaluationTooltip(log) {
     }
 
     if (lines.length === 0) {
-        lines.push(log.is_passed ? 'Marked as passed.' : 'Marked as failed.');
+        const display = resolveEvaluationDisplay(log);
+        if (display.label === 'Passed') {
+            lines.push('Marked as passed.');
+        } else if (display.label === 'Failed') {
+            lines.push('Marked as failed.');
+        } else {
+            lines.push('Evaluation skipped or not applicable.');
+        }
     }
 
     return lines.join('\n\n');
 }
 
 function formatPassBadge(log) {
-    const isPassed = Boolean(log && log.is_passed);
-    const badgeClass = isPassed ? 'bg-success' : 'bg-danger';
-    const icon = isPassed ? 'check' : 'times';
-    const label = isPassed ? 'Passed' : 'Failed';
+    const display = resolveEvaluationDisplay(log);
     const tooltipContent = encodeTooltipPayload(buildEvaluationTooltip(log));
-    const fallback = encodeTooltipPayload(label);
+    const fallback = encodeTooltipPayload(display.label);
     return `
-        <span class="badge ${badgeClass} log-preview"
+        <span class="badge ${display.badgeClass} log-preview"
               data-bs-toggle="tooltip" data-bs-placement="top"
               data-bs-custom-class="log-tooltip" data-bs-html="true"
               data-tooltip-content="${tooltipContent}" data-tooltip-fallback="${fallback}">
-            <i class="fas fa-${icon} me-1"></i>${label}
+            <i class="fas fa-${display.icon} me-1"></i>${display.label}
         </span>
     `;
 }

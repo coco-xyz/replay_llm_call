@@ -29,11 +29,9 @@ class TestExecutionResponse(BaseModel):
         None, description="Error message if execution failed"
     )
     llm_response: Optional[str] = Field(None, description="LLM response text")
-    similarity_score: Optional[float] = Field(
-        None, description="Similarity score between response and example"
-    )
     is_passed: Optional[bool] = Field(
-        None, description="Whether the evaluation marked the run as passed"
+        None,
+        description="Evaluation outcome: true=passed, false=failed, None=unknown",
     )
     evaluation_feedback: Optional[str] = Field(
         None, description="Summary from the evaluation agent"

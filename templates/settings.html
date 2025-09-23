@@ -86,9 +86,16 @@
                 </div>
                 <div class="mb-3">
                     <label for="evaluationModel" class="form-label">Model Name</label>
-                    <input type="text" class="form-control" id="evaluationModel" placeholder="e.g. openai/gpt-4o-mini">
+                    <div class="position-relative">
+                        <input type="text" class="form-control" id="evaluationModel"
+                            placeholder="e.g. openai/gpt-4o-mini" autocomplete="off">
+                        <div class="model-history-dropdown" id="evaluationModelDropdown">
+                            <!-- 历史记录将在这里动态生成 -->
+                        </div>
+                    </div>
                     <div class="form-text settings-help">
-                        Specify the model identifier exposed by your provider. Changes take effect immediately for new test runs.
+                        Specify the model identifier exposed by your provider. Changes take effect immediately for new
+                        test runs.
                     </div>
                 </div>
                 <div class="d-flex justify-content-end gap-2">
@@ -106,5 +113,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="/static/js/model-history.js?v={{ static_asset_version }}"></script>
 <script src="/static/js/settings.js?v={{ static_asset_version }}"></script>
 {% endblock %}

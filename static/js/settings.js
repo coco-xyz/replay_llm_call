@@ -64,6 +64,12 @@ async function saveSettings() {
         const data = await response.json();
         currentEvaluationSettings = data;
         evaluationModelInput.value = data.model_name || '';
+
+        // Save model name to history
+        if (window.ModelHistoryManager && modelName) {
+            window.ModelHistoryManager.saveModelToHistory(modelName);
+        }
+
         showAlert('Evaluation settings saved successfully.', 'success');
     } catch (error) {
         console.error('Failed to save evaluation settings', error);
@@ -159,6 +165,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (refreshButton) {
         refreshButton.addEventListener('click', loadSettings);
+    }
+
+    // Initialize model name history dropdown
+    if (window.ModelHistoryManager) {
+        window.ModelHistoryManager.initInput({
+            inputId: 'evaluationModel',
+            dropdownId: 'evaluationModelDropdown',
+        });
     }
 
     loadSettings();

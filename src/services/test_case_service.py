@@ -11,7 +11,6 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.core.embedding import JinaEmbeddingClient
 from src.core.logger import get_logger
 from src.models import TestCase
 from src.services.agent_service import AgentService, AgentSummary
@@ -93,7 +92,6 @@ class TestCaseService:
     def __init__(self):
         self.store = TestCaseStore()
         self.agent_service = AgentService()
-        self.embedding_client = JinaEmbeddingClient()
 
     def create_test_case(self, request: TestCaseCreateData) -> TestCaseData:
         """
@@ -130,12 +128,6 @@ class TestCaseService:
             response_expectation = self._normalize_optional_text(
                 request.response_expectation
             )
-            response_example_vector = None
-            if response_example:
-                response_example_vector = self.embedding_client.embed_text(
-                    response_example
-                )
-
             # Create test case model
             test_case = TestCase(
                 id=str(uuid.uuid4()),
@@ -150,7 +142,6 @@ class TestCaseService:
                 system_prompt=parsed_data.system_prompt,
                 last_user_message=parsed_data.last_user_message,
                 response_example=response_example,
-                response_example_vector=response_example_vector,
                 response_expectation=response_expectation,
                 is_deleted=False,
             )
@@ -302,12 +293,8 @@ class TestCaseService:
                 )
                 if normalized_example:
                     test_case.response_example = normalized_example
-                    test_case.response_example_vector = (
-                        self.embedding_client.embed_text(normalized_example)
-                    )
                 else:
                     test_case.response_example = None
-                    test_case.response_example_vector = None
 
             if request.response_expectation is not None:
                 test_case.response_expectation = self._normalize_optional_text(

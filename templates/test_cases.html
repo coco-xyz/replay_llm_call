@@ -341,9 +341,10 @@
             <thead>
                 <tr>
                     <th style="width: 20%">Name</th>
-                    <th style="width: 28%">User Message</th>
-                    <th style="width: 28%">Response Example</th>
-                    <th style="width: 14%">Created</th>
+                    <th style="width: 24%">User Message</th>
+                    <th style="width: 22%">Response Example</th>
+                    <th style="width: 22%">Response Expectation</th>
+                    <th style="width: 12%">Created</th>
                     <th style="width: 10%" class="text-end">Actions</th>
                 </tr>
             </thead>
@@ -418,6 +419,12 @@
                             placeholder="Enter an example LLM response for similarity checks..."></textarea>
                         <div class="form-text">Stored for semantic comparisons; leave blank if unavailable.</div>
                     </div>
+                    <div class="mb-3">
+                        <label for="responseExpectation" class="form-label">Response Expectation</label>
+                        <textarea class="form-control" id="responseExpectation" rows="4"
+                            placeholder="Describe what a successful assistant reply must cover..."></textarea>
+                        <div class="form-text">Use bullet points or criteria to capture the evaluation guidelines.</div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -461,6 +468,12 @@
                         <textarea class="form-control" id="editResponseExample" rows="4"
                             placeholder="Update the example LLM response..."></textarea>
                         <div class="form-text">Used for similarity scoring when future logs are generated.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editResponseExpectation" class="form-label">Response Expectation</label>
+                        <textarea class="form-control" id="editResponseExpectation" rows="4"
+                            placeholder="Revise the acceptance criteria or evaluation guidelines..."></textarea>
+                        <div class="form-text">Keep expectations concise so evaluators can quickly validate outputs.</div>
                     </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>

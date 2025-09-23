@@ -782,6 +782,17 @@
         return `${value}ms`;
     }
 
+    function resolveEvaluationDisplay(target) {
+        const status = target && typeof target.is_passed !== 'undefined' ? target.is_passed : null;
+        if (status === true) {
+            return { label: 'Passed', badgeClass: 'bg-success', icon: 'check' };
+        }
+        if (status === false) {
+            return { label: 'Failed', badgeClass: 'bg-danger', icon: 'times' };
+        }
+        return { label: 'Unknown', badgeClass: 'bg-secondary', icon: 'question' };
+    }
+
     function buildEvaluationTooltip(log) {
         if (!log) {
             return 'Evaluation details unavailable.';
@@ -810,26 +821,30 @@
         }
 
         if (lines.length === 0) {
-            lines.push(log.is_passed ? 'Marked as passed.' : 'Marked as failed.');
+            const display = resolveEvaluationDisplay(log);
+            if (display.label === 'Passed') {
+                lines.push('Marked as passed.');
+            } else if (display.label === 'Failed') {
+                lines.push('Marked as failed.');
+            } else {
+                lines.push('Evaluation skipped or not applicable.');
+            }
         }
 
         return lines.join('\n\n');
     }
 
     function formatPassBadge(log) {
-        const isPassed = Boolean(log && log.is_passed);
-        const badgeClass = isPassed ? 'bg-success' : 'bg-danger';
-        const icon = isPassed ? 'check' : 'times';
-        const label = isPassed ? 'Passed' : 'Failed';
+        const display = resolveEvaluationDisplay(log);
         const tooltipContent = encodeTooltipPayload(buildEvaluationTooltip(log));
-        const fallback = encodeTooltipPayload(label);
+        const fallback = encodeTooltipPayload(display.label);
 
         return `
-            <span class="badge ${badgeClass} log-preview"
+            <span class="badge ${display.badgeClass} log-preview"
                   data-bs-toggle="tooltip" data-bs-placement="top"
                   data-bs-custom-class="log-tooltip" data-bs-html="true"
                   data-tooltip-content="${tooltipContent}" data-tooltip-fallback="${fallback}">
-                <i class="fas fa-${icon} me-1"></i>${label}
+                <i class="fas fa-${display.icon} me-1"></i>${display.label}
             </span>
         `;
     }

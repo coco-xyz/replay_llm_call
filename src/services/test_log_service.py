@@ -35,20 +35,15 @@ class LogData(BaseModel):
     response_example: Optional[str] = Field(
         None, description="Response example captured with the log"
     )
-    response_example_vector: Optional[List[float]] = Field(
-        None, description="Embedding captured from the response example"
-    )
     response_expectation_snapshot: Optional[str] = Field(
         None, description="Expectation captured with the log"
     )
     response_time_ms: Optional[int] = Field(
         None, description="Response time in milliseconds"
     )
-    similarity_score: float = Field(
-        0.0, description="Cosine similarity vs. the test case example"
-    )
-    is_passed: bool = Field(
-        False, description="Indicates whether the evaluation marked the log as passed"
+    is_passed: Optional[bool] = Field(
+        None,
+        description="Evaluation outcome: true=passed, false=failed, None=unknown",
     )
     evaluation_feedback: Optional[str] = Field(
         None, description="Summary provided by the evaluation agent"
@@ -106,10 +101,8 @@ class LogService:
                 tools=test_log.tools,
                 llm_response=test_log.llm_response,
                 response_example=test_log.response_example,
-                response_example_vector=test_log.response_example_vector,
                 response_expectation_snapshot=test_log.response_expectation_snapshot,
                 response_time_ms=test_log.response_time_ms,
-                similarity_score=test_log.similarity_score,
                 is_passed=test_log.is_passed,
                 evaluation_feedback=test_log.evaluation_feedback,
                 evaluation_model_name=test_log.evaluation_model_name,
@@ -155,10 +148,8 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
                     response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
                     evaluation_feedback=log.evaluation_feedback,
                     evaluation_model_name=log.evaluation_model_name,
@@ -202,10 +193,8 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
                     response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
                     evaluation_feedback=log.evaluation_feedback,
                     evaluation_model_name=log.evaluation_model_name,
@@ -250,10 +239,8 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
                     response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
                     evaluation_feedback=log.evaluation_feedback,
                     evaluation_model_name=log.evaluation_model_name,
@@ -310,10 +297,8 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
                     response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
                     evaluation_feedback=log.evaluation_feedback,
                     evaluation_model_name=log.evaluation_model_name,
@@ -399,10 +384,8 @@ class LogService:
                     tools=log.tools,
                     llm_response=log.llm_response,
                     response_example=log.response_example,
-                    response_example_vector=log.response_example_vector,
                     response_expectation_snapshot=log.response_expectation_snapshot,
                     response_time_ms=log.response_time_ms,
-                    similarity_score=log.similarity_score,
                     is_passed=log.is_passed,
                     evaluation_feedback=log.evaluation_feedback,
                     evaluation_model_name=log.evaluation_model_name,

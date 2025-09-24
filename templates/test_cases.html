@@ -68,17 +68,26 @@
         max-width: 400px;
     }
 
+    .filter-search-group .form-control,
     .search-container .form-control {
-        padding-left: 2.75rem;
-        border-radius: 0.5rem;
+        border-radius: 0.75rem;
         border: 1px solid var(--border-color);
         background-color: var(--card-background);
         transition: all 0.2s ease;
+        padding: 0.65rem 1rem;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
     }
 
+    .filter-search-group .form-control:focus,
     .search-container .form-control:focus {
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    .search-container .form-control {
+        padding-left: 2.75rem;
     }
 
     .search-container .search-icon {
@@ -91,14 +100,44 @@
         pointer-events: none;
     }
 
-    .filter-search-group {
+    .filter-search-group,
+    .search-container {
         position: relative;
+    }
+
+    .filter-search-group {
         width: 220px;
         flex: 0 0 auto;
     }
 
     .filter-search-group.w-100 {
         width: 100% !important;
+    }
+
+    .filter-search-group .form-control,
+    .search-container .form-control {
+        border-radius: 0.5rem;
+        border: 1px solid var(--border-color);
+        background-color: var(--card-background);
+        transition: all 0.2s ease;
+        padding: 0.625rem 1rem;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .filter-search-group .form-control:focus,
+    .search-container .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .search-container {
+        max-width: 420px;
+        flex: 1 1 260px !important;
+    }
+
+    .search-container .form-control {
+        padding-left: 2.75rem;
     }
 
     .filter-search-results {
@@ -377,8 +416,8 @@
                 </span>
                 <div class="filter-search-group" data-filter="agent">
                     <input type="hidden" id="agentFilter" value="">
-                    <input type="text" class="form-control form-control-sm" id="agentFilterInput"
-                        placeholder="Search agents" autocomplete="off">
+                    <input type="text" class="form-control" id="agentFilterInput" placeholder="Search agents"
+                        autocomplete="off">
                     <div class="filter-search-results d-none" id="agentFilterResults"></div>
                 </div>
                 <div class="search-container" style="flex: 1 1 260px; max-width: 420px;">
@@ -409,7 +448,8 @@
                 <!-- Test cases will be loaded here -->
             </tbody>
         </table>
-        <div class="card-footer d-flex justify-content-between align-items-center d-none" id="testCasesPagination" style="background-color: #f8fafc; border-top: 1px solid var(--border-color);">
+        <div class="card-footer d-flex justify-content-between align-items-center d-none" id="testCasesPagination"
+            style="background-color: #f8fafc; border-top: 1px solid var(--border-color);">
             <div class="text-muted small" id="testCasesPaginationStatus"></div>
             <nav aria-label="Test cases pagination">
                 <ul class="pagination pagination-sm mb-0">
@@ -552,7 +592,8 @@
                         <label for="editResponseExpectation" class="form-label">Response Expectation</label>
                         <textarea class="form-control" id="editResponseExpectation" rows="4"
                             placeholder="Revise the acceptance criteria or evaluation guidelines..."></textarea>
-                        <div class="form-text">Keep expectations concise so evaluators can quickly validate outputs.</div>
+                        <div class="form-text">Keep expectations concise so evaluators can quickly validate outputs.
+                        </div>
                     </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>

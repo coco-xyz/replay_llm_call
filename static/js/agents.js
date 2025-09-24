@@ -9,9 +9,15 @@ const FETCH_LIMIT = PAGE_SIZE + 1;
 let agents = [];
 let currentPage = 1;
 let hasNextPage = false;
+let currentSearchTerm = '';
+let searchDebounceTimer = null;
+
+let defaultEmptyStateTitle = '';
+let defaultEmptyStateDescription = '';
 
 // Initialize page
 window.addEventListener('DOMContentLoaded', () => {
+    cacheEmptyStateMessages();
     setupEventListeners();
     loadAgents(1);
 });
@@ -57,6 +63,54 @@ function setupEventListeners() {
             dropdownId: 'editAgentModelNameDropdown',
         });
     }
+
+    const searchInput = document.getElementById('agentSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (event) => {
+            const value = event.target.value.trim();
+            if (searchDebounceTimer) {
+                clearTimeout(searchDebounceTimer);
+            }
+            searchDebounceTimer = window.setTimeout(() => {
+                currentSearchTerm = value;
+                currentPage = 1;
+                loadAgents(1);
+            }, 400);
+        });
+
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (searchDebounceTimer) {
+                    clearTimeout(searchDebounceTimer);
+                }
+                currentSearchTerm = searchInput.value.trim();
+                currentPage = 1;
+                loadAgents(1);
+            }
+        });
+    }
+
+    const clearSearchBtn = document.getElementById('clearAgentSearchBtn');
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            if (searchDebounceTimer) {
+                clearTimeout(searchDebounceTimer);
+            }
+
+            const input = document.getElementById('agentSearchInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+
+            if (currentSearchTerm) {
+                currentSearchTerm = '';
+                currentPage = 1;
+                loadAgents(1);
+            }
+        });
+    }
 }
 
 async function loadAgents(page = currentPage) {
@@ -66,6 +120,9 @@ async function loadAgents(page = currentPage) {
         url.searchParams.set('limit', FETCH_LIMIT.toString());
         const offset = (page - 1) * PAGE_SIZE;
         url.searchParams.set('offset', offset.toString());
+        if (currentSearchTerm) {
+            url.searchParams.set('search', currentSearchTerm);
+        }
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -99,6 +156,7 @@ function displayAgents(agentList) {
     if (!agentList || agentList.length === 0) {
         container.innerHTML = '';
         table.style.display = 'none';
+        updateEmptyStateMessage(currentSearchTerm);
         emptyState.classList.remove('d-none');
         return;
     }
@@ -213,11 +271,8 @@ function updateAgentHints(agentList) {
         return;
     }
 
-    if (!agentList || agentList.length === 0) {
-        hint.classList.remove('d-none');
-    } else {
-        hint.classList.add('d-none');
-    }
+    const shouldShowHint = !agentList || agentList.length === 0;
+    hint.classList.toggle('d-none', !shouldShowHint);
 }
 
 async function createAgent() {
@@ -436,6 +491,41 @@ function toggleLoading(show) {
     } else {
         spinner.classList.add('d-none');
         table.classList.remove('d-none');
+    }
+}
+
+function cacheEmptyStateMessages() {
+    const emptyState = document.getElementById('emptyState');
+    if (!emptyState) {
+        return;
+    }
+    const titleEl = emptyState.querySelector('h3');
+    const descEl = emptyState.querySelector('p');
+    if (!defaultEmptyStateTitle && titleEl) {
+        defaultEmptyStateTitle = titleEl.textContent;
+    }
+    if (!defaultEmptyStateDescription && descEl) {
+        defaultEmptyStateDescription = descEl.textContent;
+    }
+}
+
+function updateEmptyStateMessage(searchTerm) {
+    const emptyState = document.getElementById('emptyState');
+    if (!emptyState) {
+        return;
+    }
+    const titleEl = emptyState.querySelector('h3');
+    const descEl = emptyState.querySelector('p');
+    if (!titleEl || !descEl) {
+        return;
+    }
+
+    if (searchTerm) {
+        titleEl.textContent = 'No matching agents';
+        descEl.textContent = 'Try a different search term or adjust your filters to find other agents.';
+    } else {
+        titleEl.textContent = defaultEmptyStateTitle || 'No agents configured';
+        descEl.textContent = defaultEmptyStateDescription || 'Agents keep your regression defaults consistent. Create your first agent to get started.';
     }
 }
 

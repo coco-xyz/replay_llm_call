@@ -231,15 +231,82 @@
         <!-- Content will be loaded here -->
     </div>
 </div>
+
+<!-- Edit Agent Modal -->
+<div class="modal fade" id="editAgentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="editAgentAlert"></div>
+                <form id="editAgentForm">
+                    <input type="hidden" id="editAgentId">
+                    <div class="mb-3">
+                        <label for="editAgentName" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="editAgentName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAgentDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editAgentDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAgentModelName" class="form-label">Default Model Name *</label>
+                        <div class="position-relative">
+                            <input type="text" class="form-control" id="editAgentModelName" required autocomplete="off">
+                            <div class="model-history-dropdown" id="editAgentModelNameDropdown"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAgentSystemPrompt" class="form-label">Default System Prompt *</label>
+                        <textarea class="form-control" id="editAgentSystemPrompt" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAgentModelSettings" class="form-label">Default Model Settings (JSON)</label>
+                        <textarea class="form-control" id="editAgentModelSettings" rows="5"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmUpdateAgent">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="/static/js/model-history.js?v={{ static_asset_version }}"></script>
 <script>
     const agentId = '{{ agent_id }}';
     let currentAgent = null;
 
     document.addEventListener('DOMContentLoaded', function () {
         loadAgentDetails();
+
+        const updateBtn = document.getElementById('confirmUpdateAgent');
+        if (updateBtn) {
+            updateBtn.addEventListener('click', updateAgent);
+        }
+
+        const editModal = document.getElementById('editAgentModal');
+        if (editModal) {
+            editModal.addEventListener('hidden.bs.modal', () => {
+                clearModalAlert('editAgentAlert');
+            });
+        }
+
+        if (window.ModelHistoryManager) {
+            window.ModelHistoryManager.initInput({
+                inputId: 'editAgentModelName',
+                dropdownId: 'editAgentModelNameDropdown'
+            });
+        }
     });
 
     async function loadAgentDetails() {
@@ -383,13 +450,6 @@
         }
     }
 
-    function editAgent() {
-        if (currentAgent) {
-            // Redirect back to agents page with edit modal
-            window.location.href = `/agents?edit=${currentAgent.id}`;
-        }
-    }
-
     async function deleteAgent() {
         if (!currentAgent) return;
 
@@ -414,6 +474,305 @@
             console.error('Error deleting agent:', error);
             alert('Error deleting agent: ' + error.message);
         }
+    }
+
+    function editAgent() {
+        if (!currentAgent) {
+            return;
+        }
+
+        document.getElementById('editAgentId').value = currentAgent.id;
+        document.getElementById('editAgentName').value = currentAgent.name || '';
+        document.getElementById('editAgentDescription').value = currentAgent.description || '';
+        document.getElementById('editAgentModelName').value = currentAgent.default_model_name || '';
+        document.getElementById('editAgentSystemPrompt').value = currentAgent.default_system_prompt || '';
+        document.getElementById('editAgentModelSettings').value = currentAgent.default_model_settings
+            ? JSON.stringify(currentAgent.default_model_settings, null, 2)
+            : '';
+
+        clearModalAlert('editAgentAlert');
+
+        const modalEl = document.getElementById('editAgentModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        modal.show();
+    }
+
+    async function updateAgent() {
+        const agentIdInput = document.getElementById('editAgentId');
+
+        if (!agentIdInput || !agentIdInput.value) {
+            return;
+        }
+
+        const name = document.getElementById('editAgentName').value.trim();
+        const descriptionValue = document.getElementById('editAgentDescription').value.trim();
+        const modelName = document.getElementById('editAgentModelName').value.trim();
+        const systemPrompt = document.getElementById('editAgentSystemPrompt').value.trim();
+        const modelSettingsText = document.getElementById('editAgentModelSettings').value.trim();
+
+        if (!name || !modelName || !systemPrompt) {
+            showModalAlert('editAgentAlert', 'Name, default model, and system prompt are required.', 'warning');
+            return;
+        }
+
+        let modelSettings = {};
+        try {
+            modelSettings = parseJsonOrThrow(modelSettingsText, {});
+        } catch (error) {
+            showModalAlert('editAgentAlert', error.message, 'danger');
+            return;
+        }
+
+        const payload = {
+            name: name,
+            description: descriptionValue || null,
+            default_model_name: modelName,
+            default_system_prompt: systemPrompt,
+            default_model_settings: modelSettings
+        };
+
+        try {
+            const response = await fetch(`/v1/api/agents/${agentIdInput.value}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await safeJson(response);
+                const message = errorData?.detail || `HTTP error! status: ${response.status}`;
+                throw new Error(message);
+            }
+
+            const modalEl = document.getElementById('editAgentModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+
+            showAlert('Agent updated successfully.', 'success');
+
+            currentAgent = {
+                ...currentAgent,
+                ...payload,
+                updated_at: new Date().toISOString()
+            };
+
+            displayAgentDetails(currentAgent);
+        } catch (error) {
+            console.error('Error updating agent:', error);
+            showModalAlert('editAgentAlert', 'Error updating agent: ' + error.message, 'danger');
+        }
+    }
+
+    function showModalAlert(containerId, message, type) {
+        const container = document.getElementById(containerId);
+
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="alert alert-${type}" role="alert">
+                ${message}
+            </div>
+        `;
+    }
+
+    function clearModalAlert(containerId) {
+        const container = document.getElementById(containerId);
+
+        if (container) {
+            container.innerHTML = '';
+        }
+    }
+
+    function parseJsonOrThrow(text, fallback) {
+        if (!text) {
+            return fallback;
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            throw new Error('Model settings must be valid JSON. ' + error.message);
+        }
+    }
+
+    async function safeJson(response) {
+        try {
+            return await response.json();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        const toastRoot = document.getElementById('toast-root');
+
+        if (toastRoot) {
+            toastRoot.appendChild(alertDiv);
+        } else {
+            const container = document.querySelector('.container');
+
+            if (container) {
+                if (container.firstChild) {
+                    container.insertBefore(alertDiv, container.firstChild);
+                } else {
+                    container.appendChild(alertDiv);
+                }
+            }
+        }
+
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+    async function updateAgent() {
+        const agentIdInput = document.getElementById('editAgentId');
+        if (!agentIdInput || !agentIdInput.value) {
+            return;
+        }
+
+        const name = document.getElementById('editAgentName').value.trim();
+        const descriptionValue = document.getElementById('editAgentDescription').value.trim();
+        const modelName = document.getElementById('editAgentModelName').value.trim();
+        const systemPrompt = document.getElementById('editAgentSystemPrompt').value.trim();
+        const modelSettingsText = document.getElementById('editAgentModelSettings').value.trim();
+
+        if (!name || !modelName || !systemPrompt) {
+            showModalAlert('editAgentAlert', 'Name, default model, and system prompt are required.', 'warning');
+            return;
+        }
+
+        let modelSettings = {};
+        try {
+            modelSettings = parseJsonOrThrow(modelSettingsText, {});
+        } catch (error) {
+            showModalAlert('editAgentAlert', error.message, 'danger');
+            return;
+        }
+
+        const payload = {
+            name: name,
+            description: descriptionValue || null,
+            default_model_name: modelName,
+            default_system_prompt: systemPrompt,
+            default_model_settings: modelSettings
+        };
+
+        try {
+            const response = await fetch(`/v1/api/agents/${agentIdInput.value}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await safeJson(response);
+                const message = errorData?.detail || `HTTP error! status: ${response.status}`;
+                throw new Error(message);
+            }
+
+            const modalEl = document.getElementById('editAgentModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+
+            showAlert('Agent updated successfully.', 'success');
+
+            currentAgent = {
+                ...currentAgent,
+                ...payload
+            };
+
+            displayAgentDetails(currentAgent);
+        } catch (error) {
+            console.error('Error updating agent:', error);
+            showModalAlert('editAgentAlert', 'Error updating agent: ' + error.message, 'danger');
+        }
+    }
+
+    function showModalAlert(containerId, message, type) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="alert alert-${type}" role="alert">
+                ${message}
+            </div>
+        `;
+    }
+
+    function clearModalAlert(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+        }
+    }
+
+    function parseJsonOrThrow(text, fallback) {
+        if (!text) {
+            return fallback;
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            throw new Error('Model settings must be valid JSON. ' + error.message);
+        }
+    }
+
+    async function safeJson(response) {
+        try {
+            return await response.json();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        const toastRoot = document.getElementById('toast-root');
+        if (toastRoot) {
+            toastRoot.appendChild(alertDiv);
+        } else {
+            const container = document.querySelector('.container');
+            if (container) {
+                if (container.firstChild) {
+                    container.insertBefore(alertDiv, container.firstChild);
+                } else {
+                    container.appendChild(alertDiv);
+                }
+            }
+        }
+
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
     }
 </script>
 {% endblock %}

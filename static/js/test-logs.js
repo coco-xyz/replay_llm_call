@@ -982,7 +982,11 @@ function reExecuteTest(testCaseId) {
 }
 
 function reExecuteLog(logId) {
-    window.location.href = `/test-execution?logId=${logId}`;
+    const url = `/test-execution?logId=${encodeURIComponent(logId)}`;
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (newWindow) {
+        newWindow.opener = null;
+    }
 }
 
 function reExecuteFromLog() {

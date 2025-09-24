@@ -610,7 +610,7 @@
 
         // Setup Model Settings collapse handlers
         setupModelSettingsCollapse(log);
-        
+
         // Setup Response Example collapse handlers
         setupResponseExampleCollapse(log);
     }
@@ -1011,7 +1011,11 @@
 
     function reExecuteTest() {
         if (currentLog) {
-            window.location.href = `/test-execution?logId=${currentLog.id}`;
+            const url = `/test-execution?logId=${currentLog.id}`;
+            const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+            if (newWindow) {
+                newWindow.opener = null;
+            }
         }
     }
 

@@ -212,6 +212,7 @@ class TestLogStore:
     def get_filtered(
         self,
         status: Optional[str] = None,
+        model_name: Optional[str] = None,
         test_case_id: Optional[str] = None,
         agent_id: Optional[str] = None,
         regression_test_id: Optional[str] = None,
@@ -240,6 +241,8 @@ class TestLogStore:
                 # Apply filters
                 if status:
                     query = query.filter(TestLog.status == status)
+                if model_name:
+                    query = query.filter(TestLog.model_name == model_name)
                 if test_case_id:
                     query = query.filter(TestLog.test_case_id == test_case_id)
                 if agent_id:

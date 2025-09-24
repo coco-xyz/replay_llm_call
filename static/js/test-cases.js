@@ -13,6 +13,7 @@ let selectedAgentId = '';
 let currentPage = 1;
 let hasNextPage = false;
 let currentSearchTerm = '';
+let searchDebounceTimer = null;
 let hasAgentsAvailable = true;
 
 const agentCache = new Map();
@@ -354,17 +355,22 @@ function setupEventListeners() {
         searchInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
+                if (searchDebounceTimer) {
+                    clearTimeout(searchDebounceTimer);
+                }
                 applySearchFilters();
             }
         });
 
-        // Also trigger search on input change with debounce
-        let searchTimeout;
-        searchInput.addEventListener('input', function () {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
+        searchInput.addEventListener('input', function (event) {
+            const value = event.target.value;
+            if (searchDebounceTimer) {
+                clearTimeout(searchDebounceTimer);
+            }
+            searchDebounceTimer = setTimeout(() => {
+                currentSearchTerm = value.trim();
                 applySearchFilters();
-            }, 500); // 500ms debounce
+            }, 400);
         });
     }
 
@@ -376,8 +382,12 @@ function setupEventListeners() {
             currentSearchTerm = '';
             currentPage = 1;
             resetAgentAutocomplete('filter');
+            if (searchDebounceTimer) {
+                clearTimeout(searchDebounceTimer);
+            }
             if (searchField) {
                 searchField.value = '';
+                searchField.focus();
             }
             loadTestCases(1);
         });

@@ -171,6 +171,7 @@ async def get_logs_by_status(
 @router.get("/filter/combined", response_model=List[TestLogListItemResponse])
 async def get_logs_filtered(
     status: Optional[str] = Query(None, description="Filter by status"),
+    model_name: Optional[str] = Query(None, description="Filter by model name"),
     test_case_id: Optional[str] = Query(None, description="Filter by test case ID"),
     agent_id: Optional[str] = Query(None, description="Filter by agent ID"),
     regression_test_id: Optional[str] = Query(
@@ -196,10 +197,16 @@ async def get_logs_filtered(
     """
     try:
         logger.debug(
-            f"API: Getting filtered logs (status={status}, test_case_id={test_case_id})"
+            "API: Getting filtered logs (status=%s, model_name=%s, test_case_id=%s, agent_id=%s, regression_test_id=%s)",
+            status,
+            model_name,
+            test_case_id,
+            agent_id,
+            regression_test_id,
         )
         result = test_log_service.get_logs_filtered(
             status=status,
+            model_name=model_name,
             test_case_id=test_case_id,
             agent_id=agent_id,
             regression_test_id=regression_test_id,

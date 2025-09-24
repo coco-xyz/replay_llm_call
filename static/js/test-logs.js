@@ -9,7 +9,7 @@ const FETCH_LIMIT = PAGE_SIZE + 1;
 let currentLogs = [];
 let currentPage = 1;
 let hasNextPage = false;
-let currentFilters = { status: '', testCaseId: '', agentId: '', regressionTestId: '' };
+let currentFilters = { status: '', modelName: '', testCaseId: '', agentId: '', regressionTestId: '' };
 let currentLogId = null;
 
 const entityCaches = {
@@ -37,6 +37,7 @@ async function initializeTestLogsPage() {
 
     // Preload filter state from URL so the first fetch respects it
     currentFilters.status = urlParams.get('status') || '';
+    currentFilters.modelName = urlParams.get('model_name') || urlParams.get('modelName') || '';
     currentFilters.testCaseId = urlParams.get('testCaseId') || '';
     currentFilters.agentId = urlParams.get('agentId') || '';
     currentFilters.regressionTestId = urlParams.get('regressionTestId') || '';
@@ -45,6 +46,7 @@ async function initializeTestLogsPage() {
 
     setupEventListeners();
     setupAutocompleteFilters();
+    setupModelFilter();
 
     await hydrateFilterInputs();
 
@@ -111,10 +113,14 @@ function resetAllFilters() {
     if (statusFilter) {
         statusFilter.value = '';
     }
+    const modelFilterInput = document.getElementById('modelFilterInput');
+    if (modelFilterInput) {
+        modelFilterInput.value = '';
+    }
     resetAutocompleteFilter('testCase');
     resetAutocompleteFilter('agent');
     resetAutocompleteFilter('regression');
-    currentFilters = { status: '', testCaseId: '', agentId: '', regressionTestId: '' };
+    currentFilters = { status: '', modelName: '', testCaseId: '', agentId: '', regressionTestId: '' };
     currentPage = 1;
     loadTestLogs();
 }
@@ -125,10 +131,61 @@ function setupAutocompleteFilters() {
     });
 }
 
+function setupModelFilter() {
+    const input = document.getElementById('modelFilterInput');
+    if (!input) {
+        return;
+    }
+
+    let debounceTimer = null;
+
+    const applyFilter = (value) => {
+        const trimmed = value.trim();
+        if (currentFilters.modelName === trimmed) {
+            return;
+        }
+        currentFilters.modelName = trimmed;
+        currentPage = 1;
+        loadTestLogs();
+    };
+
+    input.addEventListener('input', (event) => {
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+        }
+        const value = event.target.value;
+        debounceTimer = window.setTimeout(() => {
+            applyFilter(value);
+        }, 300);
+    });
+
+    input.addEventListener('change', (event) => {
+        applyFilter(event.target.value);
+    });
+
+    input.addEventListener('modelhistory:selected', (event) => {
+        if (event?.detail?.value !== undefined) {
+            applyFilter(event.detail.value);
+        }
+    });
+
+    if (window.ModelHistoryManager) {
+        window.ModelHistoryManager.initInput({
+            inputId: 'modelFilterInput',
+            dropdownId: 'modelFilterDropdown',
+        });
+    }
+}
+
 async function hydrateFilterInputs() {
     const statusFilter = document.getElementById('statusFilter');
     if (statusFilter) {
         statusFilter.value = currentFilters.status || '';
+    }
+
+    const modelFilterInput = document.getElementById('modelFilterInput');
+    if (modelFilterInput) {
+        modelFilterInput.value = currentFilters.modelName || '';
     }
 
     const tasks = [];
@@ -363,6 +420,9 @@ async function loadTestLogs() {
 
         if (currentFilters.status) {
             params.append('status', currentFilters.status);
+        }
+        if (currentFilters.modelName) {
+            params.append('model_name', currentFilters.modelName);
         }
         if (currentFilters.testCaseId) {
             params.append('test_case_id', currentFilters.testCaseId);

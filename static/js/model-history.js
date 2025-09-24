@@ -13,6 +13,7 @@
             this.input = input;
             this.dropdown = dropdown;
             this.pointerDownInDropdown = false;
+            this.suppressInputHandler = false;
 
             this.handleDocumentClick = this.handleDocumentClick.bind(this);
             this.onFocus = this.onFocus.bind(this);
@@ -52,6 +53,10 @@
         }
 
         onInput(event) {
+            if (this.suppressInputHandler) {
+                return;
+            }
+
             const value = event.target.value.trim();
             if (value) {
                 this.filterHistory(value);
@@ -65,6 +70,7 @@
                 const value = this.input.value.trim();
                 if (value) {
                     saveModelToHistory(value);
+                    this.emitSelection(value);
                 }
                 this.hideHistory();
             } else if (event.key === 'Escape') {
@@ -127,6 +133,7 @@
                     this.pointerDownInDropdown = true;
                     this.input.value = modelName;
                     saveModelToHistory(modelName);
+                    this.emitSelection(modelName);
                 });
 
                 item.addEventListener('mouseup', () => {
@@ -144,6 +151,24 @@
 
         hideHistory() {
             this.dropdown.classList.remove('show');
+        }
+
+        emitSelection(value) {
+            const detailValue = typeof value === 'string' ? value.trim() : this.input.value.trim();
+            this.suppressInputHandler = true;
+            try {
+                const inputEvent = new Event('input', { bubbles: true });
+                this.input.dispatchEvent(inputEvent);
+                const changeEvent = new Event('change', { bubbles: true });
+                this.input.dispatchEvent(changeEvent);
+                const customEvent = new CustomEvent('modelhistory:selected', {
+                    bubbles: true,
+                    detail: { value: detailValue },
+                });
+                this.input.dispatchEvent(customEvent);
+            } finally {
+                this.suppressInputHandler = false;
+            }
         }
     }
 

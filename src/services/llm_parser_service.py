@@ -7,7 +7,7 @@ Supports both OpenAI and Google Gemini API formats.
 
 import json
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -294,6 +294,104 @@ def _convert_gemini_parts_to_content(parts: List[Dict]) -> str:
     return "\n".join(content_parts)
 
 
+def _convert_gemini_parts_to_openai_message(
+    parts: List[Dict],
+    role: str,
+    tool_call_state: Dict[str, Any],
+) -> Tuple[Optional[Dict], List[Dict]]:
+    """Convert Gemini parts list to an OpenAI chat message and any follow-up tool messages."""
+
+    text_segments: List[str] = []
+    tool_calls: List[Dict] = []
+    extra_messages: List[Dict] = []
+
+    for part in parts:
+        if "text" in part:
+            text_segments.append(part["text"])
+            continue
+
+        if "functionCall" in part:
+            function_call = part.get("functionCall", {}) or {}
+            name = function_call.get("name", "")
+            arguments = function_call.get("args")
+            if arguments is None:
+                arguments = function_call.get("arguments")
+
+            if not isinstance(arguments, str):
+                try:
+                    arguments = json.dumps(arguments or {}, ensure_ascii=False)
+                except TypeError:
+                    arguments = json.dumps({}, ensure_ascii=False)
+
+            counter = int(tool_call_state.get("counter", 1))
+            call_id = f"tool_call_{counter}"
+            tool_call_state["counter"] = counter + 1
+
+            pending_calls = tool_call_state.setdefault("pending", {})
+            pending_calls.setdefault(name, []).append(call_id)
+
+            tool_calls.append(
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {"name": name, "arguments": arguments},
+                }
+            )
+            continue
+
+        if "functionResponse" in part:
+            function_response = part.get("functionResponse", {}) or {}
+            name = function_response.get("name", "")
+            response_payload = function_response.get("response")
+            if response_payload is None:
+                response_payload = function_response
+
+            serialized_response = {"name": name, "response": response_payload}
+
+            try:
+                content = json.dumps(serialized_response, ensure_ascii=False)
+            except TypeError:
+                content = json.dumps({"name": name, "response": {}}, ensure_ascii=False)
+
+            call_id = None
+            pending_calls = tool_call_state.setdefault("pending", {})
+            pending_by_name = pending_calls.get(name)
+            if pending_by_name:
+                call_id = pending_by_name.pop(0)
+                if not pending_by_name:
+                    pending_calls.pop(name, None)
+
+            tool_message = {"role": "tool", "content": content}
+            if call_id:
+                tool_message["tool_call_id"] = call_id
+
+            extra_messages.append(tool_message)
+            continue
+
+        # Preserve any unrecognized part types as JSON content to avoid data loss
+        try:
+            text_segments.append(json.dumps(part, ensure_ascii=False))
+        except TypeError:
+            text_segments.append(json.dumps({}, ensure_ascii=False))
+
+    if not text_segments and not tool_calls:
+        # Nothing to emit for the primary message
+        return None, extra_messages
+
+    message: Dict = {"role": role}
+
+    if text_segments:
+        message["content"] = "\n".join(text_segments)
+    elif role == "assistant":
+        # Ensure assistant tool call messages have explicit content
+        message["content"] = ""
+
+    if tool_calls:
+        message["tool_calls"] = tool_calls
+
+    return message, extra_messages
+
+
 def _convert_gemini_type_to_openai(gemini_type: str) -> str:
     """
     Convert Gemini parameter type format to OpenAI format.
@@ -461,6 +559,8 @@ def _convert_gemini_to_openai_format(raw_data: dict) -> dict:
                 openai_messages.append({"role": "system", "content": system_content})
 
         # Convert contents to messages
+        tool_call_state: Dict[str, Any] = {"counter": 1, "pending": {}}
+
         for content in contents:
             role = content.get("role", "user")
             parts = content.get("parts", [])
@@ -469,9 +569,13 @@ def _convert_gemini_to_openai_format(raw_data: dict) -> dict:
             if role == "model":
                 role = "assistant"
 
-            content_text = _convert_gemini_parts_to_content(parts)
-            if content_text:
-                openai_messages.append({"role": role, "content": content_text})
+            message, extra_messages = _convert_gemini_parts_to_openai_message(
+                parts, role, tool_call_state
+            )
+            if message:
+                openai_messages.append(message)
+            if extra_messages:
+                openai_messages.extend(extra_messages)
 
         # Extract model name from URL
         model_name = _extract_model_from_url(raw_data)

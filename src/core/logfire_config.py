@@ -77,8 +77,10 @@ def _custom_scrub_callback(match: Any) -> Any:
     # Get the path as a tuple of keys
     path = match.path
 
-    # Allow only exact matches for session_id and sid fields (don't redact them)
-    allowed_keys = {"session_id", "sid"}
+    allowed_keys = {
+        "sid", # sid is used to identify the chat session, injected in logger.py
+        "http.request.body.text", # prevent the LLM’s input parameters from being redacted. 
+    }
     if any(str(part).lower() in allowed_keys for part in path):
         return match.value
 

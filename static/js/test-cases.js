@@ -741,9 +741,30 @@ async function editTestCase(testCaseId) {
         if (editResponseExpectation) {
             editResponseExpectation.value = testCase.response_expectation || '';
         }
-        const editAgentSelect = document.getElementById('editTestCaseAgent');
-        if (editAgentSelect) {
-            editAgentSelect.value = testCase.agent_id || '';
+        // Set agent field - both hidden and visible inputs
+        const editAgentHidden = document.getElementById('editTestCaseAgent');
+        const editAgentInput = document.getElementById('editTestCaseAgentInput');
+
+        if (testCase.agent_id && editAgentHidden && editAgentInput) {
+            // Set the hidden field value
+            editAgentHidden.value = testCase.agent_id;
+
+            // Load agent info and set the visible input
+            try {
+                const agent = await ensureAgentLoaded(testCase.agent_id);
+                if (agent) {
+                    editAgentInput.value = agent.name;
+                } else {
+                    editAgentInput.value = testCase.agent_id; // fallback to ID if agent not found
+                }
+            } catch (error) {
+                console.error('Error loading agent for edit form:', error);
+                editAgentInput.value = testCase.agent_id; // fallback to ID
+            }
+        } else if (editAgentHidden && editAgentInput) {
+            // Clear both fields if no agent
+            editAgentHidden.value = '';
+            editAgentInput.value = '';
         }
 
         // Show modal

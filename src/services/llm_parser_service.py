@@ -323,12 +323,19 @@ def _convert_gemini_parts_to_openai_message(
                 except TypeError:
                     arguments = json.dumps({}, ensure_ascii=False)
 
-            counter = int(tool_call_state.get("counter", 1))
-            call_id = f"tool_call_{counter}"
-            tool_call_state["counter"] = counter + 1
+            call_id = function_call.get("id")
+            if isinstance(call_id, str) and call_id.strip():
+                call_id = call_id.strip()
+            else:
+                counter = int(tool_call_state.get("counter", 1))
+                call_id = f"tool_call_{counter}"
+                tool_call_state["counter"] = counter + 1
 
             pending_calls = tool_call_state.setdefault("pending", {})
-            pending_calls.setdefault(name, []).append(call_id)
+            pending_by_name = tool_call_state.setdefault("pending_by_name", {})
+            pending_calls[call_id] = name or None
+            if name:
+                pending_by_name.setdefault(name, []).append(call_id)
 
             tool_calls.append(
                 {
@@ -355,11 +362,32 @@ def _convert_gemini_parts_to_openai_message(
 
             call_id = None
             pending_calls = tool_call_state.setdefault("pending", {})
-            pending_by_name = pending_calls.get(name)
-            if pending_by_name:
-                call_id = pending_by_name.pop(0)
-                if not pending_by_name:
-                    pending_calls.pop(name, None)
+            pending_by_name = tool_call_state.setdefault("pending_by_name", {})
+
+            response_id = function_response.get("id")
+            if isinstance(response_id, str) and response_id.strip():
+                response_id = response_id.strip()
+                if response_id in pending_calls:
+                    call_id = response_id
+                    pending_name = pending_calls.pop(response_id) or None
+                    if pending_name:
+                        name_queue = pending_by_name.get(pending_name, [])
+                        try:
+                            name_queue.remove(response_id)
+                        except ValueError:
+                            pass
+                        if not name_queue:
+                            pending_by_name.pop(pending_name, None)
+                        else:
+                            pending_by_name[pending_name] = name_queue
+
+            if call_id is None and name:
+                name_queue = pending_by_name.get(name)
+                if name_queue:
+                    call_id = name_queue.pop(0)
+                    if not name_queue:
+                        pending_by_name.pop(name, None)
+                    pending_calls.pop(call_id, None)
 
             tool_message = {"role": "tool", "content": content}
             if call_id:
@@ -559,7 +587,11 @@ def _convert_gemini_to_openai_format(raw_data: dict) -> dict:
                 openai_messages.append({"role": "system", "content": system_content})
 
         # Convert contents to messages
-        tool_call_state: Dict[str, Any] = {"counter": 1, "pending": {}}
+        tool_call_state: Dict[str, Any] = {
+            "counter": 1,
+            "pending": {},
+            "pending_by_name": {},
+        }
 
         for content in contents:
             role = content.get("role", "user")

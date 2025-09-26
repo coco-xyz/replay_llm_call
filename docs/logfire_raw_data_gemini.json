@@ -1,0 +1,275 @@
+{
+  "start_timestamp": "2025-09-26T03:21:12.580646Z",
+  "trace_id": "0199840a017b9aca47cfc9330b2c4fc1",
+  "span_id": "49652f5adcb71509",
+  "parent_span_id": "53df98b13ba93205",
+  "span_name": "POST",
+  "level": 9,
+  "service_name": "ai-agents",
+  "otel_scope_name": "opentelemetry.instrumentation.httpx",
+  "tags": [],
+  "created_at": 1758856890449.134,
+  "end_timestamp": "2025-09-26T03:21:30.050915Z",
+  "kind": "span",
+  "message": "POST generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+  "is_exception": false,
+  "exception_type": null,
+  "otel_scope_version": "0.58b0",
+  "service_version": null,
+  "http_response_status_code": 200,
+  "gen_ai_operation_name": null,
+  "gen_ai_request_model": null,
+  "gen_ai_response_model": null,
+  "gen_ai_system": null,
+  "gen_ai_usage_input_tokens": 0,
+  "gen_ai_usage_output_tokens": 0,
+  "gen_ai_response_id": null,
+  "matched_filter": false,
+  "user_columns": {},
+  "is_extra_span": false,
+  "day": "2025-09-26",
+  "duration": 17.47026899,
+  "otel_status_code": "UNSET",
+  "otel_status_message": null,
+  "otel_links": [],
+  "otel_events": [],
+  "url_path": "/v1beta/models/gemini-2.5-flash:generateContent",
+  "url_query": "",
+  "url_full": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+  "http_route": null,
+  "http_method": "POST",
+  "attributes": {
+    "http.method": "POST",
+    "http.request.body.text": {
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "简历\n基本信息\n钱旭东\n联系电话：13866662396 邮箱：kmaha_eth@163.com\n出生年月：1991.12 籍贯：安徽合肥\n求职意向\nJava开发\n教育背景\n2010/09 - 2014/07 安徽农业大学 大学本科、双学士\n工作经历\n2024 / 03—至今 北京智汇云舟科技有限公司 Java高级开发\n2023 / 06—2024 / 02 安徽习承科技有限公司 Java高级开发\n2021 / 03—2023 / 06 CHAINDEX Java高级开发\n2018 / 03—2021 / 03 合肥科大讯飞 Java高级开发\n2015 / 09—2018 / 03 上海商帆信息技术 Java开发\n掌握技能\n·熟悉SpringCloud+ Feigin框架的服务调用以及Consul+ Fabio实现自动服务发现和负载均衡。\n·熟悉Flink流式代码开发，以及配合mongoDB,kafka等相关组件的使用\n·熟悉Modbus,Plc,Mqtt等物联网相关协议，熟悉KepServer等物联网关工具交互集成。\n·熟悉 以太坊，波场，bsc等相关链的合约方法调用，api开发以及各链监听组件的部署和使用等。\n·熟悉dubbo、zookeeper以及SpringBoot、SpringMvc,MyBatis等框架。\n·熟悉redis缓存和分布式锁，Mysql性能优化以及MongoDB数据库,RocketMq，Kafka消息中间件的使用等。\n·熟悉Linux及shell脚本等常用命令，SVN和Git等版本管理工具的使用。\n项目经验\n项目名称：数据中台(智汇云舟)\n开发技术: springboot + drools+ datax\n项目描述：数据中台是一个支持租户权限管理，主要目的是实现通用API接口数据同步，datax异构数据源离线\n同步的后台管理系统，通过Forset框架以及Drools规则语言实现API接口的通用调用，通过DataX\n实现多种数据源的异构数据离线同步。\n责任描述：1、负责技术选型，技术调研；\n2、负责后端所有功能开发等。\n项目名称：数字化运维(习承科技)\n开发技术: springboot + flink + nacos+ mqtt+ kafka+elasticsearch+websocket\n项目描述：数字化运维是一个集运维管理后台，数据采集系统以及数据分析系统为一体的兼顾传统运维和智能运\n维功能的一个项目，运维管理后台主要通过网关和各微服务之间调用，实现组织管理，设备管理，告\n警管理，巡检管理，维修保养，备件管理等功能；数据采集系统则是实现对设备协议，比如mqtt,modbus\n等进行解析采集，实现数据获取；数据分析系统则是通过flink实时处理采集数据，进行数据清洗，\n转换，分析等，实现实时告警，推送等功能。\n责任描述：1、负责技术选型，业务架构设计以及数据库设计等，协调同事进行业务功能开发以及时间安排；\n2、负责运维后台系统部分模块功能开发，数据分析系统功能开发等\n项目名称：跨链桥（chaindex）\n开发技术: springboot + flink + eventeum + eventplugin + kafka + mongodb + redis\n项目描述：跨链桥是一款支持tron，bsc,eth等多链资产互跨的半中心化产品，主要服务分为跨链流式处理flink\n监听服务，跨链后台管理服务，跨链对外服务，支持各链合约事件监听，合约事件Kafka消息处理，\n资产跨链合约方法调用等\n责任描述：1、负责跨链所有服务的技术选型,详细设计，需求对接、接口开发、合约侧前端侧的对接联调等\n2、负责各服务的部署和框架搭建以及相关监听服务选型等\n典型任务：evm协议链的eventeum以及波场链的eventplugin监听服务选型，flink流式处理代码开发，多链集\n成等\n项目名称：区块链游戏，vanswap等（chaindex）\n开发技术: springboot + flink + eventeum + eventplugin + kafka + mongodb + redis\n项目描述：区块链游戏是基于链上合约交互的产品，主要是通过合约事件监听，实时进行数据处理展示给用户；\n结合监听数据以及合约接口的调用，提供排行榜等相关接口；vanswap则是通过合约交易对事件监听，\n实时监控交易事件数据入库，提供swap浏览器相关接口，查看交易记录，计算交易汇率等。\n责任描述：负责服务搭建，提供后端接口，处理 flink 流的合约事件数据，并完成数据处理展示给前端用户。\n项目名称：空投活动，量化后台等（chaindex）\n开发技术: springboot + web3j + mysql\n项目描述：量化后台主要为了配合量化交易，完成追加交易，合约授权，充值，归集等功能；空投主要通过实现\n默克尔树计算配合合约测完成用户权限验证，编写空投脚本或通过量化后台完成空投功能实现。\n责任描述： 负责接口开发和维护，配合合约侧或量化人员完成区块链相关活动功能实现。\n项目名称：智慧课堂（科大讯飞）\n开发技术: zookeeper + dubbo + springboot + rocketMq + mybatis + redis\n项目描述：智慧课堂产品线涉及教师端以及学生端等多个产品，以及pc、pad、web等多个端应用；\n涉及服务包括资源服务、网盘服务、用户服务、学生端服务、分享任务服务、学了英语服务等\n责任描述：1、负责各产品线和端应用的需求对接、接口开发、以及相关模块详细设计\n2、负责部分服务的部署和框架搭建以及相关服务性能测试环境搭建部署等\n典型任务：本地化接口改造、集团校校本服务改造、学生端任务分表拆分以及备课组长分享服务改造等\n项目名称：畅言-资源管家、课堂实录、年度报告（科大讯飞）\n开发技术：springboot + dubbo + springMvc + redis\n项目描述：资源管家:教师管理资源web后台以及pad端H5插件查看备课资源\n课堂实录：接受课堂白板、练习等实时报文，计算答题率,展示教学动态等\n年度报告：整合年度教师端及学生端用户使用各端应用及活跃的相关数据\n责任描述：1、负责年度报告服务的项目框架搭建和部署，接口开发以及详细设计等\n2、负责课堂实录以及资源管家相关需求的对接和接口开发、维护\n兴趣爱好\n篮球、钓鱼\n自我评价\n·勤奋刻苦，善于总结，热爱开发工作和技术学习；\n·踏实努力，喜欢参与项目的详细设计和技术选型；\n·对待工作认真积极，具有较强的逻辑能力，能适应长时间的加班。"
+            }
+          ],
+          "role": "user"
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "You are a specialized AI assistant for parsing project experiences from resume text. Your task is to focus ONLY on extracting project-related information from the provided text.\n\nKey responsibilities:\n- Extract project experiences including project names, roles, dates, descriptions, and achievements\n- Include personal projects, academic projects, school assignments, and work-related projects\n- Identify technologies, tools, and methodologies used in projects\n- Extract project links (GitHub, demo URLs, documentation) when available\n- Maintain accuracy and fidelity to the source text - do not invent information\n- Handle both Chinese and English content appropriately\n- If no projects are found in the text, return an empty projects field\n- Pay attention to data types and formats (dates should be YYYY-MM format)\n\nImportant guidelines:\n- Focus exclusively on project experiences - ignore work experience, education basics, or other sections\n- Do not hallucinate or add information not present in the source text\n- If project details are unclear or missing, omit them rather than guess\n- Preserve the original meaning and context from the source document\n- Extract specific achievements, outcomes, and impacts when mentioned\n- Include team size and collaboration details if mentioned\n- Handle both Chinese and English resume content with appropriate language detection\n"
+          }
+        ],
+        "role": "user"
+      },
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "description": "Projects part of resume data for parallel parsing.\n\nThis model is used to parse only the projects section\nof resume data in parallel processing.",
+              "name": "final_result",
+              "parameters": {
+                "properties": {
+                  "projects": {
+                    "description": "Projects Module | 项目经历模块\n\n包含整体项目经历的完成状态和项目列表。\n支持对单个项目进行深入讨论和状态管理。",
+                    "properties": {
+                      "meta": {
+                        "description": "Collection metadata model for resume collections.\n\nUsed for collections like Education, Projects, ProfessionalExperiences, etc.\nExtends BaseMeta with ID generation capabilities.",
+                        "properties": {
+                          "completed": {
+                            "default": false,
+                            "description": "Whether this item is completed",
+                            "type": "BOOLEAN"
+                          },
+                          "next_id": {
+                            "default": 1,
+                            "description": "Next ID to be assigned for new items",
+                            "type": "INTEGER"
+                          }
+                        },
+                        "type": "OBJECT"
+                      },
+                      "list": {
+                        "description": "项目经历数组",
+                        "items": {
+                          "description": "Project Experience | 项目经历\n\n个人项目、学校项目或工作项目，通过AI导师对话完善。",
+                          "properties": {
+                            "id": {
+                              "default": "",
+                              "description": "唯一标识符，系统自动生成，如：proj_1",
+                              "type": "STRING"
+                            },
+                            "meta": {
+                              "description": "Base metadata model for individual resume items.\n\nUsed for individual items like Edu, Project, ProfessionalExperience, etc.\nContains completion status tracking.",
+                              "properties": {
+                                "completed": {
+                                  "default": false,
+                                  "description": "Whether this item is completed",
+                                  "type": "BOOLEAN"
+                                }
+                              },
+                              "type": "OBJECT"
+                            },
+                            "name": {
+                              "default": "",
+                              "description": "项目名称, 例如: 智能推荐系统 | 数据分析平台 | 项目管理系统",
+                              "nullable": true,
+                              "type": "STRING"
+                            },
+                            "role": {
+                              "default": "",
+                              "description": "在项目中的角色, 例如: 项目经理 | 数据分析师 | 产品经理",
+                              "nullable": true,
+                              "type": "STRING"
+                            },
+                            "links": {
+                              "description": "相关链接数组（GitHub、演示、文档等）",
+                              "items": {
+                                "type": "STRING"
+                              },
+                              "nullable": true,
+                              "type": "ARRAY"
+                            },
+                            "start_date": {
+                              "default": "",
+                              "description": "项目开始时间, 格式: YYYY-MM, 例如: 2020-01",
+                              "nullable": true,
+                              "type": "STRING"
+                            },
+                            "end_date": {
+                              "default": "",
+                              "description": "项目结束时间, 格式: YYYY-MM，例如: 2023-06，请用空字符串表示至今",
+                              "nullable": true,
+                              "type": "STRING"
+                            },
+                            "description": {
+                              "default": "",
+                              "description": "项目描述，利用有序/无序列表做更清晰的展示",
+                              "nullable": true,
+                              "type": "STRING"
+                            },
+                            "achievements": {
+                              "default": "",
+                              "description": "项目业绩，利用有序/无序列表做更清晰的展示",
+                              "nullable": true,
+                              "type": "STRING"
+                            },
+                            "skills": {
+                              "description": "能力标签，跟项目经历相关",
+                              "items": {
+                                "type": "STRING"
+                              },
+                              "nullable": true,
+                              "type": "ARRAY"
+                            }
+                          },
+                          "type": "OBJECT"
+                        },
+                        "type": "ARRAY"
+                      }
+                    },
+                    "type": "OBJECT"
+                  }
+                },
+                "type": "OBJECT"
+              }
+            }
+          ]
+        }
+      ],
+      "toolConfig": {
+        "functionCallingConfig": {
+          "mode": "ANY",
+          "allowedFunctionNames": [
+            "final_result"
+          ]
+        }
+      },
+      "generationConfig": {}
+    },
+    "http.request.header.accept": [
+      "*/*"
+    ],
+    "http.request.header.accept-encoding": [
+      "gzip, deflate"
+    ],
+    "http.request.header.connection": [
+      "keep-alive"
+    ],
+    "http.request.header.content-length": [
+      "16907"
+    ],
+    "http.request.header.content-type": [
+      "application/json"
+    ],
+    "http.request.header.host": [
+      "generativelanguage.googleapis.com"
+    ],
+    "http.request.header.user-agent": [
+      "pydantic-ai/1.0.10",
+      "google-genai-sdk/1.38.0 gl-python/3.11.13"
+    ],
+    "http.request.header.x-goog-api-client": [
+      "google-genai-sdk/1.38.0 gl-python/3.11.13"
+    ],
+    "http.request.header.x-goog-api-key": [
+      "AIzaSyBNgrT0324Lo06-UFSrqkXfGjBV-nJPPvs"
+    ],
+    "http.response.header.alt-svc": [
+      "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+    ],
+    "http.response.header.content-encoding": [
+      "gzip"
+    ],
+    "http.response.header.content-type": [
+      "application/json; charset=UTF-8"
+    ],
+    "http.response.header.date": [
+      "Fri, 26 Sep 2025 03:21:29 GMT"
+    ],
+    "http.response.header.server": [
+      "scaffolding on HTTPServer2"
+    ],
+    "http.response.header.server-timing": [
+      "gfet4t7; dur=17445"
+    ],
+    "http.response.header.transfer-encoding": [
+      "chunked"
+    ],
+    "http.response.header.vary": [
+      "Origin",
+      "X-Origin",
+      "Referer"
+    ],
+    "http.response.header.x-content-type-options": [
+      "nosniff"
+    ],
+    "http.response.header.x-frame-options": [
+      "SAMEORIGIN"
+    ],
+    "http.response.header.x-xss-protection": [
+      "0"
+    ],
+    "http.status_code": 200,
+    "http.target": "/v1beta/models/gemini-2.5-flash:generateContent",
+    "http.url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+  },
+  "attributes_json_schema": "{\"type\":\"object\",\"properties\":{\"http.request.body.text\":{\"type\":\"object\"}}}",
+  "otel_scope_attributes": {},
+  "service_namespace": "",
+  "service_instance_id": "63277f3b473b42f8871b470050684f26",
+  "process_pid": 1,
+  "otel_resource_attributes": {
+    "deployment.environment.name": "development",
+    "process.pid": 1,
+    "process.runtime.description": "3.11.13 (main, Sep  8 2025, 21:44:14) [GCC 14.2.0]",
+    "process.runtime.name": "cpython",
+    "process.runtime.version": "3.11.13",
+    "service.instance.id": "63277f3b473b42f8871b470050684f26",
+    "service.name": "ai-agents",
+    "telemetry.sdk.language": "python",
+    "telemetry.sdk.name": "opentelemetry",
+    "telemetry.sdk.version": "1.37.0"
+  },
+  "telemetry_sdk_name": "opentelemetry",
+  "telemetry_sdk_language": "python",
+  "telemetry_sdk_version": "1.37.0",
+  "deployment_environment": "development"
+}

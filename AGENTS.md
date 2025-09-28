@@ -1,31 +1,36 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `src/core` contains configuration, logging, and LLM integration primitives; treat it as shared infrastructure.
-- `src/agents` holds agent orchestrators, with prompt templates alongside in `src/prompts`.
-- `src/api` exposes FastAPI routers; `src/services` coordinate business flows and `src/stores` wrap persistence layers.
-- Templates live in `templates/`, front-end assets in `static/`, migrations in `migrations/`, and canonical tests in `tests/`. Use `docs/` for design notes and `main.py` plus the `Makefile` as entry points.
+- `src/core` hosts shared configuration, logging utilities, and LLM adapters—treat these as single sources of truth.
+- `src/agents` defines orchestrators, with supporting prompt templates under `src/prompts` and coordination helpers in `src/services`.
+- API entry points live in `src/api`, while persistence wrappers stay in `src/stores`; UI templates sit in `templates/` with assets in `static/`.
+- Tests mirror the source tree under `tests/`; refer to `docs/` for design notes, `main.py` for runtime bootstrap, and the `Makefile` for day-to-day automation.
 
 ## Build, Test, and Development Commands
-- `make setup` installs dependencies via uv, creates `.env`, and prepares log/test directories.
-- `make run-cli` executes the agent CLI; `make run-api` (or `make run-api-dev`) runs the FastAPI service on `http://localhost:8080` with optional reload.
-- `make test` runs pytest with async support; `make test-verbose` adds detailed traces for debugging.
-- `make format`, `make lint`, and `make type-check` invoke Black, Flake8, and Mypy—expect clean runs before pushing.
-- Docker workflows use `make docker-build` and `make docker-run` to mirror production containers locally.
+- `make setup` provisions the environment (uv install, `.env`, log/test dirs).
+- `make run-cli` launches the interactive agent CLI for manual workflows.
+- `make run-api` or `make run-api-dev` serves the FastAPI app on `http://localhost:8080` (reload enabled in `-dev`).
+- `make test` runs pytest with async fixtures; append `-verbose` for trace-heavy debugging.
+- `make format`, `make lint`, and `make type-check` run Black/isort, Flake8, and Mypy; expect clean passes before merging.
+- Container parity commands: `make docker-build` and `make docker-run`.
 
 ## Coding Style & Naming Conventions
-- Target Python 3.11; keep modules and files snake_case, classes PascalCase, and constants UPPER_SNAKE.
-- Black enforces 88-character lines and isort uses the `black` profile. Run `make format` after substantial edits to sync both.
-- Maintain type hints; Mypy runs with strict flags, so declare return types and avoid implicit `Optional` values.
-- Prefer structured logging through `src/core/logger.py` and reusable service layers over inline business logic.
+- Target Python 3.11 with Black's 88-character lines and isort `black` profile (run `make format` after edits).
+- Modules and files use `snake_case`, classes `PascalCase`, constants `UPPER_SNAKE`; keep agent prompt IDs descriptive but concise.
+- Uphold strict typing—avoid implicit `Optional` and prefer structured logging via `src/core/logger.py`.
 
 ## Testing Guidelines
-- Co-locate pytest suites under `tests/` mirroring the source layout; filenames follow `test_*.py` and async cases use `pytest.mark.asyncio`.
-- Tag slow or external-resource checks with `@pytest.mark.integration` so they can be excluded via `-m "not integration"`.
-- Every feature should ship with happy-path and edge-case coverage; keep fixtures minimal and reuse helpers from `tests/conftest.py`.
+- Name suites `tests/<module>/test_*.py`; async tests require `@pytest.mark.asyncio`.
+- Tag external or long-running scenarios with `@pytest.mark.integration` so `pytest -m "not integration"` stays fast.
+- Cover happy paths, error handling, and store/service boundaries, reusing fixtures from `tests/conftest.py` to limit setup drift.
 
 ## Commit & Pull Request Guidelines
-- Commit summaries stay in the imperative mood (see recent `git log`); keep the first line ≤72 characters and add context in a wrapped body when needed.
-- Group changes by concern and run `make test` plus quality targets before pushing to avoid CI churn.
-- Pull requests must explain intent, link related issues, list the verification commands, and attach UI screenshots for changes under `templates/` or `static/`.
-- Highlight configuration updates (`.env`, `env.sample`, or infrastructure manifests) and request reviewers familiar with cross-agent impacts.
+- Write imperative, ≤72 character commit titles and group related edits; mention follow-up context in the body when needed.
+- Before pushing, run `make test`, `make lint`, `make type-check`, and `make format` to keep CI green.
+- PRs must state intent, link issues, enumerate verification commands, and attach screenshots for `templates/` or `static/` updates.
+- Call out configuration changes (`.env`, `env.sample`, docker manifests) and request reviewers aware of cross-agent impact.
+
+## Security & Configuration Tips
+- Never commit secrets; derive local settings from `env.sample` via `make setup` and document additions there.
+- Rotate API keys through environment variables and prefer `src/core` helpers for credential access.
+- When adding dependencies, update `pyproject.toml` and regenerate `uv.lock` using `uv pip compile` to maintain reproducibility.

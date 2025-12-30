@@ -42,6 +42,11 @@ def test_get_test_case_includes_soft_delete_flag(monkeypatch):
         return deleted_case
 
     monkeypatch.setattr(service.store, "get_by_id", _fake_get_by_id)
+    monkeypatch.setattr(
+        service.agent_service,
+        "get_agent_summary",
+        lambda _agent_id: None,
+    )
 
     result = service.get_test_case("case-1")
 

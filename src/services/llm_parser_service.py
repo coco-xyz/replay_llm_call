@@ -2,7 +2,10 @@
 LLM Parser Service
 
 Service for parsing logfire raw data and extracting LLM request components.
-Supports both OpenAI and Google Gemini API formats.
+Supports multiple formats:
+- OpenAI format (via http.request.body.text)
+- Google Gemini format (via http.request.body.text)
+- pydantic-ai OpenTelemetry format (via gen_ai.* attributes)
 """
 
 import json
@@ -37,7 +40,7 @@ class ParsedLLMData(BaseModel):
 def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
     """
     Parse logfire raw data and separate system prompt, last user message, and other messages.
-    Supports both OpenAI and Google Gemini API formats.
+    Supports OpenAI, Google Gemini, and pydantic-ai OpenTelemetry formats.
 
     This function implements the optimized storage strategy where:
     - System prompt (first system message) is extracted separately
@@ -45,7 +48,7 @@ def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
     - All other messages are stored in original_messages for replay concatenation
 
     Args:
-        raw_data: Raw logfire data containing the LLM request (OpenAI or Gemini format)
+        raw_data: Raw logfire data containing the LLM request (OpenAI, Gemini, or pydantic-ai format)
 
     Returns:
         ParsedLLMData: Parsed data with separated components
@@ -62,21 +65,33 @@ def parse_llm_raw_data(raw_data: dict) -> ParsedLLMData:
         if not attributes:
             raise ValueError("Missing 'attributes' in raw data")
 
-        request_body = attributes.get("http.request.body.text", {})
-        if not request_body:
-            raise ValueError("Missing 'http.request.body.text' in raw data")
+        # Detect data source format and convert if necessary
+        data_source = _detect_data_source(raw_data)
+        logger.debug(f"Detected data source: {data_source}")
 
-        # Detect API format and convert if necessary
-        api_format = _detect_api_format(request_body)
-        logger.debug(f"Detected API format: {api_format}")
-
-        if api_format == "gemini":
-            # Convert Gemini format to OpenAI format
-            logger.debug("Converting Gemini format to OpenAI format")
-            converted_data = _convert_gemini_to_openai_format(raw_data)
+        if data_source == "pydantic_ai":
+            # Convert pydantic-ai format to OpenAI format
+            logger.debug("Converting pydantic-ai format to OpenAI format")
+            converted_data = _convert_pydantic_ai_to_openai_format(raw_data)
             request_body = converted_data["attributes"]["http.request.body.text"]
-        elif api_format != "openai":
-            raise ValueError(f"Unsupported API format: {api_format}")
+        elif data_source == "http_body":
+            request_body = attributes.get("http.request.body.text", {})
+            if not request_body:
+                raise ValueError("Missing 'http.request.body.text' in raw data")
+
+            # Detect API format and convert if necessary
+            api_format = _detect_api_format(request_body)
+            logger.debug(f"Detected API format: {api_format}")
+
+            if api_format == "gemini":
+                # Convert Gemini format to OpenAI format
+                logger.debug("Converting Gemini format to OpenAI format")
+                converted_data = _convert_gemini_to_openai_format(raw_data)
+                request_body = converted_data["attributes"]["http.request.body.text"]
+            elif api_format != "openai":
+                raise ValueError(f"Unsupported API format: {api_format}")
+        else:
+            raise ValueError(f"Unsupported data source format: {data_source}")
 
         # Extract original data (now in OpenAI format)
         all_messages = request_body.get("messages", [])
@@ -644,10 +659,186 @@ def _convert_gemini_to_openai_format(raw_data: dict) -> dict:
         raise ValueError(f"Failed to convert Gemini format: {str(e)}") from e
 
 
+def _detect_data_source(raw_data: dict) -> str:
+    """
+    Detect the data source format of the raw data.
+
+    Args:
+        raw_data: Raw data to analyze
+
+    Returns:
+        str: "http_body" for http.request.body.text format,
+             "pydantic_ai" for gen_ai.* format,
+             "unknown" otherwise
+    """
+    attributes = raw_data.get("attributes", {})
+
+    # Check for pydantic-ai OpenTelemetry format (gen_ai.* attributes)
+    if "gen_ai.input.messages" in attributes:
+        return "pydantic_ai"
+
+    # Check for HTTP body format
+    if "http.request.body.text" in attributes:
+        return "http_body"
+
+    return "unknown"
+
+
+def _validate_pydantic_ai_format(attributes: dict) -> bool:
+    """
+    Validate pydantic-ai OpenTelemetry format.
+
+    Args:
+        attributes: The attributes dict from raw data
+
+    Returns:
+        bool: True if format is valid
+    """
+    # Must have gen_ai.input.messages as a list
+    input_messages = attributes.get("gen_ai.input.messages")
+    if not isinstance(input_messages, list) or not input_messages:
+        return False
+
+    # Must have gen_ai.request.model as a string
+    model = attributes.get("gen_ai.request.model")
+    if not isinstance(model, str) or not model:
+        return False
+
+    # Validate message format - each message should have role and parts
+    for message in input_messages:
+        if not isinstance(message, dict):
+            return False
+        if "role" not in message:
+            return False
+        if "parts" not in message or not isinstance(message["parts"], list):
+            return False
+
+    return True
+
+
+def _convert_pydantic_ai_parts_to_content(parts: List[Dict]) -> str:
+    """
+    Convert pydantic-ai parts array to content string.
+
+    Args:
+        parts: List of parts from pydantic-ai format
+
+    Returns:
+        str: Combined content string
+    """
+    content_parts = []
+    for part in parts:
+        # pydantic-ai uses "content" key, while Gemini uses "text"
+        if "content" in part:
+            content_parts.append(str(part["content"]))
+        elif "text" in part:
+            content_parts.append(str(part["text"]))
+
+    return "\n".join(content_parts)
+
+
+def _convert_pydantic_ai_tool_to_openai(tool: Dict) -> Dict:
+    """
+    Convert pydantic-ai output_tool format to OpenAI tool format.
+
+    Args:
+        tool: pydantic-ai tool definition
+
+    Returns:
+        Dict: OpenAI format tool
+    """
+    return {
+        "type": "function",
+        "function": {
+            "name": tool.get("name", ""),
+            "description": tool.get("description", ""),
+            "parameters": tool.get("parameters_json_schema", {}),
+        },
+    }
+
+
+def _convert_pydantic_ai_to_openai_format(raw_data: dict) -> dict:
+    """
+    Convert pydantic-ai OpenTelemetry format to standard format for parsing.
+
+    This creates a synthetic http.request.body.text structure from gen_ai.* attributes.
+
+    Args:
+        raw_data: Raw logfire data with pydantic-ai format
+
+    Returns:
+        dict: Modified raw_data with OpenAI format in request body
+    """
+    try:
+        # Create a copy to avoid modifying the original
+        converted_data = json.loads(json.dumps(raw_data))
+
+        attributes = converted_data.get("attributes", {})
+
+        # Extract input messages
+        input_messages = attributes.get("gen_ai.input.messages", [])
+
+        # Convert pydantic-ai messages to OpenAI format
+        openai_messages = []
+        for msg in input_messages:
+            role = msg.get("role", "user")
+            parts = msg.get("parts", [])
+
+            # Extract content from parts
+            content = _convert_pydantic_ai_parts_to_content(parts)
+
+            openai_messages.append({"role": role, "content": content})
+
+        # Extract model name
+        model_name = attributes.get("gen_ai.request.model", "")
+
+        # Build OpenAI format request body
+        openai_request_body = {"messages": openai_messages, "model": model_name}
+
+        # Extract model settings
+        if "gen_ai.request.temperature" in attributes:
+            openai_request_body["temperature"] = attributes["gen_ai.request.temperature"]
+        if "gen_ai.request.max_tokens" in attributes:
+            openai_request_body["max_tokens"] = attributes["gen_ai.request.max_tokens"]
+
+        # Extract tools from model_request_parameters if present
+        model_params = attributes.get("model_request_parameters", {})
+        tools = []
+
+        # Collect from function_tools
+        function_tools = model_params.get("function_tools", [])
+        if function_tools:
+            for tool in function_tools:
+                tools.append(_convert_pydantic_ai_tool_to_openai(tool))
+
+        # Collect from output_tools
+        output_tools = model_params.get("output_tools", [])
+        if output_tools:
+            for tool in output_tools:
+                tools.append(_convert_pydantic_ai_tool_to_openai(tool))
+
+        if tools:
+            openai_request_body["tools"] = tools
+
+        # Update the converted data
+        converted_data["attributes"]["http.request.body.text"] = openai_request_body
+
+        logger.debug(
+            f"Converted pydantic-ai format to OpenAI format: "
+            f"{len(openai_messages)} messages, model: {model_name}"
+        )
+
+        return converted_data
+
+    except Exception as e:
+        logger.error(f"Failed to convert pydantic-ai to OpenAI format: {e}")
+        raise ValueError(f"Failed to convert pydantic-ai format: {str(e)}") from e
+
+
 def validate_raw_data_format(raw_data: dict) -> bool:
     """
     Validate that raw data has the expected logfire format.
-    Supports both OpenAI and Google Gemini API formats.
+    Supports OpenAI, Google Gemini, and pydantic-ai OpenTelemetry formats.
 
     Args:
         raw_data: Raw data to validate
@@ -664,27 +855,45 @@ def validate_raw_data_format(raw_data: dict) -> bool:
         if not isinstance(attributes, dict):
             return False
 
-        request_body = attributes.get("http.request.body.text")
-        if not isinstance(request_body, dict):
-            return False
+        # Detect data source format
+        data_source = _detect_data_source(raw_data)
 
-        # Detect and validate format
-        api_format = _detect_api_format(request_body)
+        if data_source == "pydantic_ai":
+            # Validate pydantic-ai format
+            is_valid = _validate_pydantic_ai_format(attributes)
+            if is_valid:
+                logger.debug("Raw data format validation passed (pydantic-ai format)")
+            else:
+                logger.debug("Raw data format validation failed (pydantic-ai format)")
+            return is_valid
 
-        if api_format == "openai":
-            is_valid = _validate_openai_format(request_body)
-        elif api_format == "gemini":
-            is_valid = _validate_gemini_format(request_body)
+        elif data_source == "http_body":
+            # Original HTTP body format - validate OpenAI or Gemini
+            request_body = attributes.get("http.request.body.text")
+            if not isinstance(request_body, dict):
+                return False
+
+            # Detect and validate format
+            api_format = _detect_api_format(request_body)
+
+            if api_format == "openai":
+                is_valid = _validate_openai_format(request_body)
+            elif api_format == "gemini":
+                is_valid = _validate_gemini_format(request_body)
+            else:
+                logger.debug("Unknown API format detected")
+                return False
+
+            if is_valid:
+                logger.debug(f"Raw data format validation passed ({api_format} format)")
+            else:
+                logger.debug(f"Raw data format validation failed ({api_format} format)")
+
+            return is_valid
+
         else:
-            logger.debug("Unknown API format detected")
+            logger.debug("Unknown data source format detected")
             return False
-
-        if is_valid:
-            logger.debug(f"Raw data format validation passed ({api_format} format)")
-        else:
-            logger.debug(f"Raw data format validation failed ({api_format} format)")
-
-        return is_valid
 
     except Exception as e:
         logger.debug(f"Raw data format validation failed: {e}")
@@ -694,7 +903,7 @@ def validate_raw_data_format(raw_data: dict) -> bool:
 def extract_model_info(raw_data: dict) -> Dict[str, str]:
     """
     Extract model information from raw data.
-    Supports both OpenAI and Google Gemini API formats.
+    Supports OpenAI, Google Gemini, and pydantic-ai OpenTelemetry formats.
 
     Args:
         raw_data: Raw logfire data
@@ -704,6 +913,33 @@ def extract_model_info(raw_data: dict) -> Dict[str, str]:
     """
     try:
         attributes = raw_data.get("attributes", {})
+
+        # Detect data source format
+        data_source = _detect_data_source(raw_data)
+
+        if data_source == "pydantic_ai":
+            # pydantic-ai format: model is in gen_ai.request.model
+            model_name = attributes.get("gen_ai.request.model", "")
+            # Extract provider from model name if it follows provider/model format
+            provider = ""
+            if "/" in model_name:
+                provider = model_name.split("/", 1)[0]
+            elif ":" in model_name:
+                provider = model_name.split(":", 1)[0]
+
+            return {
+                "full_model_name": model_name,
+                "provider": provider,
+                "model_only": (
+                    model_name.split("/", 1)[-1]
+                    if "/" in model_name
+                    else model_name.split(":", 1)[-1]
+                    if ":" in model_name
+                    else model_name
+                ),
+            }
+
+        # HTTP body format
         request_body = attributes.get("http.request.body.text", {})
 
         # Detect API format

@@ -775,11 +775,40 @@ def _convert_pydantic_ai_to_openai_format(raw_data: dict) -> dict:
 
         attributes = converted_data.get("attributes", {})
 
+        # Convert pydantic-ai messages to OpenAI format
+        openai_messages = []
+
+        # Extract system instructions if present (gen_ai.system_instructions)
+        # This is separate from gen_ai.input.messages in pydantic-ai format
+        system_instructions = attributes.get("gen_ai.system_instructions", [])
+        if system_instructions:
+            # system_instructions is a list of instruction objects with parts
+            system_content_parts = []
+            for instruction in system_instructions:
+                if isinstance(instruction, dict) and "content" in instruction:
+                    # Direct content format
+                    system_content_parts.append(str(instruction["content"]))
+                elif isinstance(instruction, dict) and "parts" in instruction:
+                    # Parts format (similar to messages)
+                    parts = instruction.get("parts", [])
+                    content = _convert_pydantic_ai_parts_to_content(parts)
+                    if content:
+                        system_content_parts.append(content)
+                elif isinstance(instruction, str):
+                    # Plain string format
+                    system_content_parts.append(instruction)
+
+            if system_content_parts:
+                system_content = "\n".join(system_content_parts)
+                openai_messages.append({"role": "system", "content": system_content})
+                logger.debug(
+                    f"Extracted system instructions: {len(system_content)} chars"
+                )
+
         # Extract input messages
         input_messages = attributes.get("gen_ai.input.messages", [])
 
         # Convert pydantic-ai messages to OpenAI format
-        openai_messages = []
         for msg in input_messages:
             role = msg.get("role", "user")
             parts = msg.get("parts", [])
